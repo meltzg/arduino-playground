@@ -6,9 +6,6 @@
 #define PING_DELAY 1
 #define LISTEN_WAIT 2
 
-// Used as a hopefully unique ID for each node in the network
-const char NODE_ID[] = "*" __DATE__ "*" __TIME__ "*";
-
 /*  
  * Each node has a SoftwareSerial connection to its neighbor and another to the
  * 1 /\ 2
@@ -18,6 +15,10 @@ const char NODE_ID[] = "*" __DATE__ "*" __TIME__ "*";
  * The 7th port (PORT_ACTOR) sends/receves messages through the network
  */
 #if defined(__AVR_ATmega328P__)
+//Status LED
+#define RED A2
+#define GREEN A3
+#define BLUE A4
 SoftwareSerial PORT_0(2, 3);
 SoftwareSerial PORT_1(4, 5);
 SoftwareSerial PORT_2(6, 7);
@@ -26,6 +27,10 @@ SoftwareSerial PORT_4(10, 11);
 SoftwareSerial PORT_5(12, 13);
 SoftwareSerial PORT_ACTOR(14, 15);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+//Status LED
+#define RED A0
+#define GREEN A1
+#define BLUE A2
 SoftwareSerial PORT_0(10, 11);
 SoftwareSerial PORT_1(12, 13);
 SoftwareSerial PORT_2(50, 51);
@@ -37,6 +42,10 @@ SoftwareSerial PORT_ACTOR(67, 68);
 
 SoftwareSerial *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
 
+uint64_t getNodeId();
+void setStatusLED();
+const unsigned long long NODE_ID = getNodeId();
+
 void setup() {
   Serial.begin(9600);
   PORT_0.begin(9600);
@@ -46,6 +55,9 @@ void setup() {
   PORT_4.begin(9600);
   PORT_5.begin(9600);
   PORT_ACTOR.begin(9600);
+  setStatusLED(0x00, 0xff, 0x00);
+  delay(1000);
+  setStatusLED(0x00, 0x00, 0x00);
 }
 
 void loop() {
@@ -103,4 +115,79 @@ bool hasIncoming(SoftwareSerial *port) {
     return true;
   }
   return false;
+}
+
+int strcicmp(char const *a, char const *b)
+{
+    for (;; a++, b++) {
+        int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
+        if (d != 0 || !*a)
+            return d;
+    }
+}
+
+uint64_t getNodeId() {
+  uint64_t nodeId = 0;
+ 
+  int datelen = strlen(__DATE__);
+  int timelen = strlen(__TIME__);
+  char date[datelen + 1] = {0};
+  char time_[timelen + 1] = {0};
+  strncpy(date, __DATE__, datelen);
+  strncpy(time_, __TIME__, timelen);
+  char *token;
+
+  // add date to node ID
+  int year, month, day;
+  token = strtok(date, " :");
+  day = atoi(strtok(NULL, " :"));
+  year = atoi(strtok(NULL, " :"));
+
+  nodeId += year;
+    
+  nodeId = nodeId << 4;
+  if (strcicmp(token, "jan") == 0) {
+    nodeId += 1;
+  } else if (strcicmp(token, "feb") == 0) {
+    nodeId += 2;
+  } else if (strcicmp(token, "mar") == 0) {
+    nodeId += 3;
+  } else if (strcicmp(token, "apr") == 0) {
+    nodeId += 4;
+  } else if (strcicmp(token, "may") == 0) {
+    nodeId += 5;
+  } else if (strcicmp(token, "jun") == 0) {
+    nodeId += 6;
+  } else if (strcicmp(token, "jul") == 0) {
+    nodeId += 7;
+  } else if (strcicmp(token, "aug") == 0) {
+    nodeId += 8;
+  } else if (strcicmp(token, "sep") == 0) {
+    nodeId += 9;
+  } else if (strcicmp(token, "oct") == 0) {
+    nodeId += 10;
+  } else if (strcicmp(token, "nov") == 0) {
+    nodeId += 11;
+  } else if (strcicmp(token, "dec") == 0) {
+    nodeId += 12;
+  }
+
+  nodeId = nodeId << 5;
+  nodeId += day;
+  
+  // add time to node ID
+  token = strtok(time_, " :");
+  for (int i = 0; i < 3 && token != NULL; i++) {
+    nodeId = nodeId << 6;
+    nodeId += atoi(token);
+    token = strtok(NULL, " :");
+  }
+
+  return nodeId;  
+}
+
+void setStatusLED(byte r, byte g, byte b) {
+  analogWrite(RED, r);
+  analogWrite(GREEN, g);
+  analogWrite(BLUE, b);
 }

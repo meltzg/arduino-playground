@@ -6,6 +6,55 @@
 #define PING_DELAY 1
 #define LISTEN_WAIT 2
 
+// Hardware serial has a special case address
+#define PORT_H 0xffffffffffffffff
+
+/*
+ * Protocol
+ * --------
+ * 
+ * 0                   1                   2                   3  
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   Start Code  |                                               |
+ * +-+-+-+-+-+-+-+-+                                               +
+ * |                         Source Address                        |
+ * +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |               |                                               |
+ * +-+-+-+-+-+-+-+-+                                               +
+ * |                       Destination Address                     |
+ * +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |               |         Payload Length        | System Command|
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * 
+ * Start Code:  8 bits
+ *   Used to indicate start of message
+ *   
+ * Source Address:  64 bits
+ *   The source address
+ *   
+ * Destination Address: 64 bits
+ *   The destination address
+ *   
+ * Payload Length: 16 bits
+ *   Size of the apyload after the header in bytes
+ * 
+ * System Command: 8 bits
+ *   Specifies network commands to perform
+ *   
+ * System Commands
+ * ---------------
+ * Get ID: 0x01
+ *   Retrieve the ID of the node. During newtork discovery, this can be used
+ *   to determine the ID of one's neightbors
+ *   
+ * Get Neighbors: 0x02
+ *   Retrieve the neighbors of the Source address
+ *   
+ * Update Network Topology: 0x04
+ *   The payload contains updated network topology to use for routing
+ */
+
 /*  
  * Each node has a SoftwareSerial connection to its neighbor and another to the
  * 1 /\ 2
@@ -42,11 +91,10 @@ SoftwareSerial PORT_ACTOR(67, 68);
 
 SoftwareSerial *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
 
-uint64_t getNodeId();
-void setStatusLED();
-const unsigned long long NODE_ID = getNodeId();
+uint64_t NODE_ID;
 
 void setup() {
+  NODE_ID = getNodeId();
   Serial.begin(9600);
   PORT_0.begin(9600);
   PORT_1.begin(9600);

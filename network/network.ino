@@ -1,7 +1,8 @@
 #include <SoftwareSerial.h>
 
-#define PING byte(0xCC)
+#define PING byte(0xAA)
 #define ACK byte(0xAB)
+#define START_CODE byte(0xAC)
 #define READ_DELAY 50
 #define PING_DELAY 1
 #define LISTEN_WAIT 2
@@ -149,11 +150,6 @@ bool hasIncoming(Stream *port) {
   if (resp == PING) {
     Serial.println("incoming data");
     port->write(ACK);
-    // consume extra pings
-    while(port->peek() == PING) {
-      Serial.println("strip extra pings");
-      port->read();
-    }
     return true;
   }
   return false;
@@ -161,7 +157,9 @@ bool hasIncoming(Stream *port) {
 
 void readMessage(Stream *port, uint32_t &source, uint32_t &dest, uint16_t &payloadSize, uint8_t &sysCommand, byte *&body) {
   byte startByte;
-  port->readBytes(&startByte, 1);
+  do {
+    port->readBytes(&startByte, 1);
+  } while (startByte != START_CODE);
   port->readBytes((byte *) &source, 4);
   port->readBytes((byte *) &dest, 4);
   port->readBytes((byte *) &payloadSize, 2);

@@ -1,39 +1,35 @@
 #include <SoftwareSerial.h>
 
-#define PING byte(0x00)
+#define PING byte(0xCC)
 #define ACK byte(0xAB)
 #define READ_DELAY 50
 #define PING_DELAY 1
 #define LISTEN_WAIT 2
 
 // Hardware serial has a special case address
-#define PORT_H 0xffffffffffffffff
+#define PORT_H 0xffffffff
 
 /*
  * Protocol
  * --------
  * 
- * 0                   1                   2                   3  
- * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *  0                   1                   2                   3  
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |   Start Code  |                                               |
- * +-+-+-+-+-+-+-+-+                                               +
- * |                         Source Address                        |
- * +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |               |                                               |
- * +-+-+-+-+-+-+-+-+                                               +
- * |                       Destination Address                     |
- * +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   Start Code  |                 Source Address                |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |               |              Destination Address              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |               |         Payload Length        | System Command|
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
  * 
  * Start Code:  8 bits
  *   Used to indicate start of message
  *   
- * Source Address:  64 bits
+ * Source Address:  32 bits
  *   The source address
  *   
- * Destination Address: 64 bits
+ * Destination Address: 32 bits
  *   The destination address
  *   
  * Payload Length: 16 bits
@@ -53,6 +49,9 @@
  *   
  * Update Network Topology: 0x04
  *   The payload contains updated network topology to use for routing
+ *   
+ * Get Network Topology: 0x08
+ *   Return the node's network topology
  */
 
 /*  
@@ -64,10 +63,7 @@
  * The 7th port (PORT_ACTOR) sends/receves messages through the network
  */
 #if defined(__AVR_ATmega328P__)
-//Status LED
-#define RED A2
-#define GREEN A3
-#define BLUE A4
+#define STATUS_LED A2
 SoftwareSerial PORT_0(2, 3);
 SoftwareSerial PORT_1(4, 5);
 SoftwareSerial PORT_2(6, 7);
@@ -76,10 +72,7 @@ SoftwareSerial PORT_4(10, 11);
 SoftwareSerial PORT_5(12, 13);
 SoftwareSerial PORT_ACTOR(14, 15);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-//Status LED
-#define RED A0
-#define GREEN A1
-#define BLUE A2
+#define STATUS_LED A0
 SoftwareSerial PORT_0(10, 11);
 SoftwareSerial PORT_1(12, 13);
 SoftwareSerial PORT_2(50, 51);
@@ -91,7 +84,7 @@ SoftwareSerial PORT_ACTOR(67, 68);
 
 SoftwareSerial *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
 
-uint64_t NODE_ID;
+uint32_t NODE_ID;
 
 void setup() {
   NODE_ID = getNodeId();
@@ -103,37 +96,39 @@ void setup() {
   PORT_4.begin(9600);
   PORT_5.begin(9600);
   PORT_ACTOR.begin(9600);
-  setStatusLED(0x00, 0xff, 0x00);
+  digitalWrite(STATUS_LED, HIGH);
   delay(1000);
-  setStatusLED(0x00, 0x00, 0x00);
+  digitalWrite(STATUS_LED, LOW);
 }
 
 void loop() {
   // Loop through ports and process messages
   if (Serial.available() > 0) {
-    int len = Serial.read() - 48;
-    char msg[len + 1] = {0};
-    Serial.readBytes(msg, len);
-    Serial.println(msg);
+    PORT_0.listen();
     ackWait(&PORT_0);
-    PORT_0.write(msg, len);
+    while (Serial.available()) {
+        PORT_0.write(Serial.read());
+    }
   }
 
   for (int i = 0; i < 7; i++) {
-    char buff[50];
     SoftwareSerial *port = ALLPORTS[i];
+    port->listen();
     if (hasIncoming(port)) {
       Serial.println("recieving message");
-      delay(READ_DELAY);
-      while (port->available()) {
-        Serial.write(port->read());
-      }
+      uint32_t source, dest;
+      uint16_t payloadSize;
+      uint8_t sysCommand;
+      byte *body;
+      readMessage(port, source, dest, payloadSize, sysCommand, body);
+      Serial.write((char *)body, payloadSize);
+      Serial.println();
+      delete[] body;
     }
   }
 }
 
-void ackWait(SoftwareSerial *port) {
-  port->listen();
+void ackWait(Stream *port) {
   bool connected = false;
   char ackBuff[1];
   while (!connected) {
@@ -148,8 +143,7 @@ void ackWait(SoftwareSerial *port) {
   }
 }
 
-bool hasIncoming(SoftwareSerial *port) {
-  port->listen();
+bool hasIncoming(Stream *port) {
   delay(LISTEN_WAIT);
   byte resp = port->read();
   if (resp == PING) {
@@ -165,6 +159,22 @@ bool hasIncoming(SoftwareSerial *port) {
   return false;
 }
 
+void readMessage(Stream *port, uint32_t &source, uint32_t &dest, uint16_t &payloadSize, uint8_t &sysCommand, byte *&body) {
+  byte startByte;
+  port->readBytes(&startByte, 1);
+  port->readBytes((byte *) &source, 4);
+  port->readBytes((byte *) &dest, 4);
+  port->readBytes((byte *) &payloadSize, 2);
+  port->readBytes((byte *) &sysCommand, 1);
+  Serial.println(startByte, HEX);
+  Serial.println(source, HEX);
+  Serial.println(dest, HEX);
+  Serial.println(payloadSize, HEX);
+  Serial.println(sysCommand, HEX);
+  body = new byte[payloadSize];
+  port->readBytes(body, payloadSize);
+}
+
 int strcicmp(char const *a, char const *b)
 {
     for (;; a++, b++) {
@@ -174,8 +184,8 @@ int strcicmp(char const *a, char const *b)
     }
 }
 
-uint64_t getNodeId() {
-  uint64_t nodeId = 0;
+uint32_t getNodeId() {
+  uint32_t nodeId = 0;
  
   int datelen = strlen(__DATE__);
   int timelen = strlen(__TIME__);
@@ -232,10 +242,4 @@ uint64_t getNodeId() {
   }
 
   return nodeId;  
-}
-
-void setStatusLED(byte r, byte g, byte b) {
-  analogWrite(RED, r);
-  analogWrite(GREEN, g);
-  analogWrite(BLUE, b);
 }

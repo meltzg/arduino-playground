@@ -9,6 +9,13 @@
 
 // Hardware serial has a special case address
 #define PORT_H 0xffffffff
+#define EMPTY 0x00000000
+// System commands
+#define GET_ID 0x01
+#define GET_NEIGHBORS 0x02
+#define GET_TOPOLOGY 0x04
+#define UPDATE_TOPOLOGY 0x08
+
 
 /*
  * Protocol
@@ -83,7 +90,9 @@ SoftwareSerial PORT_5(65, 66);
 SoftwareSerial PORT_ACTOR(67, 68);
 #endif
 
-SoftwareSerial *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
+Stream *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
+Stream *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
+uint32_t neighbors[6] = { EMPTY };
 
 uint32_t NODE_ID;
 
@@ -103,13 +112,17 @@ void setup() {
 }
 
 void loop() {
+  uint32_t source, dest;
+  uint16_t payloadSize;
+  uint8_t sysCommand;
+  byte *body;
   // Loop through ports and process messages
   if (Serial.available() > 0) {
-    PORT_0.listen();
-    ackWait(&PORT_0);
-    while (Serial.available()) {
-        PORT_0.write(Serial.read());
-    }
+    readMessage(&Serial, source, dest, payloadSize, sysCommand, body);
+    source = PORT_H;
+    processMessage(&Serial, source, dest, payloadSize, sysCommand, body);
+    delete[] body;
+    body = NULL;
   }
 
   for (int i = 0; i < 7; i++) {
@@ -117,14 +130,12 @@ void loop() {
     port->listen();
     if (hasIncoming(port)) {
       Serial.println("recieving message");
-      uint32_t source, dest;
-      uint16_t payloadSize;
-      uint8_t sysCommand;
-      byte *body;
       readMessage(port, source, dest, payloadSize, sysCommand, body);
       Serial.write((char *)body, payloadSize);
       Serial.println();
+      processMessage(port, source, dest, payloadSize, sysCommand, body);
       delete[] body;
+      body = NULL;
     }
   }
 }
@@ -171,6 +182,16 @@ void readMessage(Stream *port, uint32_t &source, uint32_t &dest, uint16_t &paylo
   Serial.println(sysCommand, HEX);
   body = new byte[payloadSize];
   port->readBytes(body, payloadSize);
+}
+
+void processMessage(Stream *port, uint32_t &source, uint32_t &dest, uint16_t &payloadSize, uint8_t &sysCommand, byte *&message) {
+  if (sysCommand | GET_ID) {
+    // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same port
+    port->write((char *) &NODE_ID, sizeof(NODE_ID));
+  }
+  if (sysCommand | GET_NEIGHBORS) {
+    
+  }
 }
 
 int strcicmp(char const *a, char const *b)

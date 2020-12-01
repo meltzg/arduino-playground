@@ -12,10 +12,16 @@
 #define EMPTY 0x00000000
 // System commands
 #define GET_ID 0x01
-#define GET_NEIGHBORS 0x02
-#define GET_TOPOLOGY 0x04
-#define UPDATE_TOPOLOGY 0x08
+#define UPDATE_NEIGHBORS 0x02
+#define GET_NEIGHBORS 0x04
+#define GET_TOPOLOGY 0x08
+#define UPDATE_TOPOLOGY 0x10
+#define DISCOVER_TOPOLOGY 0x20
 
+typedef uint8_t StartCode_t;
+typedef uint32_t NodeId_t;
+typedef uint16_t MessageSize_t;
+typedef uint8_t SysCommand_t;
 
 /*
  * Protocol
@@ -52,14 +58,20 @@
  *   Retrieve the ID of the node. During newtork discovery, this can be used
  *   to determine the ID of one's neightbors
  *   
- * Get Neighbors: 0x02
+ * Update Neighbors: 0x02
+ *   Payload contains the ordered neighbor IDs of the source node
+ *   
+ * Get Neighbors: 0x04
  *   Retrieve the neighbors of the Source address
  *   
- * Update Network Topology: 0x04
+ * Update Network Topology: 0x08
  *   The payload contains updated network topology to use for routing
  *   
- * Get Network Topology: 0x08
+ * Get Network Topology: 0x10
  *   Return the node's network topology
+ *   
+ * Discover: 0x20
+ *   Discover network topology, create and distribute routing tables
  */
 
 /*  
@@ -90,11 +102,11 @@ SoftwareSerial PORT_5(65, 66);
 SoftwareSerial PORT_ACTOR(67, 68);
 #endif
 
-Stream *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
+SoftwareSerial *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
 Stream *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
-uint32_t neighbors[6] = { EMPTY };
+NodeId_t neighborIds[6] = { EMPTY };
 
-uint32_t NODE_ID;
+NodeId_t NODE_ID;
 
 void setup() {
   NODE_ID = getNodeId();
@@ -112,9 +124,9 @@ void setup() {
 }
 
 void loop() {
-  uint32_t source, dest;
-  uint16_t payloadSize;
-  uint8_t sysCommand;
+  NodeId_t source, dest;
+  MessageSize_t payloadSize;
+  SysCommand_t sysCommand;
   byte *body;
   // Loop through ports and process messages
   if (Serial.available() > 0) {
@@ -140,19 +152,20 @@ void loop() {
   }
 }
 
-void ackWait(Stream *port) {
+bool ackWait(Stream *port, int maxRetries = -1) {
   bool connected = false;
   char ackBuff[1];
-  while (!connected) {
+  for (int i = 0; !connected && (i < maxRetries || maxRetries < 0); i++) {
     Serial.println("pinging");
     port->write(PING);
     byte pong = port->read();
     Serial.println(pong, HEX);
     if (pong == ACK) {
-      break;
+      return true;
     }
     delay(PING_DELAY);
   }
+  return false;
 }
 
 bool hasIncoming(Stream *port) {
@@ -166,32 +179,64 @@ bool hasIncoming(Stream *port) {
   return false;
 }
 
-void readMessage(Stream *port, uint32_t &source, uint32_t &dest, uint16_t &payloadSize, uint8_t &sysCommand, byte *&body) {
+void readMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *body) {
   byte startByte;
   do {
-    port->readBytes(&startByte, 1);
+    srcPort->readBytes(&startByte, sizeof(StartCode_t));
   } while (startByte != START_CODE);
-  port->readBytes((byte *) &source, 4);
-  port->readBytes((byte *) &dest, 4);
-  port->readBytes((byte *) &payloadSize, 2);
-  port->readBytes((byte *) &sysCommand, 1);
+  srcPort->readBytes((byte *) &source, sizeof(NodeId_t));
+  srcPort->readBytes((byte *) &dest, sizeof(NodeId_t));
+  srcPort->readBytes((byte *) &payloadSize, sizeof(MessageSize_t));
+  srcPort->readBytes((byte *) &sysCommand, sizeof(SysCommand_t));
   Serial.println(startByte, HEX);
   Serial.println(source, HEX);
   Serial.println(dest, HEX);
   Serial.println(payloadSize, HEX);
   Serial.println(sysCommand, HEX);
   body = new byte[payloadSize];
-  port->readBytes(body, payloadSize);
+  srcPort->readBytes(body, payloadSize);
 }
 
-void processMessage(Stream *port, uint32_t &source, uint32_t &dest, uint16_t &payloadSize, uint8_t &sysCommand, byte *&message) {
+void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
+  char buff[100];
   if (sysCommand | GET_ID) {
-    // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same port
-    port->write((char *) &NODE_ID, sizeof(NODE_ID));
+    // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
+    sprintf(buff, "Node ID requested by %lu", source);
+    Serial.println(buff);
+    srcPort->write((char *) &NODE_ID, sizeof(NODE_ID));
   }
-  if (sysCommand | GET_NEIGHBORS) {
+  if (dest != NODE_ID) {
+    routeMessage(srcPort, source, dest, payloadSize, sysCommand, message);
+    return;
+  }
+  if (sysCommand | UPDATE_NEIGHBORS) {
     
   }
+  if (sysCommand | GET_NEIGHBORS) {
+    for (int i = 0; i < 6; i++) {
+      NEIGHBORS[i]->listen();
+      if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], 10)) {
+        writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
+        NEIGHBORS[i]->readBytes((byte *) neighborIds[i], sizeof(NodeId_t));
+      }
+      routeMessage(srcPort, source, dest, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
+    }
+  }
+}
+
+void routeMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
+  char buff[100];
+  sprintf(buff, "Routing message from %lu to %lu", source, dest);
+  Serial.println(buff);
+}
+
+void writeMessage(Stream *destPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
+  destPort->write(START_CODE);
+  destPort->write((char *) &source, sizeof(source));
+  destPort->write((char *) &dest, sizeof(dest));
+  destPort->write((char *) &payloadSize, sizeof(payloadSize));
+  destPort->write((char *) &sysCommand, sizeof(sysCommand));
+  destPort->write(message, payloadSize);
 }
 
 int strcicmp(char const *a, char const *b)
@@ -203,8 +248,8 @@ int strcicmp(char const *a, char const *b)
     }
 }
 
-uint32_t getNodeId() {
-  uint32_t nodeId = 0;
+NodeId_t getNodeId() {
+  NodeId_t nodeId = 0;
  
   int datelen = strlen(__DATE__);
   int timelen = strlen(__TIME__);

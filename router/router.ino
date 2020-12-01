@@ -1,4 +1,5 @@
 #include <SoftwareSerial.h>
+#include "structures.h"
 
 #define PING byte(0xAA)
 #define ACK byte(0xAB)
@@ -24,64 +25,64 @@ typedef uint16_t MessageSize_t;
 typedef uint8_t SysCommand_t;
 
 /*
- * Protocol
- * --------
- * 
- *  0                   1                   2                   3  
- *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |   Start Code  |                 Source Address                |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |               |              Destination Address              |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |               |         Payload Length        | System Command|
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
- * 
- * Start Code:  8 bits
- *   Used to indicate start of message
- *   
- * Source Address:  32 bits
- *   The source address
- *   
- * Destination Address: 32 bits
- *   The destination address
- *   
- * Payload Length: 16 bits
- *   Size of the apyload after the header in bytes
- * 
- * System Command: 8 bits
- *   Specifies network commands to perform
- *   
- * System Commands
- * ---------------
- * Get ID: 0x01
- *   Retrieve the ID of the node. During newtork discovery, this can be used
- *   to determine the ID of one's neightbors
- *   
- * Update Neighbors: 0x02
- *   Payload contains the ordered neighbor IDs of the source node
- *   
- * Get Neighbors: 0x04
- *   Retrieve the neighbors of the Source address
- *   
- * Update Network Topology: 0x08
- *   The payload contains updated network topology to use for routing
- *   
- * Get Network Topology: 0x10
- *   Return the node's network topology
- *   
- * Discover: 0x20
- *   Discover network topology, create and distribute routing tables
- */
+   Protocol
+   --------
 
-/*  
- * Each node has a SoftwareSerial connection to its neighbor and another to the
- * 1 /\ 2
- * 0 | | 3
- * 5 \/ 4
- * 
- * The 7th port (PORT_ACTOR) sends/receves messages through the network
- */
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |   Start Code  |                 Source Address                |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |               |              Destination Address              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |               |         Payload Length        | System Command|
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Start Code:  8 bits
+     Used to indicate start of message
+
+   Source Address:  32 bits
+     The source address
+
+   Destination Address: 32 bits
+     The destination address
+
+   Payload Length: 16 bits
+     Size of the apyload after the header in bytes
+
+   System Command: 8 bits
+     Specifies network commands to perform
+
+   System Commands
+   ---------------
+   Get ID: 0x01
+     Retrieve the ID of the node. During newtork discovery, this can be used
+     to determine the ID of one's neightbors
+
+   Update Neighbors: 0x02
+     Payload contains the ordered neighbor IDs of the source node
+
+   Get Neighbors: 0x04
+     Retrieve the neighbors of the Source address
+
+   Update Network Topology: 0x08
+     The payload contains updated network topology to use for routing
+
+   Get Network Topology: 0x10
+     Return the node's network topology
+
+   Discover: 0x20
+     Discover network topology, create and distribute routing tables
+*/
+
+/*
+   Each node has a SoftwareSerial connection to its neighbor and another to the
+   1 /\ 2
+   0 | | 3
+   5 \/ 4
+
+   The 7th port (PORT_ACTOR) sends/receves messages through the network
+*/
 #if defined(__AVR_ATmega328P__)
 #define STATUS_LED A2
 SoftwareSerial PORT_0(2, 3);
@@ -107,6 +108,8 @@ Stream *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PO
 NodeId_t neighborIds[6] = { EMPTY };
 
 NodeId_t NODE_ID;
+
+LinkedList<NodeId_t> discoveryQueue;
 
 void setup() {
   NODE_ID = getNodeId();
@@ -210,7 +213,7 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
     return;
   }
   if (sysCommand | UPDATE_NEIGHBORS) {
-    
+
   }
   if (sysCommand | GET_NEIGHBORS) {
     for (int i = 0; i < 6; i++) {
@@ -241,16 +244,16 @@ void writeMessage(Stream *destPort, NodeId_t source, NodeId_t dest, MessageSize_
 
 int strcicmp(char const *a, char const *b)
 {
-    for (;; a++, b++) {
-        int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
-        if (d != 0 || !*a)
-            return d;
-    }
+  for (;; a++, b++) {
+    int d = tolower((unsigned char) * a) - tolower((unsigned char) * b);
+    if (d != 0 || !*a)
+      return d;
+  }
 }
 
 NodeId_t getNodeId() {
   NodeId_t nodeId = 0;
- 
+
   int datelen = strlen(__DATE__);
   int timelen = strlen(__TIME__);
   char date[datelen + 1] = {0};
@@ -266,7 +269,7 @@ NodeId_t getNodeId() {
   year = atoi(strtok(NULL, " :"));
 
   nodeId += year;
-    
+
   nodeId = nodeId << 4;
   if (strcicmp(token, "jan") == 0) {
     nodeId += 1;
@@ -296,7 +299,7 @@ NodeId_t getNodeId() {
 
   nodeId = nodeId << 5;
   nodeId += day;
-  
+
   // add time to node ID
   token = strtok(time_, " :");
   for (int i = 0; i < 3 && token != NULL; i++) {
@@ -305,5 +308,5 @@ NodeId_t getNodeId() {
     token = strtok(NULL, " :");
   }
 
-  return nodeId;  
+  return nodeId;
 }

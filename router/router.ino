@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 
-#define PING byte(0xAA)
-#define ACK byte(0xAB)
+#define PING_BYTE byte(0xAA)
+#define ACK_BYTE byte(0xAB)
 #define START_CODE byte(0xAC)
 #define READ_DELAY 50
 #define PING_DELAY 1
@@ -83,7 +83,7 @@ typedef uint8_t SysCommand_t;
    The 7th port (PORT_ACTOR) sends/receves messages through the network
 */
 #if defined(__AVR_ATmega328P__)
-#define STATUS_LED LED_BUILTIN
+#define STATUS_LED A2
 SoftwareSerial PORT_0(2, 3);
 SoftwareSerial PORT_1(4, 5);
 SoftwareSerial PORT_2(6, 7);
@@ -92,7 +92,7 @@ SoftwareSerial PORT_4(10, 11);
 SoftwareSerial PORT_5(12, 13);
 SoftwareSerial PORT_ACTOR(14, 15);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-#define STATUS_LED LED_BUILTIN
+#define STATUS_LED A0
 SoftwareSerial PORT_0(10, 11);
 SoftwareSerial PORT_1(12, 13);
 SoftwareSerial PORT_2(50, 51);
@@ -103,7 +103,7 @@ SoftwareSerial PORT_ACTOR(67, 68);
 #endif
 
 SoftwareSerial *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
-Stream *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
+SoftwareSerial *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
 NodeId_t neighborIds[6] = { EMPTY };
 
 NodeId_t NODE_ID;
@@ -118,6 +118,7 @@ void setup() {
   PORT_4.begin(9600);
   PORT_5.begin(9600);
   PORT_ACTOR.begin(9600);
+  pinMode(STATUS_LED, OUTPUT);
   digitalWrite(STATUS_LED, HIGH);
   delay(1000);
   digitalWrite(STATUS_LED, LOW);
@@ -157,10 +158,10 @@ bool ackWait(Stream *port, int maxRetries = -1) {
   char ackBuff[1];
   for (int i = 0; !connected && (i < maxRetries || maxRetries < 0); i++) {
     Serial.println("pinging");
-    port->write(PING);
+    port->write(PING_BYTE);
     byte pong = port->read();
     Serial.println(pong, HEX);
-    if (pong == ACK) {
+    if (pong == ACK_BYTE) {
       Serial.println("Connected!");
       return true;
     }
@@ -173,9 +174,9 @@ bool ackWait(Stream *port, int maxRetries = -1) {
 bool hasIncoming(Stream *port) {
   delay(LISTEN_WAIT);
   byte resp = port->read();
-  if (resp == PING) {
+  if (resp == PING_BYTE) {
     Serial.println("incoming data");
-    port->write(ACK);
+    port->write(ACK_BYTE);
     return true;
   }
   return false;
@@ -211,9 +212,11 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
 
   }
   if (sysCommand & GET_NEIGHBORS) {
+    sprintf(buff, "Node Neighbors requested by %lu", source);
+    int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
     for (int i = 0; i < 6; i++) {
       NEIGHBORS[i]->listen();
-      if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], 10)) {
+      if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], 20)) {
         writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
         NEIGHBORS[i]->readBytes((byte *) neighborIds[i], sizeof(NodeId_t));
       }

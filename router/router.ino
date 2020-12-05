@@ -1,5 +1,4 @@
 #include <SoftwareSerial.h>
-#include "structures.h"
 
 #define PING byte(0xAA)
 #define ACK byte(0xAB)
@@ -84,7 +83,7 @@ typedef uint8_t SysCommand_t;
    The 7th port (PORT_ACTOR) sends/receves messages through the network
 */
 #if defined(__AVR_ATmega328P__)
-#define STATUS_LED A2
+#define STATUS_LED LED_BUILTIN
 SoftwareSerial PORT_0(2, 3);
 SoftwareSerial PORT_1(4, 5);
 SoftwareSerial PORT_2(6, 7);
@@ -93,7 +92,7 @@ SoftwareSerial PORT_4(10, 11);
 SoftwareSerial PORT_5(12, 13);
 SoftwareSerial PORT_ACTOR(14, 15);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-#define STATUS_LED A0
+#define STATUS_LED LED_BUILTIN
 SoftwareSerial PORT_0(10, 11);
 SoftwareSerial PORT_1(12, 13);
 SoftwareSerial PORT_2(50, 51);
@@ -108,8 +107,6 @@ Stream *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PO
 NodeId_t neighborIds[6] = { EMPTY };
 
 NodeId_t NODE_ID;
-
-LinkedList<NodeId_t> discoveryQueue;
 
 void setup() {
   NODE_ID = getNodeId();
@@ -164,10 +161,12 @@ bool ackWait(Stream *port, int maxRetries = -1) {
     byte pong = port->read();
     Serial.println(pong, HEX);
     if (pong == ACK) {
+      Serial.println("Connected!");
       return true;
     }
     delay(PING_DELAY);
   }
+  Serial.println("Failed!");
   return false;
 }
 
@@ -182,7 +181,7 @@ bool hasIncoming(Stream *port) {
   return false;
 }
 
-void readMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *body) {
+void readMessage(Stream *srcPort, NodeId_t &source, NodeId_t &dest, MessageSize_t &payloadSize, SysCommand_t &sysCommand, byte *&body) {
   byte startByte;
   do {
     srcPort->readBytes(&startByte, sizeof(StartCode_t));
@@ -191,46 +190,46 @@ void readMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t 
   srcPort->readBytes((byte *) &dest, sizeof(NodeId_t));
   srcPort->readBytes((byte *) &payloadSize, sizeof(MessageSize_t));
   srcPort->readBytes((byte *) &sysCommand, sizeof(SysCommand_t));
-  Serial.println(startByte, HEX);
-  Serial.println(source, HEX);
-  Serial.println(dest, HEX);
-  Serial.println(payloadSize, HEX);
-  Serial.println(sysCommand, HEX);
   body = new byte[payloadSize];
   srcPort->readBytes(body, payloadSize);
 }
 
 void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
   char buff[100];
-  if (sysCommand | GET_ID) {
+  if (sysCommand & GET_ID) {
     // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
     sprintf(buff, "Node ID requested by %lu", source);
     Serial.println(buff);
     srcPort->write((char *) &NODE_ID, sizeof(NODE_ID));
+    return;
   }
   if (dest != NODE_ID) {
     routeMessage(srcPort, source, dest, payloadSize, sysCommand, message);
     return;
   }
-  if (sysCommand | UPDATE_NEIGHBORS) {
+  if (sysCommand & UPDATE_NEIGHBORS) {
 
   }
-  if (sysCommand | GET_NEIGHBORS) {
+  if (sysCommand & GET_NEIGHBORS) {
     for (int i = 0; i < 6; i++) {
       NEIGHBORS[i]->listen();
       if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], 10)) {
         writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
         NEIGHBORS[i]->readBytes((byte *) neighborIds[i], sizeof(NodeId_t));
       }
-      routeMessage(srcPort, source, dest, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
     }
+    routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
   }
 }
 
 void routeMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
   char buff[100];
-  sprintf(buff, "Routing message from %lu to %lu", source, dest);
+  sprintf(buff, "Routing message from %lu to %lu via %lu size %hu", source, dest, NODE_ID, payloadSize);
   Serial.println(buff);
+  if (dest == PORT_H) {
+    writeMessage(&Serial, source, PORT_H, payloadSize, sysCommand, message);
+    return;
+  }
 }
 
 void writeMessage(Stream *destPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {

@@ -218,7 +218,9 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
       NEIGHBORS[i]->listen();
       if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], 20)) {
         writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
-        NEIGHBORS[i]->readBytes((byte *) neighborIds[i], sizeof(NodeId_t));
+        NodeId_t neighbor = EMPTY;
+        NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));
+        neighborIds[i] = neighbor;
       }
     }
     routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);

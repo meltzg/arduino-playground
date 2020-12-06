@@ -1,4 +1,5 @@
 #include <SoftwareSerial.h>
+#include "structures.h"
 
 #define PING_BYTE byte(0xAA)
 #define ACK_BYTE byte(0xAB)
@@ -108,6 +109,11 @@ NodeId_t neighborIds[6] = { EMPTY };
 
 NodeId_t NODE_ID;
 
+LinkedList<NodeId_t> discoveryQueue;
+LinkedList<NodeId_t> discoverVisited;
+LinkedList<GraphEdge<NodeId_t>> edges;
+bool discoveryDone = false;
+
 void setup() {
   NODE_ID = getNodeId();
   Serial.begin(9600);
@@ -213,16 +219,7 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
   }
   if (sysCommand & GET_NEIGHBORS) {
     sprintf(buff, "Node Neighbors requested by %lu", source);
-    int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
-    for (int i = 0; i < 6; i++) {
-      NEIGHBORS[i]->listen();
-      if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], maxRetries)) {
-        writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
-        NodeId_t neighbor = EMPTY;
-        NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));
-        neighborIds[i] = neighbor;
-      }
-    }
+    getNeigbors();
     routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
   }
 }
@@ -252,6 +249,39 @@ int strcicmp(char const *a, char const *b)
     int d = tolower((unsigned char) * a) - tolower((unsigned char) * b);
     if (d != 0 || !*a)
       return d;
+  }
+}
+
+void getNeigbors() {
+  int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
+    for (int i = 0; i < 6; i++) {
+      NEIGHBORS[i]->listen();
+      if (ackWait(NEIGHBORS[i], maxRetries)) {
+        writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
+        NodeId_t neighbor = EMPTY;
+        NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));
+        neighborIds[i] = neighbor;
+      } else {
+        neighborIds[i] = EMPTY;
+      }
+    }
+}
+
+void startDiscovery() {
+  discoveryQueue.purge();
+  discoverVisited.purge();
+  edges.purge();
+  discoveryDone = false;
+
+  getNeigbors();
+  discoverVisited.pushBack(NODE_ID);
+  for (int i = 0; i < 6; i++) {
+    if (neighborIds[i] != EMPTY) {
+      if (!discoverVisited.contains(neighborIds[i])) {
+        discoveryQueue.pushBack(neighborIds[i]);
+      }
+//      Gra
+    }
   }
 }
 

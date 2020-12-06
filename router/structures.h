@@ -12,9 +12,7 @@ template <typename T> struct LinkedList {
     front = back = NULL;
   }
   ~LinkedList() {
-    while (front != NULL) {
-      popFront();
-    }
+    purge();
   }
 
   void pushBack(T val) {
@@ -45,5 +43,33 @@ template <typename T> struct LinkedList {
 
   bool isEmpty() {
     return back == NULL;
+  }
+
+  bool contains(T val) {
+    LinkedNode<T> *node = front;
+    while (node != NULL) {
+      if (node->val == val) {
+        return true;
+      }
+      node = node->next;
+    }
+    return false;
+  }
+
+  void purge() {
+    while (front != NULL) {
+      popFront();
+    }
+  }
+};
+
+template <typename T> struct GraphEdge {
+  T src;
+  T dest;
+
+  GraphEdge(T src, T dest) : src(src), dest(dest) {}
+
+  bool operator==(const GraphEdge<T> &rhs) {
+    return (src == rhs.src && dest == rhs.dest) || (src == rhs.dest && dest == rhs.src);
   }
 };

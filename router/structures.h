@@ -15,7 +15,7 @@ template <typename T> struct LinkedList {
     purge();
   }
 
-  void pushBack(T val) {
+  virtual void pushBack(T val) {
     LinkedNode<T> *tmp = new LinkedNode<T>(val);
     if (isEmpty()) {
       front = back = tmp;
@@ -61,6 +61,15 @@ template <typename T> struct LinkedList {
       popFront();
     }
   }
+};
+
+template <typename T> struct Set : public LinkedList<T> {
+  virtual void pushBack(T val) {
+    if (contains(val)) {
+      return;
+    }
+    LinkedList<T>::pushBack(val);
+  }  
 };
 
 template <typename T> struct GraphEdge {

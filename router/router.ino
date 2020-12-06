@@ -111,7 +111,7 @@ NodeId_t NODE_ID;
 
 LinkedList<NodeId_t> discoveryQueue;
 LinkedList<NodeId_t> discoverVisited;
-LinkedList<GraphEdge<NodeId_t>> edges;
+Set<GraphEdge<NodeId_t>> edges;
 bool discoveryDone = false;
 
 void setup() {
@@ -254,17 +254,17 @@ int strcicmp(char const *a, char const *b)
 
 void getNeigbors() {
   int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
-    for (int i = 0; i < 6; i++) {
-      NEIGHBORS[i]->listen();
-      if (ackWait(NEIGHBORS[i], maxRetries)) {
-        writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
-        NodeId_t neighbor = EMPTY;
-        NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));
-        neighborIds[i] = neighbor;
-      } else {
-        neighborIds[i] = EMPTY;
-      }
+  for (int i = 0; i < 6; i++) {
+    NEIGHBORS[i]->listen();
+    if (ackWait(NEIGHBORS[i], maxRetries)) {
+      writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
+      NodeId_t neighbor = EMPTY;
+      NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));
+      neighborIds[i] = neighbor;
+    } else {
+      neighborIds[i] = EMPTY;
     }
+  }
 }
 
 void startDiscovery() {
@@ -277,13 +277,12 @@ void startDiscovery() {
   discoverVisited.pushBack(NODE_ID);
   for (int i = 0; i < 6; i++) {
     if (neighborIds[i] != EMPTY) {
-      if (!discoverVisited.contains(neighborIds[i])) {
-        discoveryQueue.pushBack(neighborIds[i]);
-      }
-//      Gra
+      discoveryQueue.pushBack(neighborIds[i]);
     }
   }
 }
+
+
 
 NodeId_t getNodeId() {
   NodeId_t nodeId = 0;

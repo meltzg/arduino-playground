@@ -216,7 +216,7 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
     int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
     for (int i = 0; i < 6; i++) {
       NEIGHBORS[i]->listen();
-      if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], 20)) {
+      if (neighborIds[i] == EMPTY && ackWait(NEIGHBORS[i], maxRetries)) {
         writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
         NodeId_t neighbor = EMPTY;
         NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));

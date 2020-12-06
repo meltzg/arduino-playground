@@ -1,4 +1,5 @@
 #include <SoftwareSerial.h>
+#include <Adafruit_NeoPixel.h>
 #include "structures.h"
 
 #define PING_BYTE byte(0xAA)
@@ -18,6 +19,10 @@
 #define GET_TOPOLOGY 0x08
 #define UPDATE_TOPOLOGY 0x10
 #define DISCOVER_TOPOLOGY 0x20
+
+#define STATUS_IDX 0
+#define BRIGHTNESS 0x10
+
 
 typedef uint8_t StartCode_t;
 typedef uint32_t NodeId_t;
@@ -114,6 +119,8 @@ LinkedList<NodeId_t> discoverVisited;
 LinkedList<GraphEdge<NodeId_t>> edges;
 bool discoveryDone = false;
 
+Adafruit_NeoPixel pixels(1, STATUS_LED, NEO_GRB + NEO_KHZ800);
+
 void setup() {
   NODE_ID = getNodeId();
   Serial.begin(9600);
@@ -125,9 +132,8 @@ void setup() {
   PORT_5.begin(9600);
   PORT_ACTOR.begin(9600);
   pinMode(STATUS_LED, OUTPUT);
-  digitalWrite(STATUS_LED, HIGH);
-  delay(1000);
-  digitalWrite(STATUS_LED, LOW);
+  
+  setStatusLed(0xFF0000, 1000);
 }
 
 void loop() {
@@ -343,4 +349,15 @@ NodeId_t getNodeId() {
   }
 
   return nodeId;
+}
+
+void setStatusLed(__uint24 grb, int duration) {
+  pixels.clear();
+  pixels.setBrightness(BRIGHTNESS);
+  pixels.setPixelColor(STATUS_IDX, grb);
+  pixels.show();
+  delay(duration);
+  pixels.setBrightness(BRIGHTNESS);
+  pixels.setPixelColor(STATUS_IDX, 0x000000);
+  pixels.show();
 }

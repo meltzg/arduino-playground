@@ -61,6 +61,13 @@ template <typename T> struct LinkedList {
       popFront();
     }
   }
+
+  size_t size() {
+    LinkedNode<T> *node = front;
+    size_t s = 0;
+    for (s = 0; node != NULL; s++, node = node->next);
+    return s;
+  }
 };
 
 template <typename T> struct Set : public LinkedList<T> {

@@ -92,7 +92,7 @@ typedef uint8_t SysCommand_t;
    0 | | 3
    5 \/ 4
 
-   The 7th port (PORT_ACTOR) sends/receves messages through the network
+   The hardware port reprents the actual destination
 */
 #if defined(__AVR_ATmega328P__)
 #define STATUS_LED A2
@@ -102,7 +102,6 @@ SoftwareSerial PORT_2(6, 7);
 SoftwareSerial PORT_3(8, 9);
 SoftwareSerial PORT_4(10, 11);
 SoftwareSerial PORT_5(12, 13);
-SoftwareSerial PORT_ACTOR(14, 15);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 #define STATUS_LED A0
 SoftwareSerial PORT_0(10, 11);
@@ -111,11 +110,9 @@ SoftwareSerial PORT_2(50, 51);
 SoftwareSerial PORT_3(52, 53);
 SoftwareSerial PORT_4(62, 63);
 SoftwareSerial PORT_5(65, 66);
-SoftwareSerial PORT_ACTOR(67, 68);
 #endif
 
 SoftwareSerial *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
-SoftwareSerial *ALLPORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_ACTOR};
 NodeId_t neighborIds[6] = { EMPTY };
 
 NodeId_t NODE_ID;
@@ -136,7 +133,6 @@ void setup() {
   PORT_3.begin(9600);
   PORT_4.begin(9600);
   PORT_5.begin(9600);
-  PORT_ACTOR.begin(9600);
   pinMode(STATUS_LED, OUTPUT);
   
   setStatusLed(0xFF0000, 1000);
@@ -157,7 +153,7 @@ void loop() {
   }
 
   for (int i = 0; i < 7; i++) {
-    SoftwareSerial *port = ALLPORTS[i];
+    SoftwareSerial *port = NEIGHBORS[i];
     port->listen();
     if (hasIncoming(port)) {
       Serial.println("recieving message");
@@ -231,7 +227,7 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
   }
   if (sysCommand & GET_NEIGHBORS) {
     sprintf(buff, "Node Neighbors requested by %lu", source);
-    getNeigbors();
+    resetNeigbors();
     routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
   }
 }
@@ -264,7 +260,7 @@ int strcicmp(char const *a, char const *b)
   }
 }
 
-void getNeigbors() {
+void resetNeigbors() {
   int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
   for (int i = 0; i < 6; i++) {
     NEIGHBORS[i]->listen();
@@ -285,10 +281,11 @@ void startDiscovery() {
   edges.purge();
   discoveryDone = false;
 
-  getNeigbors();  
+  resetNeigbors();
+  updateNetwork(NODE_ID, neighborIds);
 }
 
-void updateNeighbors(const NodeId_t source, const NodeId_t dest[]) {
+void updateNetwork(const NodeId_t source, const NodeId_t dest[]) {
   discoverVisited.pushBack(source);
   for (int i = 0; i < sizeof(dest) / sizeof(NodeId_t); i++) {
     if (dest[i] != EMPTY) {
@@ -299,6 +296,8 @@ void updateNeighbors(const NodeId_t source, const NodeId_t dest[]) {
     }
   }
 
+  distributeTopology();
+
   if (discoveryQueue.isEmpty()) {
     discoveryDone = true;
     return;
@@ -306,11 +305,26 @@ void updateNeighbors(const NodeId_t source, const NodeId_t dest[]) {
 
   while (!discoveryQueue.isEmpty()) {
     NodeId_t next = discoveryQueue.popFront();
-//    routeMessage(NULL, next
+    routeMessage(NULL, NODE_ID, next, 0, GET_NEIGHBORS, NULL);
   }
 }
 
-
+void distributeTopology() {
+  const MessageSize_t messageSize = edges.size() * sizeof(NodeId_t) * 2;
+  byte message[messageSize] = { 0x00 };
+  LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front;
+  for (int i = 0; edge != NULL; i++, edge = edge->next) {
+    int edgeSize = sizeof(edge->val.src) + sizeof(edge->val.dest);
+    memset(message + i * edgeSize, edge->val.src, sizeof(edge->val.src));
+    memset(message + i * edgeSize + sizeof(edge->val.src), edge->val.dest, sizeof(edge->val.dest));
+  }
+  for (LinkedNode<NodeId_t> *i = discoverVisited.front; i != NULL; i = i->next) {
+    if (i->val == NODE_ID) {
+      continue;
+    }
+    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_TOPOLOGY, message);
+  }
+}
 
 NodeId_t getNodeId() {
   NodeId_t nodeId = 0;

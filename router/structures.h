@@ -65,7 +65,7 @@ template <typename T> struct LinkedList {
 
 template <typename T> struct Set : public LinkedList<T> {
   virtual void pushBack(T val) {
-    if (contains(val)) {
+    if (this->contains(val)) {
       return;
     }
     LinkedList<T>::pushBack(val);

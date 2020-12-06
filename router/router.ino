@@ -10,8 +10,8 @@
 #define LISTEN_WAIT 2
 
 // Hardware serial has a special case address
-#define PORT_H 0xffffffff
-#define EMPTY 0x00000000
+#define PORT_H 0xffff
+#define EMPTY 0x0000
 // System commands
 #define GET_ID 0x01
 #define UPDATE_NEIGHBORS 0x02
@@ -21,11 +21,17 @@
 #define DISCOVER_TOPOLOGY 0x20
 
 #define STATUS_IDX 0
+#define STATUS_DURATION 100
 #define BRIGHTNESS 0x10
+#define INCOMING 0x00FFFF
+#define WAITING 0xE2FC2A
+#define PROCESSING 0x0000FF
+#define SENDING 0xC8991F
+#define FAIL 0x00FF00
 
 
 typedef uint8_t StartCode_t;
-typedef uint32_t NodeId_t;
+typedef uint16_t NodeId_t;
 typedef uint16_t MessageSize_t;
 typedef uint8_t SysCommand_t;
 
@@ -232,7 +238,7 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
 
 void routeMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
   char buff[100];
-  sprintf(buff, "Routing message from %lu to %lu via %lu size %hu", source, dest, NODE_ID, payloadSize);
+  sprintf(buff, "Routing message from %hu to %hu via %hu size %hu", source, dest, NODE_ID, payloadSize);
   Serial.println(buff);
   if (dest == PORT_H) {
     writeMessage(&Serial, source, PORT_H, payloadSize, sysCommand, message);
@@ -279,12 +285,28 @@ void startDiscovery() {
   edges.purge();
   discoveryDone = false;
 
-  getNeigbors();
-  discoverVisited.pushBack(NODE_ID);
-  for (int i = 0; i < 6; i++) {
-    if (neighborIds[i] != EMPTY) {
-      discoveryQueue.pushBack(neighborIds[i]);
+  getNeigbors();  
+}
+
+void updateNeighbors(const NodeId_t source, const NodeId_t dest[]) {
+  discoverVisited.pushBack(source);
+  for (int i = 0; i < sizeof(dest) / sizeof(NodeId_t); i++) {
+    if (dest[i] != EMPTY) {
+      if (!discoverVisited.contains(dest[i])) {
+        discoveryQueue.pushBack(dest[i]);
+      }
+      edges.pushBack(GraphEdge<NodeId_t>(source, dest[i]));
     }
+  }
+
+  if (discoveryQueue.isEmpty()) {
+    discoveryDone = true;
+    return;
+  }
+
+  while (!discoveryQueue.isEmpty()) {
+    NodeId_t next = discoveryQueue.popFront();
+//    routeMessage(NULL, next
   }
 }
 
@@ -355,8 +377,10 @@ void setStatusLed(__uint24 grb, int duration) {
   pixels.setBrightness(BRIGHTNESS);
   pixels.setPixelColor(STATUS_IDX, grb);
   pixels.show();
-  delay(duration);
-  pixels.setBrightness(BRIGHTNESS);
-  pixels.setPixelColor(STATUS_IDX, 0x000000);
-  pixels.show();
+  if (duration > 0) {
+    delay(duration);
+    pixels.setBrightness(BRIGHTNESS);
+    pixels.setPixelColor(STATUS_IDX, 0x000000);
+    pixels.show();
+  }
 }

@@ -4,7 +4,8 @@ import serial
 
 
 START_CODE = bytes([0xac])
-HARD_PORT = b'\xff' * 4
+ID_SIZE = 2
+HARD_PORT = b'\xff' * ID_SIZE
 
 
 def to_bytes(val: int, num_bytes: int):
@@ -28,12 +29,12 @@ def get_id(ser):
     sleep(0.25)
     resp = ser.read_all()
     print(resp)
-    return resp[-4:]
+    return resp[-ID_SIZE:]
 
 
 def get_neighbors(ser, dest):
     send_message(ser, dest, 0x04, b'')
     resp = ser.read(10000)
     print(resp)
-    idstr = resp[-(6 * 4):]
-    return [idstr[i:i + 4] for i in range(0, len(idstr), 4)]
+    idstr = resp[-(6 * ID_SIZE):]
+    return [idstr[i:i + ID_SIZE] for i in range(0, len(idstr), ID_SIZE)]

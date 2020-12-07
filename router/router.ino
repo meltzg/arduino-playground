@@ -39,23 +39,21 @@ typedef uint8_t SysCommand_t;
    Protocol
    --------
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |   Start Code  |                 Source Address                |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |               |              Destination Address              |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |               |         Payload Length        | System Command|
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   0                   1                   2                   3
+   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |   Start Code  |         Source Address        |Destination Ad.|
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |               |         Payload Length        | System Command|
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Start Code:  8 bits
      Used to indicate start of message
 
-   Source Address:  32 bits
+   Source Address:  16 bits
      The source address
 
-   Destination Address: 32 bits
+   Destination Address: 16 bits
      The destination address
 
    Payload Length: 16 bits
@@ -134,7 +132,9 @@ void setup() {
   PORT_4.begin(9600);
   PORT_5.begin(9600);
   pinMode(STATUS_LED, OUTPUT);
-  
+
+  Serial.println("starting");
+
   setStatusLed(0xFF0000, 1000);
 }
 
@@ -152,7 +152,7 @@ void loop() {
     body = NULL;
   }
 
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < 6; i++) {
     SoftwareSerial *port = NEIGHBORS[i];
     port->listen();
     if (hasIncoming(port)) {
@@ -213,7 +213,7 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
   char buff[100];
   if (sysCommand & GET_ID) {
     // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
-    sprintf(buff, "Node ID requested by %lu", source);
+    sprintf(buff, "Node ID requested by %hu", source);
     Serial.println(buff);
     srcPort->write((char *) &NODE_ID, sizeof(NODE_ID));
     return;
@@ -226,9 +226,26 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
 
   }
   if (sysCommand & GET_NEIGHBORS) {
-    sprintf(buff, "Node Neighbors requested by %lu", source);
+    sprintf(buff, "Node Neighbors requested by %hu", source);
+    Serial.println(buff);
     resetNeigbors();
     routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
+  }
+  if (sysCommand & GET_TOPOLOGY) {
+    sprintf(buff, "Network Topology requested by %hu", source);
+    Serial.println(buff);
+    byte *topology = NULL;
+    const MessageSize_t topologySize = serializeTopology(topology);
+    routeMessage(srcPort, dest, source, topologySize, UPDATE_TOPOLOGY, topology);
+  }
+  if (sysCommand & UPDATE_TOPOLOGY) {
+    sprintf(buff, "Network Topology update from %hu", source);
+    Serial.println(buff);
+  }
+  if (sysCommand & DISCOVER_TOPOLOGY) {
+    sprintf(buff, "Network Topology discovery triggered by %hu", source);
+    Serial.println(buff);
+    startDiscovery();
   }
 }
 
@@ -261,6 +278,7 @@ int strcicmp(char const *a, char const *b)
 }
 
 void resetNeigbors() {
+  Serial.println("Reset Edges");
   int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
   for (int i = 0; i < 6; i++) {
     NEIGHBORS[i]->listen();
@@ -276,18 +294,30 @@ void resetNeigbors() {
 }
 
 void startDiscovery() {
+  Serial.println("Purge queue");
   discoveryQueue.purge();
+  Serial.println("Purge visited");
   discoverVisited.purge();
+  Serial.println("Purge edges");
   edges.purge();
   discoveryDone = false;
+
+  char buff[100] = { 0 };
+  sprintf(buff, "collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, edges.count);
+  Serial.println(buff);
 
   resetNeigbors();
   updateNetwork(NODE_ID, neighborIds);
 }
 
-void updateNetwork(const NodeId_t source, const NodeId_t dest[]) {
+void updateNetwork(const NodeId_t source, const NodeId_t *dest) {
+  char buff[100] = { 0 };
   discoverVisited.pushBack(source);
-  for (int i = 0; i < sizeof(dest) / sizeof(NodeId_t); i++) {
+  sprintf(buff, "%hu == %hu, %d", source, NODE_ID, discoverVisited.count);
+  Serial.println(buff);
+  for (int i = 0; i < 6; i++) {
+    sprintf(buff, "source %hu dest %hu", source, dest[i]);
+    Serial.println(buff);
     if (dest[i] != EMPTY) {
       if (!discoverVisited.contains(dest[i])) {
         discoveryQueue.pushBack(dest[i]);
@@ -296,34 +326,63 @@ void updateNetwork(const NodeId_t source, const NodeId_t dest[]) {
     }
   }
 
+  sprintf(buff, "UPDATE collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, edges.count);
+  Serial.println(buff);
+
   distributeTopology();
 
-  if (discoveryQueue.isEmpty()) {
-    discoveryDone = true;
-    return;
-  }
-
-  while (!discoveryQueue.isEmpty()) {
-    NodeId_t next = discoveryQueue.popFront();
-    routeMessage(NULL, NODE_ID, next, 0, GET_NEIGHBORS, NULL);
-  }
+  //  if (discoveryQueue.isEmpty()) {
+  //    discoveryDone = true;
+  //    return;
+  //  }
+  //
+  //  while (!discoveryQueue.isEmpty()) {
+  //    NodeId_t next = discoveryQueue.popFront();
+  //    routeMessage(NULL, NODE_ID, next, 0, GET_NEIGHBORS, NULL);
+  //  }
 }
 
 void distributeTopology() {
-  const MessageSize_t messageSize = edges.size() * sizeof(NodeId_t) * 2;
-  byte message[messageSize] = { 0x00 };
-  LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front;
-  for (int i = 0; edge != NULL; i++, edge = edge->next) {
-    int edgeSize = sizeof(edge->val.src) + sizeof(edge->val.dest);
-    memset(message + i * edgeSize, edge->val.src, sizeof(edge->val.src));
-    memset(message + i * edgeSize + sizeof(edge->val.src), edge->val.dest, sizeof(edge->val.dest));
-  }
+  byte *message = NULL;
+  const MessageSize_t messageSize = serializeTopology(message);
+
+  Serial.println("DISTRIBUTE TOPO");
+
   for (LinkedNode<NodeId_t> *i = discoverVisited.front; i != NULL; i = i->next) {
+    Serial.println(i->val, HEX);
     if (i->val == NODE_ID) {
       continue;
     }
     routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_TOPOLOGY, message);
   }
+
+  for (LinkedNode<NodeId_t> *i = discoveryQueue.front; i != NULL; i = i->next) {
+    Serial.println(i->val, HEX);
+    if (i->val == NODE_ID) {
+      continue;
+    }
+    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_TOPOLOGY, message);
+  }
+
+  Serial.println("DISTRIBUTE TOPO DONE");
+
+  delete[] message;
+}
+
+MessageSize_t serializeTopology(byte *&destination) {
+  char buff[100] = { 0 };
+  const MessageSize_t messageSize = edges.count * sizeof(NodeId_t) * 2;
+  destination = new byte[messageSize] { EMPTY };
+  LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front;
+  for (int i = 0; edge != NULL; i++, edge = edge->next) {
+    sprintf(buff, "%hu <-> %hu", edge->val.src, edge->val.dest);
+    Serial.println(buff);
+    int edgeSize = sizeof(edge->val.src) + sizeof(edge->val.dest);
+    memset(destination + i * edgeSize, edge->val.src, sizeof(edge->val.src));
+    memset(destination + i * edgeSize + sizeof(edge->val.src), edge->val.dest, sizeof(edge->val.dest));
+  }
+
+  return messageSize;
 }
 
 NodeId_t getNodeId() {

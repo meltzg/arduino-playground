@@ -2,11 +2,12 @@ template <typename T> struct LinkedNode {
   T val;
   LinkedNode *next;
 
-  LinkedNode(T val) : val(val) {}
+  LinkedNode(T val) : val(val), next(NULL) {}
 };
 
 template <typename T> struct LinkedList {
   LinkedNode<T> *front, *back;
+  size_t count = 0;
 
   LinkedList() {
     front = back = NULL;
@@ -19,10 +20,11 @@ template <typename T> struct LinkedList {
     LinkedNode<T> *tmp = new LinkedNode<T>(val);
     if (isEmpty()) {
       front = back = tmp;
-      return;
+    } else {
+      back->next = tmp;
+      back = tmp;
     }
-    back->next = tmp;
-    back = tmp;
+    count++;
   }
 
   T popFront() {
@@ -30,6 +32,7 @@ template <typename T> struct LinkedList {
     T val = tmp->val;
     front = front->next;
     delete tmp;
+    count--;
     return val;
   }
 
@@ -60,13 +63,6 @@ template <typename T> struct LinkedList {
     while (front != NULL) {
       popFront();
     }
-  }
-
-  size_t size() {
-    LinkedNode<T> *node = front;
-    size_t s = 0;
-    for (s = 0; node != NULL; s++, node = node->next);
-    return s;
   }
 };
 

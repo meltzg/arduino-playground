@@ -375,11 +375,11 @@ MessageSize_t serializeTopology(byte *&destination) {
   destination = new byte[messageSize] { EMPTY };
   LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front;
   for (int i = 0; edge != NULL; i++, edge = edge->next) {
-    sprintf(buff, "%hu <-> %hu", edge->val.src, edge->val.dest);
+    sprintf(buff, "%#5hX <-> %#5hX", edge->val.src, edge->val.dest);
     Serial.println(buff);
     int edgeSize = sizeof(edge->val.src) + sizeof(edge->val.dest);
-    memset(destination + i * edgeSize, edge->val.src, sizeof(edge->val.src));
-    memset(destination + i * edgeSize + sizeof(edge->val.src), edge->val.dest, sizeof(edge->val.dest));
+    memcpy(destination + i * edgeSize, (byte *) &edge->val.src, sizeof(edge->val.src));
+    memcpy(destination + i * edgeSize + sizeof(edge->val.src), (byte *) &edge->val.dest, sizeof(edge->val.dest));
   }
 
   return messageSize;

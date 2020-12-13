@@ -35,12 +35,13 @@ SIGNAL(TIMER0_COMPA_vect)
 
 void loop()
 {
-  for (int i = 0; i < 0x100; i++) {
+  const char *message = "  Hello World!  ";
+  for (int i = 0; i < strlen(message) - 1; i++) {
     char buf[3] = {0};
     sprintf(buf, "%02x", i);
     Serial.println(buf);
 
-    tileValue.setChars(buf);
+    tileValue.setChars(message + i);
 
     delay(500);
   }

@@ -3,7 +3,7 @@
 class SegmentDisplay
 {
   private:
-    const static int digitSwitchDelay = 10;
+    const static int digitSwitchDelay = 5;
 
     const int latchPin;
     const int clockPin;

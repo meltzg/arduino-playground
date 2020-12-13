@@ -1,14 +1,26 @@
 #import "components.h"
 
-SegmentDisplay tileValue(2,3,4,5,6);
+#define SEGMENT_LATCH 2
+#define SEGMENT_CLOCK 3
+#define SEGMENT_DATA 4
+#define SEGMENT_LEFT 5
+#define SEGMENT_RIGHT 6
+
+SegmentDisplay tileValue(
+  SEGMENT_LATCH,
+  SEGMENT_CLOCK,
+  SEGMENT_DATA,
+  SEGMENT_LEFT,
+  SEGMENT_RIGHT
+);
 
 void setup()
 {
-  pinMode(2, OUTPUT);
-  pinMode(3, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
-  pinMode(6, OUTPUT);
+  pinMode(SEGMENT_LATCH, OUTPUT);
+  pinMode(SEGMENT_CLOCK, OUTPUT);
+  pinMode(SEGMENT_DATA, OUTPUT);
+  pinMode(SEGMENT_LEFT, OUTPUT);
+  pinMode(SEGMENT_RIGHT, OUTPUT);
   Serial.begin(9600);
 
   OCR0A = 0xAF;
@@ -29,9 +41,7 @@ void loop()
     Serial.println(buf);
 
     tileValue.setChars(buf);
-    
+
     delay(500);
   }
 }
-
-// This method sends bits to the shift register:

@@ -1,3 +1,6 @@
+#ifndef _STRUCTURES_H_
+#define _STRUCTURES_H_
+
 template <typename T> struct LinkedNode {
   T val;
   LinkedNode *next;
@@ -85,3 +88,5 @@ template <typename T> struct GraphEdge {
     return (src == rhs.src && dest == rhs.dest) || (src == rhs.dest && dest == rhs.src);
   }
 };
+
+#endif // _STRUCTURES_H_

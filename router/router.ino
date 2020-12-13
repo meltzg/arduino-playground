@@ -1,13 +1,7 @@
 #include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
 #include "structures.h"
-
-#define PING_BYTE byte(0xAA)
-#define ACK_BYTE byte(0xAB)
-#define START_CODE byte(0xAC)
-#define READ_DELAY 50
-#define PING_DELAY 1
-#define LISTEN_WAIT 2
+#include "messaging.h"
 
 // Hardware serial has a special case address
 #define PORT_H 0xffff
@@ -16,8 +10,8 @@
 #define GET_ID 0x01
 #define UPDATE_NEIGHBORS 0x02
 #define GET_NEIGHBORS 0x04
-#define GET_TOPOLOGY 0x08
-#define UPDATE_TOPOLOGY 0x10
+#define GET_ROUTING 0x08
+#define UPDATE_ROUTING 0x10
 #define DISCOVER_TOPOLOGY 0x20
 
 #define STATUS_IDX 0
@@ -29,38 +23,13 @@
 #define SENDING 0xC8991F
 #define FAIL 0x00FF00
 
-
-typedef uint8_t StartCode_t;
-typedef uint16_t NodeId_t;
-typedef uint16_t MessageSize_t;
-typedef uint8_t SysCommand_t;
-
 /*
-   Protocol
-   --------
+   Each node has a SoftwareSerial connection to its neighbor and another to the
+   1 /\ 2
+   0 | | 3
+   5 \/ 4
 
-   0                   1                   2                   3
-   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |   Start Code  |         Source Address        |Destination Ad.|
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |               |         Payload Length        | System Command|
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-   Start Code:  8 bits
-     Used to indicate start of message
-
-   Source Address:  16 bits
-     The source address
-
-   Destination Address: 16 bits
-     The destination address
-
-   Payload Length: 16 bits
-     Size of the apyload after the header in bytes
-
-   System Command: 8 bits
-     Specifies network commands to perform
+   A 7th SoftwareSerial represents the actual destination on the node
 
    System Commands
    ---------------
@@ -74,24 +43,16 @@ typedef uint8_t SysCommand_t;
    Get Neighbors: 0x04
      Retrieve the neighbors of the Source address
 
-   Update Network Topology: 0x08
-     The payload contains updated network topology to use for routing
+   Get Routing Table: 0x08
+     Return the routing table of the node
 
-   Get Network Topology: 0x10
-     Return the node's network topology
+   Update Routing Table: 0x10
+     The payload contains all known edges in the network to be used to update routing table
 
    Discover: 0x20
      Discover network topology, create and distribute routing tables
 */
 
-/*
-   Each node has a SoftwareSerial connection to its neighbor and another to the
-   1 /\ 2
-   0 | | 3
-   5 \/ 4
-
-   The hardware port reprents the actual destination
-*/
 #if defined(__AVR_ATmega328P__)
 #define STATUS_LED A2
 SoftwareSerial PORT_0(2, 3);
@@ -100,6 +61,7 @@ SoftwareSerial PORT_2(6, 7);
 SoftwareSerial PORT_3(8, 9);
 SoftwareSerial PORT_4(10, 11);
 SoftwareSerial PORT_5(12, 13);
+SoftwareSerial PORT_A(14, 15);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 #define STATUS_LED A0
 SoftwareSerial PORT_0(10, 11);
@@ -108,9 +70,11 @@ SoftwareSerial PORT_2(50, 51);
 SoftwareSerial PORT_3(52, 53);
 SoftwareSerial PORT_4(62, 63);
 SoftwareSerial PORT_5(65, 66);
+SoftwareSerial PORT_A(67, 68);
 #endif
 
 SoftwareSerial *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
+SoftwareSerial *ALL_PORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_A};
 NodeId_t neighborIds[6] = { EMPTY };
 
 NodeId_t NODE_ID;
@@ -152,8 +116,8 @@ void loop() {
     body = NULL;
   }
 
-  for (int i = 0; i < 6; i++) {
-    SoftwareSerial *port = NEIGHBORS[i];
+  for (int i = 0; i < 7; i++) {
+    SoftwareSerial *port = ALL_PORTS[i];
     port->listen();
     if (hasIncoming(port)) {
       Serial.println("recieving message");
@@ -165,48 +129,6 @@ void loop() {
       body = NULL;
     }
   }
-}
-
-bool ackWait(Stream *port, int maxRetries = -1) {
-  bool connected = false;
-  char ackBuff[1];
-  for (int i = 0; !connected && (i < maxRetries || maxRetries < 0); i++) {
-    Serial.println("pinging");
-    port->write(PING_BYTE);
-    byte pong = port->read();
-    Serial.println(pong, HEX);
-    if (pong == ACK_BYTE) {
-      Serial.println("Connected!");
-      return true;
-    }
-    delay(PING_DELAY);
-  }
-  Serial.println("Failed!");
-  return false;
-}
-
-bool hasIncoming(Stream *port) {
-  delay(LISTEN_WAIT);
-  byte resp = port->read();
-  if (resp == PING_BYTE) {
-    Serial.println("incoming data");
-    port->write(ACK_BYTE);
-    return true;
-  }
-  return false;
-}
-
-void readMessage(Stream *srcPort, NodeId_t &source, NodeId_t &dest, MessageSize_t &payloadSize, SysCommand_t &sysCommand, byte *&body) {
-  byte startByte;
-  do {
-    srcPort->readBytes(&startByte, sizeof(StartCode_t));
-  } while (startByte != START_CODE);
-  srcPort->readBytes((byte *) &source, sizeof(NodeId_t));
-  srcPort->readBytes((byte *) &dest, sizeof(NodeId_t));
-  srcPort->readBytes((byte *) &payloadSize, sizeof(MessageSize_t));
-  srcPort->readBytes((byte *) &sysCommand, sizeof(SysCommand_t));
-  body = new byte[payloadSize];
-  srcPort->readBytes(body, payloadSize);
 }
 
 void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
@@ -231,14 +153,14 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
     resetNeigbors();
     routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
   }
-  if (sysCommand & GET_TOPOLOGY) {
+  if (sysCommand & GET_ROUTING) {
     sprintf(buff, "Network Topology requested by %hu", source);
     Serial.println(buff);
     byte *topology = NULL;
     const MessageSize_t topologySize = serializeTopology(topology);
-    routeMessage(srcPort, dest, source, topologySize, UPDATE_TOPOLOGY, topology);
+    routeMessage(srcPort, dest, source, topologySize, UPDATE_ROUTING, topology);
   }
-  if (sysCommand & UPDATE_TOPOLOGY) {
+  if (sysCommand & UPDATE_ROUTING) {
     sprintf(buff, "Network Topology update from %hu", source);
     Serial.println(buff);
   }
@@ -256,24 +178,6 @@ void routeMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t
   if (dest == PORT_H) {
     writeMessage(&Serial, source, PORT_H, payloadSize, sysCommand, message);
     return;
-  }
-}
-
-void writeMessage(Stream *destPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
-  destPort->write(START_CODE);
-  destPort->write((char *) &source, sizeof(source));
-  destPort->write((char *) &dest, sizeof(dest));
-  destPort->write((char *) &payloadSize, sizeof(payloadSize));
-  destPort->write((char *) &sysCommand, sizeof(sysCommand));
-  destPort->write(message, payloadSize);
-}
-
-int strcicmp(char const *a, char const *b)
-{
-  for (;; a++, b++) {
-    int d = tolower((unsigned char) * a) - tolower((unsigned char) * b);
-    if (d != 0 || !*a)
-      return d;
   }
 }
 
@@ -348,20 +252,18 @@ void distributeTopology() {
 
   Serial.println("DISTRIBUTE TOPO");
 
-  for (LinkedNode<NodeId_t> *i = discoverVisited.front; i != NULL; i = i->next) {
-    Serial.println(i->val, HEX);
-    if (i->val == NODE_ID) {
-      continue;
-    }
-    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_TOPOLOGY, message);
+  Set<NodeId_t> allNodes;
+  for (LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front; edge != NULL; edge = edge->next) {
+    allNodes.pushBack(edge->val.src);
+    allNodes.pushBack(edge->val.dest);
   }
 
-  for (LinkedNode<NodeId_t> *i = discoveryQueue.front; i != NULL; i = i->next) {
+  for (LinkedNode<NodeId_t> *i = allNodes.front; i != NULL; i = i->next) {
     Serial.println(i->val, HEX);
     if (i->val == NODE_ID) {
       continue;
     }
-    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_TOPOLOGY, message);
+    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_ROUTING, message);
   }
 
   Serial.println("DISTRIBUTE TOPO DONE");
@@ -383,6 +285,15 @@ MessageSize_t serializeTopology(byte *&destination) {
   }
 
   return messageSize;
+}
+
+int strcicmp(char const *a, char const *b)
+{
+  for (;; a++, b++) {
+    int d = tolower((unsigned char) * a) - tolower((unsigned char) * b);
+    if (d != 0 || !*a)
+      return d;
+  }
 }
 
 NodeId_t getNodeId() {

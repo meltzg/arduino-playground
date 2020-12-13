@@ -104,7 +104,7 @@ template <typename K, typename V> struct Map {
     values.pushBack(Pair<K, V>(key, value));
   }
 
-  V get(K key) {
+  V& get(K key) {
     for (auto iter = values.front; iter != NULL; iter = iter->next) {
       if (iter->val.left == key) {
         return iter->val.right;
@@ -127,23 +127,23 @@ template <typename K, typename V> struct Map {
   }
 };
 
-template <typename T> struct GraphEdge : public Pair<T, T> {
-  using Pair<T, T>::Pair;
-
-  bool operator==(const GraphEdge<T> &rhs) {
-    return (this->left == rhs.left && this->right == rhs.right) || (this->left == rhs.right && this->right == rhs.left);
-  }
-};
-
 template <typename T> struct Graph {
-  Set<GraphEdge<T>> edges;
+  Map<T, Set<T>> adj;
 
   void addEdge(T src, T dest) {
-    edges.pushBack(GraphEdge<T>(src, dest));
+    if (!adj.containsKey(src)) {
+      adj.put(src, Set<T>());
+    }
+    if (!adj.containsKey(dest)) {
+      adj.put(dest, Set<T>());
+    }
+
+    adj.get(src).pushBack(dest);
+    adj.get(dest).pushBack(src);
   }
 
   void purge() {
-    edges.purge();
+    adj.purge();
   }
 
   LinkedList<T> shortestPath(T src, T dest) {

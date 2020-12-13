@@ -2,8 +2,6 @@
 #define _STRUCTURES_H_
 
 #include <cstddef>
-#include <iostream>
-using namespace std;
 
 template <typename T> struct LinkedNode {
   T val;
@@ -103,14 +101,12 @@ template <typename K, typename V> struct Map {
         return;
       }
     }
-    cout << "adding " << key << " " << value << endl;
     values.pushBack(Pair<K, V>(key, value));
   }
 
   V get(K key) {
     for (auto iter = values.front; iter != NULL; iter = iter->next) {
       if (iter->val.left == key) {
-        cout << "found" << endl;
         return iter->val.right;
       }
     }
@@ -132,6 +128,8 @@ template <typename K, typename V> struct Map {
 };
 
 template <typename T> struct GraphEdge : public Pair<T, T> {
+  using Pair<T, T>::Pair;
+
   bool operator==(const GraphEdge<T> &rhs) {
     return (this->left == rhs.left && this->right == rhs.right) || (this->left == rhs.right && this->right == rhs.left);
   }

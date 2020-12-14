@@ -20,6 +20,12 @@ template <typename T> struct LinkedList {
   ~LinkedList() {
     purge();
   }
+  LinkedList(LinkedList<T> const &other) {
+    front = back = NULL;
+    for (auto iter = other.front; iter != NULL; iter = iter->next) {
+      pushBack(iter->val);
+    }
+  }
 
   virtual void pushBack(T val) {
     LinkedNode<T> *tmp = new LinkedNode<T>(val);
@@ -38,6 +44,9 @@ template <typename T> struct LinkedList {
     front = front->next;
     delete tmp;
     count--;
+    if (count == 0) {
+      back = NULL;
+    }
     return val;
   }
 
@@ -104,10 +113,10 @@ template <typename K, typename V> struct Map {
     values.pushBack(Pair<K, V>(key, value));
   }
 
-  V& get(K key) {
+  V *get(K key) {
     for (auto iter = values.front; iter != NULL; iter = iter->next) {
       if (iter->val.left == key) {
-        return iter->val.right;
+        return &(iter->val.right);
       }
     }
   }
@@ -138,16 +147,65 @@ template <typename T> struct Graph {
       adj.put(dest, Set<T>());
     }
 
-    adj.get(src).pushBack(dest);
-    adj.get(dest).pushBack(src);
+    adj.get(src)->pushBack(dest);
+    adj.get(dest)->pushBack(src);
   }
 
   void purge() {
     adj.purge();
   }
 
-  LinkedList<T> shortestPath(T src, T dest) {
+  bool bfs(T src, T dest, Map<T, T> &pred, Map<T, int> &dist) {
+    Set<T> visited;
+    LinkedList<T> queue;
 
+    visited.pushBack(src);
+    dist.put(src, 0);
+    queue.pushBack(src);
+
+    while (!queue.isEmpty()) {
+      T node = queue.popFront();
+      for (auto iter = adj.get(node)->front; iter != NULL; iter = iter->next) {
+        if (!visited.contains(iter->val)) {
+          visited.pushBack(iter->val);
+          dist.put(iter->val, *(dist.get(node)) + 1);
+          pred.put(iter->val, node);
+          queue.pushBack(iter->val);
+
+          if (iter->val == dest) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+};
+
+template <typename T> struct GraphIterator {
+  Graph<T> g;
+  Set<T> visited;
+  LinkedList<T> queue;
+
+  GraphIterator(Graph<T> g, T start) : g(g) {
+    queue.pushBack(start);
+    visited.pushBack(start);
+  }
+
+  bool hasNext() {
+    return !queue.isEmpty();
+  }
+
+  T next() {
+    T next = queue.popFront();
+    for (auto iter = g.adj.get(next)->front; iter != NULL; iter = iter->next) {
+      if (!visited.contains(iter->val)) {
+          visited.pushBack(iter->val);
+          queue.pushBack(iter->val);
+      }
+    }
+    return next;
   }
 };
 

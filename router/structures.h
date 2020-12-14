@@ -38,6 +38,17 @@ template <typename T> struct LinkedList {
     count++;
   }
 
+  virtual void pushFront(T val) {
+    LinkedNode<T> *tmp = new LinkedNode<T>(val);
+    if (isEmpty()) {
+      front = back = tmp;
+    } else {
+      tmp->next = front;
+      front = tmp;
+    }
+    count++;
+  }
+
   T popFront() {
     LinkedNode<T> *tmp = front;
     T val = tmp->val;
@@ -81,12 +92,19 @@ template <typename T> struct LinkedList {
 };
 
 template <typename T> struct Set : public LinkedList<T> {
-  virtual void pushBack(T val) {
+  void pushBack(T val) {
     if (this->contains(val)) {
       return;
     }
     LinkedList<T>::pushBack(val);
-  }  
+  }
+
+  void pushFront(T val) {
+    if (this->contains(val)) {
+      return;
+    }
+    LinkedList<T>::pushFront(val);
+  }
 };
 
 template <typename K, typename V> struct Pair {
@@ -180,6 +198,20 @@ template <typename T> struct Graph {
     }
 
     return false;
+  }
+
+  void getShortestPath(T src, T dest, LinkedList<T> &path) {
+    Map<T, T> pred;
+    Map<T, int> dist;
+
+    if (bfs(src, dest, pred, dist)) {
+      T crawl = dest;
+      path.pushFront(crawl);
+      while (pred.containsKey(crawl)) {
+        path.pushFront(*(pred.get(crawl)));
+        crawl = *(pred.get(crawl));
+      }
+    }
   }
 };
 

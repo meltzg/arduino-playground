@@ -29,4 +29,11 @@ int main(int argc, char **argv) {
   while(giter.hasNext()) {
     cout << "node: " << giter.next() << endl;
   }
+
+  cout << "shortest path 0, 7" << endl;
+  LinkedList<int> path;
+  g.getShortestPath(0, 7, path);
+  while (!path.isEmpty()) {
+    cout << path.popFront() << endl;
+  }
 }

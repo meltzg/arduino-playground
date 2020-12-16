@@ -1,8 +1,6 @@
 #ifndef _STRUCTURES_H_
 #define _STRUCTURES_H_
 
-#include <cstddef>
-
 template <typename T> struct LinkedNode {
   T val;
   LinkedNode *next;

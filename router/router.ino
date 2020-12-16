@@ -81,7 +81,8 @@ NodeId_t NODE_ID;
 
 LinkedList<NodeId_t> discoveryQueue;
 LinkedList<NodeId_t> discoverVisited;
-Set<GraphEdge<NodeId_t>> edges;
+Graph<NodeId_t> topology;
+int outstandingNeighborRequests = 0;
 bool discoveryDone = false;
 
 Adafruit_NeoPixel pixels(1, STATUS_LED, NEO_GRB + NEO_KHZ800);
@@ -156,9 +157,9 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
   if (sysCommand & GET_ROUTING) {
     sprintf(buff, "Network Topology requested by %hu", source);
     Serial.println(buff);
-    byte *topology = NULL;
-    const MessageSize_t topologySize = serializeTopology(topology);
-    routeMessage(srcPort, dest, source, topologySize, UPDATE_ROUTING, topology);
+//    byte *serialized = NULL;
+//    const MessageSize_t topologySize = serializeRoutingTable(routingTable, serialized);
+//    routeMessage(srcPort, dest, source, topologySize, UPDATE_ROUTING, topology);
   }
   if (sysCommand & UPDATE_ROUTING) {
     sprintf(buff, "Network Topology update from %hu", source);
@@ -203,11 +204,11 @@ void startDiscovery() {
   Serial.println("Purge visited");
   discoverVisited.purge();
   Serial.println("Purge edges");
-  edges.purge();
+  topology.purge();
   discoveryDone = false;
 
   char buff[100] = { 0 };
-  sprintf(buff, "collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, edges.count);
+  sprintf(buff, "collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, topology.adj.values.count);
   Serial.println(buff);
 
   resetNeigbors();
@@ -226,11 +227,11 @@ void updateNetwork(const NodeId_t source, const NodeId_t *dest) {
       if (!discoverVisited.contains(dest[i])) {
         discoveryQueue.pushBack(dest[i]);
       }
-      edges.pushBack(GraphEdge<NodeId_t>(source, dest[i]));
+      topology.addEdge(source, dest[i]);
     }
   }
 
-  sprintf(buff, "UPDATE collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, edges.count);
+  sprintf(buff, "UPDATE collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, topology.adj.values.count);
   Serial.println(buff);
 
   distributeTopology();
@@ -248,40 +249,40 @@ void updateNetwork(const NodeId_t source, const NodeId_t *dest) {
 
 void distributeTopology() {
   byte *message = NULL;
-  const MessageSize_t messageSize = serializeTopology(message);
+//  const MessageSize_t messageSize = serializeTopology(message);
 
   Serial.println("DISTRIBUTE TOPO");
 
-  Set<NodeId_t> allNodes;
-  for (LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front; edge != NULL; edge = edge->next) {
-    allNodes.pushBack(edge->val.src);
-    allNodes.pushBack(edge->val.dest);
-  }
-
-  for (LinkedNode<NodeId_t> *i = allNodes.front; i != NULL; i = i->next) {
-    Serial.println(i->val, HEX);
-    if (i->val == NODE_ID) {
-      continue;
-    }
-    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_ROUTING, message);
-  }
+//  Set<NodeId_t> allNodes;
+//  for (LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front; edge != NULL; edge = edge->next) {
+//    allNodes.pushBack(edge->val.src);
+//    allNodes.pushBack(edge->val.dest);
+//  }
+//
+//  for (LinkedNode<NodeId_t> *i = allNodes.front; i != NULL; i = i->next) {
+//    Serial.println(i->val, HEX);
+//    if (i->val == NODE_ID) {
+//      continue;
+//    }
+//    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_ROUTING, message);
+//  }
 
   Serial.println("DISTRIBUTE TOPO DONE");
 
   delete[] message;
 }
 
-MessageSize_t serializeTopology(byte *&destination) {
+MessageSize_t serializeRoutingTable(const Map<NodeId_t, NodeId_t> &table, byte *&destination) {
   char buff[100] = { 0 };
-  const MessageSize_t messageSize = edges.count * sizeof(NodeId_t) * 2;
+  const MessageSize_t messageSize = table.values.count * sizeof(NodeId_t) * 2;
   destination = new byte[messageSize] { EMPTY };
-  LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front;
-  for (int i = 0; edge != NULL; i++, edge = edge->next) {
-    sprintf(buff, "%#5hX <-> %#5hX", edge->val.src, edge->val.dest);
+  LinkedNode<Pair<NodeId_t, NodeId_t>> *pair = table.values.front;
+  for (int i = 0; pair != NULL; i++, pair = pair->next) {
+    sprintf(buff, "%#5hX <-> %#5hX", pair->val.left, pair->val.right);
     Serial.println(buff);
-    int edgeSize = sizeof(edge->val.src) + sizeof(edge->val.dest);
-    memcpy(destination + i * edgeSize, (byte *) &edge->val.src, sizeof(edge->val.src));
-    memcpy(destination + i * edgeSize + sizeof(edge->val.src), (byte *) &edge->val.dest, sizeof(edge->val.dest));
+    int pairSize = sizeof(pair->val.left) + sizeof(pair->val.right);
+    memcpy(destination + i * pairSize, (byte *) &pair->val.left, sizeof(pair->val.left));
+    memcpy(destination + i * pairSize + sizeof(pair->val.left), (byte *) &pair->val.right, sizeof(pair->val.right));
   }
 
   return messageSize;

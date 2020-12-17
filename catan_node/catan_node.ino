@@ -5,6 +5,8 @@
 #define SEGMENT_DATA 4
 #define SEGMENT_LEFT 5
 #define SEGMENT_RIGHT 6
+#define LED_ARRAY 9
+
 
 SegmentDisplay tileValue(
   SEGMENT_LATCH,
@@ -13,6 +15,8 @@ SegmentDisplay tileValue(
   SEGMENT_LEFT,
   SEGMENT_RIGHT
 );
+
+LEDStatusDisplay tileStateDisplay(LED_ARRAY);
 
 void setup()
 {
@@ -31,6 +35,7 @@ SIGNAL(TIMER0_COMPA_vect)
 {
   unsigned long currentMillis = millis();
   tileValue.render(currentMillis);
+  tileStateDisplay.render(currentMillis);
 }
 
 void loop()

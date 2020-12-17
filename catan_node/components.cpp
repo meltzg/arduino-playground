@@ -1,6 +1,9 @@
 #import <Arduino.h>
 #import "components.h"
 
+const __int24 RAINBOW[6] = { RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE };
+
+
 const uint16_t getCharacter(char character)
 {
   switch (character)
@@ -233,5 +236,23 @@ void SegmentDisplay::render(unsigned long currentMillis) {
       registerWrite(getCharacter(chars[1]));
       digitalWrite(rightCommonPin, LOW);
     }
+  }
+}
+
+LEDStatusDisplay::LEDStatusDisplay(int dataPin) : dataPin(dataPin) {
+  pixels = Adafruit_NeoPixel(13, dataPin, NEO_GRB + NEO_KHZ800);
+
+  pixels.begin();
+}
+
+void LEDStatusDisplay::render(unsigned long currentMillis) {
+  if (currentMillis - previousMillis >= updateDelay) {
+    previousMillis = currentMillis;
+    shiftCounter++;
+    pixels.clear();
+    for (int i = 0; i < 13; i++) {
+      pixels.setPixelColor((i + shiftCounter) % 13, RAINBOW[i % 6]);
+    }
+    pixels.show();
   }
 }

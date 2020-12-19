@@ -26,6 +26,8 @@
 #define SEGMENT_RIGHT 6
 
 #define LED_ARRAY 9
+#define BRIGHTNESS_STEP 32
+#define MIN_BRIGHTNESS 5
 
 #define BTN_LOAD A0
 #define BTN_CLK_ENABLE A1
@@ -55,6 +57,7 @@ const byte SETTLEMENT_LED_POS[][2] = { {1, 2}, {4, 5}, {7, 8} };
 const byte SETTLEMENT_BTN_POS[] = { 1, 3, 5 };
 #define LAND_LED_POS 12
 #define LAND_BTN_POS 9
+#define BRIGHTNESS_BTN 10
 
 
 SegmentDisplay tileValue(
@@ -75,6 +78,7 @@ ButtonArray16 interface(
 );
 
 __int24 borderColors[NUM_LEDS] = { BLACK };
+byte brightness = 64;
 
 byte roadOwners[NUM_ROADS] = { 0 };
 byte settlementOwners[NUM_SETTLEMENTS] = { 0 };
@@ -161,7 +165,11 @@ void loop()
         tileValue.setChars("Rb");
       }
     }
+
+    if (((previousState >> BRIGHTNESS_BTN) & 1) && ((state >> BRIGHTNESS_BTN) & 1) == 0) {
+      brightness += BRIGHTNESS_STEP;
+    }
   }
-  tileStateDisplay.setState(borderColors, 50);
+  tileStateDisplay.setState(borderColors, max(brightness, MIN_BRIGHTNESS));
   previousState = state;
 }

@@ -43,6 +43,7 @@
 
 #define NUM_ROADS 6
 #define NUM_SETTLEMENTS 3
+#define UNOWNED -1
 
 #define DESERT 0xB4D28C
 #define BRICK 0x41CB54
@@ -82,8 +83,8 @@ ButtonArray16 interface(
 __int24 borderColors[NUM_LEDS] = { BLACK };
 byte brightness = 64;
 
-byte roadOwners[NUM_ROADS] = { 0 };
-byte settlementOwners[NUM_SETTLEMENTS] = { 0 };
+short roadOwners[NUM_ROADS];
+short settlementOwners[NUM_SETTLEMENTS];
 bool isCity[NUM_SETTLEMENTS] = { false };
 __int24 landType = WOOD;
 byte rollValue = 0;
@@ -98,6 +99,13 @@ void setup()
 {
   Serial.begin(9600);
   randomSeed(analogRead(SEED_PIN));
+
+  for (int i = 0; i < NUM_ROADS; i++) {
+    roadOwners[i] = UNOWNED;
+  }
+  for (int i = 0; i < NUM_SETTLEMENTS; i++) {
+    settlementOwners[i] = UNOWNED;
+  }
 
   rollValue = 7;
   while (rollValue == 7) {
@@ -152,11 +160,17 @@ void updateRoads(uint16_t newBtnState) {
     byte btnPos = ROAD_BTN_POS[i];
 
     if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0) {
-      if (borderColors[ledPos] == BLACK) {
-        borderColors[ledPos] = PLAYER_COLORS[currentPlayer];
-      } else if (borderColors[ledPos] == PLAYER_COLORS[currentPlayer]) {
-        borderColors[ledPos] = BLACK;
+      if (roadOwners[i] == UNOWNED) {
+        roadOwners[i] = currentPlayer;
+      } else if (roadOwners[i] == currentPlayer) {
+        roadOwners[i] = UNOWNED;
       }
+    }
+
+    if (roadOwners[i] == UNOWNED) {
+      borderColors[ledPos] = BLACK;
+    } else {
+      borderColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
     }
   }
 }
@@ -167,19 +181,31 @@ void updateSettlements(uint16_t newBtnState) {
     byte btnPos = SETTLEMENT_BTN_POS[i];
 
     if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0) {
-      if (borderColors[ledPos[0]] == BLACK) {
-        borderColors[ledPos[0]] = PLAYER_COLORS[currentPlayer];
-      } else if (borderColors[ledPos[0]] == PLAYER_COLORS[currentPlayer]) {
+      if (settlementOwners[i] == UNOWNED) {
+        settlementOwners[i] = currentPlayer;
+      } else if (settlementOwners[i] == currentPlayer) {
         if  (!isCity[i]) {
-          borderColors[ledPos[1]] = PLAYER_COLORS[currentPlayer];
           isCity[i] = true;
         } else {
-          borderColors[ledPos[0]] = BLACK;
-          borderColors[ledPos[1]] = BLACK;
           isCity[i] = false;
+          settlementOwners[i] = UNOWNED;
         }
       }
     }
+
+    if (settlementOwners[i] == UNOWNED) {
+      borderColors[ledPos[0]] = BLACK;
+      borderColors[ledPos[1]] = BLACK;
+    } else {
+      borderColors[ledPos[0]] = PLAYER_COLORS[currentPlayer];
+      if (isCity[i]) {
+        borderColors[ledPos[1]] = PLAYER_COLORS[currentPlayer];
+      }
+    }
+
+    char buf[50] = {0};
+    sprintf(buf, "Settlement %d owner: %d", i, settlementOwners[i]);
+    Serial.println(buf);
   }
 }
 

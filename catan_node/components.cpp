@@ -201,6 +201,14 @@ const uint16_t getCharacter(char character)
   }
 }
 
+SegmentDisplay::SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin) : latchPin(latchPin), clockPin(clockPin), dataPin(dataPin), leftCommonPin(leftCommonPin), rightCommonPin(rightCommonPin) {
+  pinMode(latchPin, OUTPUT);
+  pinMode(clockPin, OUTPUT);
+  pinMode(dataPin, OUTPUT);
+  pinMode(leftCommonPin, OUTPUT);
+  pinMode(rightCommonPin, OUTPUT);
+}
+
 void SegmentDisplay::registerWrite(uint16_t toWrite)
 {
   // the bits you want to send
@@ -221,7 +229,7 @@ void SegmentDisplay::setChars(char *chars) {
 }
 
 void SegmentDisplay::render(unsigned long currentMillis) {
-  if (currentMillis - previousMillis >= digitSwitchDelay) {
+  if (currentMillis - previousMillis >= DIGIT_SWITCH_DELAY) {
     showLeft = !showLeft;
     previousMillis = currentMillis;
 
@@ -239,8 +247,8 @@ void SegmentDisplay::render(unsigned long currentMillis) {
   }
 }
 
-LEDStatusDisplay::LEDStatusDisplay(int dataPin) : dataPin(dataPin) {
-  pixels = Adafruit_NeoPixel(13, dataPin, NEO_GRB + NEO_KHZ800);
+LEDStatusDisplay::LEDStatusDisplay(int dataPin, int numLeds) : dataPin(dataPin), numLeds(numLeds) {
+  pixels = Adafruit_NeoPixel(numLeds, dataPin, NEO_GRB + NEO_KHZ800);
 
   pixels.begin();
 }
@@ -254,5 +262,42 @@ void LEDStatusDisplay::render(unsigned long currentMillis) {
       pixels.setPixelColor((i + shiftCounter) % 13, RAINBOW[i % 6]);
     }
     pixels.show();
+  }
+}
+
+ButtonArray16::ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin) : loadPin(loadPin), clockEnablePin(clockEnablePin), dataPin(dataPin), clockPin(clockPin) {
+  pinMode(loadPin, OUTPUT);
+  pinMode(clockEnablePin, OUTPUT);
+  pinMode(clockPin, OUTPUT);
+  pinMode(dataPin, INPUT);
+
+  digitalWrite(clockPin, LOW);
+  digitalWrite(loadPin, HIGH);
+}
+
+void ButtonArray16::render(unsigned long currentMillis) {
+  long bitVal;
+  this->state = 0;
+
+  // Trigger a parallel Load to latch the state of the data lines,
+  digitalWrite(clockEnablePin, HIGH);
+  digitalWrite(loadPin, LOW);
+  delayMicroseconds(PULSE_WIDTH_USEC);
+  digitalWrite(loadPin, HIGH);
+  digitalWrite(clockEnablePin, LOW);
+
+  for (int i = 0; i < 16; i++)
+  {
+    bitVal = digitalRead(dataPin);
+
+    /* Set the corresponding bit in bytesVal.
+    */
+    this->state |= (bitVal << ((16 - 1) - i));
+
+    /* Pulse the Clock (rising edge shifts the next bit).
+    */
+    digitalWrite(clockPin, HIGH);
+    delayMicroseconds(PULSE_WIDTH_USEC);
+    digitalWrite(clockPin, LOW);
   }
 }

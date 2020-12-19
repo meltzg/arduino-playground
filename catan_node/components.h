@@ -3,6 +3,8 @@
 
 #include <Adafruit_NeoPixel.h>
 
+#define DIGIT_SWITCH_DELAY 5
+#define PULSE_WIDTH_USEC 5
 
 #define RED 0x00FF00
 #define ORANGE 0xA5FF00
@@ -22,8 +24,6 @@ class Component {
 class SegmentDisplay : public Component
 {
   private:
-    const static int digitSwitchDelay = 5;
-
     const int latchPin;
     const int clockPin;
     const int dataPin;
@@ -36,7 +36,7 @@ class SegmentDisplay : public Component
     void registerWrite(uint16_t toWrite);
 
   public:
-    SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin) : latchPin(latchPin), clockPin(clockPin), dataPin(dataPin), leftCommonPin(leftCommonPin), rightCommonPin(rightCommonPin) {}
+    SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin);
 
     void setChars(char *chars);
     void render(unsigned long currentMillis);
@@ -48,13 +48,31 @@ class LEDStatusDisplay : public Component
     const static int updateDelay = 100;
 
     const int dataPin;
+    const int numLeds;
     byte shiftCounter = 0;
     Adafruit_NeoPixel pixels;
 
   public:
-    LEDStatusDisplay(int dataPin);
-  
+    LEDStatusDisplay(int dataPin, int numLeds);
+
     void render(unsigned long currentMillis);
+};
+
+class ButtonArray16 : Component {
+  private:
+    const int loadPin;
+    const int clockEnablePin;
+    const int dataPin;
+    const int clockPin;
+
+    uint16_t state = 0;
+    uint16_t onDuration[16] = { 0 };
+
+  public:
+    ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin);
+
+    void render(unsigned long currentMillis);
+    uint16_t getState() { return state; }
 };
 
 #endif // _COMPONENTS_H_

@@ -1,11 +1,33 @@
 #import "components.h"
 
+/*
+   Edges
+   1 /\ 2
+   0 | | 3
+   5 \/ 4
+
+   Settlements
+      1
+   0 /\ 2
+     | |
+   5 \/ 3
+     4
+*/
+
 #define SEGMENT_LATCH 2
 #define SEGMENT_CLOCK 3
 #define SEGMENT_DATA 4
 #define SEGMENT_LEFT 5
 #define SEGMENT_RIGHT 6
+
 #define LED_ARRAY 9
+
+#define BTN_LOAD A0
+#define BTN_CLK_ENABLE A1
+#define BTN_DATA A2
+#define BTN_CLOCK A3
+
+#define NUM_LEDS 13
 
 
 SegmentDisplay tileValue(
@@ -16,15 +38,17 @@ SegmentDisplay tileValue(
   SEGMENT_RIGHT
 );
 
-LEDStatusDisplay tileStateDisplay(LED_ARRAY);
+LEDStatusDisplay tileStateDisplay(LED_ARRAY, NUM_LEDS);
+
+ButtonArray16 interface(
+  BTN_LOAD,
+  BTN_CLK_ENABLE,
+  BTN_DATA,
+  BTN_CLOCK
+);
 
 void setup()
 {
-  pinMode(SEGMENT_LATCH, OUTPUT);
-  pinMode(SEGMENT_CLOCK, OUTPUT);
-  pinMode(SEGMENT_DATA, OUTPUT);
-  pinMode(SEGMENT_LEFT, OUTPUT);
-  pinMode(SEGMENT_RIGHT, OUTPUT);
   Serial.begin(9600);
 
   OCR0A = 0xAF;
@@ -36,18 +60,14 @@ SIGNAL(TIMER0_COMPA_vect)
   unsigned long currentMillis = millis();
   tileValue.render(currentMillis);
   tileStateDisplay.render(currentMillis);
+  interface.render(currentMillis);
 }
 
 void loop()
 {
-  const char *message = "  Hello World!  ";
-  for (int i = 0; i < strlen(message) - 1; i++) {
-    char buf[3] = {0};
-    sprintf(buf, "%02x", i);
-    Serial.println(buf);
+  char buf[3] = {0};
+  uint16_t state = interface.getState();
+  sprintf(buf, "%02x", state);
 
-    tileValue.setChars(message + i);
-
-    delay(500);
-  }
+  tileValue.setChars(buf);
 }

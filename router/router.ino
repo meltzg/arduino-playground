@@ -2,6 +2,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "structures.h"
 #include "messaging.h"
+#import "components.h"
 
 // Hardware serial has a special case address
 #define PORT_H 0xffff
@@ -22,6 +23,8 @@
 #define PROCESSING 0x0000FF
 #define SENDING 0xC8991F
 #define FAIL 0x00FF00
+
+#define DISCOVERY_DURATION 30 * 1000
 
 /*
    Each node has a SoftwareSerial connection to its neighbor and another to the
@@ -75,17 +78,15 @@ SoftwareSerial PORT_A(67, 68);
 
 SoftwareSerial *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
 SoftwareSerial *ALL_PORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_A};
-NodeId_t neighborIds[6] = { EMPTY };
+NodeId_t *neighbors[6] = { NULL };
 
 NodeId_t NODE_ID;
 
-LinkedList<NodeId_t> discoveryQueue;
-LinkedList<NodeId_t> discoverVisited;
 Graph<NodeId_t> topology;
-int outstandingNeighborRequests = 0;
-bool discoveryDone = false;
+bool discoveryDone = true;
 
-Adafruit_NeoPixel pixels(1, STATUS_LED, NEO_GRB + NEO_KHZ800);
+StatusLed statusLed(STATUS_LED);
+unsigned long previousMillis = 0;
 
 void setup() {
   NODE_ID = getNodeId();
@@ -99,8 +100,21 @@ void setup() {
   pinMode(STATUS_LED, OUTPUT);
 
   Serial.println("starting");
+  discoveryDone = false;
+  OCR0A = 0xAF;
+  TIMSK0 |= _BV(OCIE0A);
+}
 
-  setStatusLed(0xFF0000, 1000);
+SIGNAL(TIMER0_COMPA_vect)
+{
+  if (!discoveryDone) {
+    if (millis() - previousMillis > DISCOVERY_DURATION) {
+      discoveryDone = true;
+      statusLed.set(0x0000ff, BRIGHTNESS);
+    } else {
+      statusLed.set(WAITING, BRIGHTNESS);
+    }
+  }
 }
 
 void loop() {
@@ -157,18 +171,9 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
   if (sysCommand & GET_ROUTING) {
     sprintf(buff, "Network Topology requested by %hu", source);
     Serial.println(buff);
-//    byte *serialized = NULL;
-//    const MessageSize_t topologySize = serializeRoutingTable(routingTable, serialized);
-//    routeMessage(srcPort, dest, source, topologySize, UPDATE_ROUTING, topology);
-  }
-  if (sysCommand & UPDATE_ROUTING) {
-    sprintf(buff, "Network Topology update from %hu", source);
-    Serial.println(buff);
-  }
-  if (sysCommand & DISCOVER_TOPOLOGY) {
-    sprintf(buff, "Network Topology discovery triggered by %hu", source);
-    Serial.println(buff);
-    startDiscovery();
+    //    byte *serialized = NULL;
+    //    const MessageSize_t topologySize = serializeRoutingTable(routingTable, serialized);
+    //    routeMessage(srcPort, dest, source, topologySize, UPDATE_ROUTING, topology);
   }
 }
 
@@ -249,23 +254,23 @@ void updateNetwork(const NodeId_t source, const NodeId_t *dest) {
 
 void distributeTopology() {
   byte *message = NULL;
-//  const MessageSize_t messageSize = serializeTopology(message);
+  //  const MessageSize_t messageSize = serializeTopology(message);
 
   Serial.println("DISTRIBUTE TOPO");
 
-//  Set<NodeId_t> allNodes;
-//  for (LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front; edge != NULL; edge = edge->next) {
-//    allNodes.pushBack(edge->val.src);
-//    allNodes.pushBack(edge->val.dest);
-//  }
-//
-//  for (LinkedNode<NodeId_t> *i = allNodes.front; i != NULL; i = i->next) {
-//    Serial.println(i->val, HEX);
-//    if (i->val == NODE_ID) {
-//      continue;
-//    }
-//    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_ROUTING, message);
-//  }
+  //  Set<NodeId_t> allNodes;
+  //  for (LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front; edge != NULL; edge = edge->next) {
+  //    allNodes.pushBack(edge->val.src);
+  //    allNodes.pushBack(edge->val.dest);
+  //  }
+  //
+  //  for (LinkedNode<NodeId_t> *i = allNodes.front; i != NULL; i = i->next) {
+  //    Serial.println(i->val, HEX);
+  //    if (i->val == NODE_ID) {
+  //      continue;
+  //    }
+  //    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_ROUTING, message);
+  //  }
 
   Serial.println("DISTRIBUTE TOPO DONE");
 
@@ -357,15 +362,15 @@ NodeId_t getNodeId() {
   return nodeId;
 }
 
-void setStatusLed(__uint24 grb, int duration) {
-  pixels.clear();
-  pixels.setBrightness(BRIGHTNESS);
-  pixels.setPixelColor(STATUS_IDX, grb);
-  pixels.show();
-  if (duration > 0) {
-    delay(duration);
-    pixels.setBrightness(BRIGHTNESS);
-    pixels.setPixelColor(STATUS_IDX, 0x000000);
-    pixels.show();
-  }
-}
+//void setStatusLed(__uint24 grb, int duration) {
+//  pixels.clear();
+//  pixels.setBrightness(BRIGHTNESS);
+//  pixels.setPixelColor(STATUS_IDX, grb);
+//  pixels.show();
+//  if (duration > 0) {
+//    delay(duration);
+//    pixels.setBrightness(BRIGHTNESS);
+//    pixels.setPixelColor(STATUS_IDX, 0x000000);
+//    pixels.show();
+//  }
+//}

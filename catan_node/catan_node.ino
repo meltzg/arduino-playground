@@ -32,6 +32,8 @@
 #define BTN_DATA A2
 #define BTN_CLOCK A3
 
+#define SEED_PIN A5
+
 #define NUM_LEDS 13
 #define NUM_BUTTONS 10
 
@@ -73,6 +75,8 @@ byte roadOwners[NUM_ROADS] = { 0 };
 byte settlementOwners[NUM_SETTLEMENTS] = { 0 };
 bool isCity[NUM_SETTLEMENTS] = { false };
 __int24 landType = DESERT;
+byte rollValue = 0;
+bool hasRobber = false;
 
 byte currentPlayer = 0;
 uint16_t previousState = 0;
@@ -80,6 +84,15 @@ uint16_t previousState = 0;
 void setup()
 {
   Serial.begin(9600);
+  randomSeed(analogRead(SEED_PIN));
+
+  rollValue = 7;
+  while (rollValue == 7) {
+    rollValue = random(1, 7) + random(1, 7);
+  }
+  char buf[3] = {0};
+  sprintf(buf, "%02d", rollValue);
+  tileValue.setChars(buf);
 
   borderColors[LAND_LED_POS] = landType;
 
@@ -132,10 +145,18 @@ void loop()
         }
       }
     }
-  }
-  sprintf(buf, "%02x", state);
 
-  tileValue.setChars(buf);
+    if (((previousState >> LAND_BTN_POS) & 1) && ((state >> LAND_BTN_POS) & 1) == 0) {
+      if (hasRobber) {
+        hasRobber = false;
+        sprintf(buf, "%02d", rollValue);
+        tileValue.setChars(buf);
+      } else {
+        hasRobber = true;
+        tileValue.setChars("Rb");
+      }
+    }
+  }
   tileStateDisplay.setState(borderColors, 50);
   previousState = state;
 }

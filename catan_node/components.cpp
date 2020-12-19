@@ -307,5 +307,15 @@ void ButtonArray16::render(unsigned long currentMillis) {
       delayMicroseconds(PULSE_WIDTH_USEC);
       digitalWrite(clockPin, LOW);
     }
+
+    for (int i = 0; i < 16; i++) {
+      if ((this->state >> i) & 1) {
+        this->onDuration[i] += currentMillis - previousMillis;
+      } else {
+        this->onDuration[i] = 0;
+      }
+    }
+
+    previousMillis = currentMillis;
   }
 }

@@ -1,22 +1,22 @@
 #import "components.h"
 
 /*
-   Edges         LEDs
-   1 /\ 2        3 /\ 6
-   0 | | 3       0 | | 9
-   5 \/ 4        11 \/ 10
+   Edges         LEDs        Buttons
+   1 /\ 2        3 /\ 6     2 /\ 4
+   0 | | 3       0 | | 9    0 | | 6
+   5 \/ 4        11\/ 10    8 \/ 7
 
-   Settlements   LEDs
-      1              4,5
-   0 /\ 2        1,2 /\ 7,8
+   Settlements   LEDs        Buttons
+      1              4,5       3
+   0 /\ 2        1,2 /\ 7,8  1 /\ 5
      | |
    5 \/ 3
      4
 
-    Land
-     /\
-    |12|
-     \/
+    Land         LEDs        Buttons
+     /\           /\          /\
+    | X|         |12|        | 9|
+     \/           \/          \/
 */
 
 #define SEGMENT_LATCH 2
@@ -42,9 +42,12 @@
 
 const __int24 PLAYER_COLORS[] = { RED, ORANGE, GREEN, BLUE, PURPLE, WHITE };
 
-const byte ROAD_POSITIONS[] = {0, 3, 6, 9, 10, 11};
-const byte SETTLEMENT_POSITIONS[][2] = {{1, 2}, {4, 5}, {7, 8}};
-#define LAND_POSITION 12
+const byte ROAD_LED_POS[] = { 0, 3, 6, 9, 10, 11 };
+const byte ROAD_BTN_POS[] = { 0, 2, 4, 6, 7, 8 };
+const byte SETTLEMENT_LED_POS[][2] = { {1, 2}, {4, 5}, {7, 8} };
+const byte SETTLEMENT_BTN_POS[] = { 1, 3, 5 };
+#define LAND_LED_POS 12
+#define LAND_BTN_POS 9
 
 
 SegmentDisplay tileValue(
@@ -72,10 +75,13 @@ bool isCity[NUM_SETTLEMENTS] = { false };
 __int24 landType = DESERT;
 
 byte currentPlayer = 0;
+uint16_t previousState = 0;
 
 void setup()
 {
   Serial.begin(9600);
+
+  borderColors[LAND_LED_POS] = landType;
 
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
@@ -93,15 +99,43 @@ void loop()
 {
   char buf[3] = {0};
   uint16_t state = interface.getState();
-  for (int i = 0; i < NUM_BUTTONS; i++) {
-    if ((state >> i) & 1) {
-      borderColors[i] = PLAYER_COLORS[currentPlayer];
-    } else {
-      borderColors[i] = 0;
+  if (state != previousState) {
+    for (int i = 0; i < NUM_ROADS; i++) {
+      byte ledPos = ROAD_LED_POS[i];
+      byte btnPos = ROAD_BTN_POS[i];
+
+      if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0) {
+        if (borderColors[ledPos] == BLACK) {
+          borderColors[ledPos] = PLAYER_COLORS[currentPlayer];
+        } else if (borderColors[ledPos] == PLAYER_COLORS[currentPlayer]) {
+          borderColors[ledPos] = BLACK;
+        }
+      }
+    }
+
+    for (int i = 0; i < NUM_SETTLEMENTS; i++) {
+      byte *ledPos = SETTLEMENT_LED_POS[i];
+      byte btnPos = SETTLEMENT_BTN_POS[i];
+
+      if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0) {
+        if (borderColors[ledPos[0]] == BLACK) {
+          borderColors[ledPos[0]] = PLAYER_COLORS[currentPlayer];
+        } else if (borderColors[ledPos[0]] == PLAYER_COLORS[currentPlayer]) {
+          if  (!isCity[i]) {
+            borderColors[ledPos[1]] = PLAYER_COLORS[currentPlayer];
+            isCity[i] = true;
+          } else {
+            borderColors[ledPos[0]] = BLACK;
+            borderColors[ledPos[1]] = BLACK;
+            isCity[i] = false;
+          }
+        }
+      }
     }
   }
   sprintf(buf, "%02x", state);
 
   tileValue.setChars(buf);
   tileStateDisplay.setState(borderColors, 50);
+  previousState = state;
 }

@@ -4,7 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 
 #define DIGIT_SWITCH_DELAY 5
-#define BTN_POLL_DELAY 10
+#define BTN_POLL_DELAY 50
 #define PULSE_WIDTH_USEC 5
 
 #define RED 0x00FF00

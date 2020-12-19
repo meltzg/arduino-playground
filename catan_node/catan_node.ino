@@ -87,6 +87,8 @@ __int24 landType = WOOD;
 byte rollValue = 0;
 bool hasRobber = false;
 
+bool playerSelectMode;
+
 byte currentPlayer = 0;
 uint16_t previousState = 0;
 
@@ -119,52 +121,11 @@ SIGNAL(TIMER0_COMPA_vect)
 
 void loop()
 {
-  char buf[3] = {0};
   uint16_t state = interface.getState();
   if (state != previousState) {
-    for (int i = 0; i < NUM_ROADS; i++) {
-      byte ledPos = ROAD_LED_POS[i];
-      byte btnPos = ROAD_BTN_POS[i];
-
-      if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0) {
-        if (borderColors[ledPos] == BLACK) {
-          borderColors[ledPos] = PLAYER_COLORS[currentPlayer];
-        } else if (borderColors[ledPos] == PLAYER_COLORS[currentPlayer]) {
-          borderColors[ledPos] = BLACK;
-        }
-      }
-    }
-
-    for (int i = 0; i < NUM_SETTLEMENTS; i++) {
-      byte *ledPos = SETTLEMENT_LED_POS[i];
-      byte btnPos = SETTLEMENT_BTN_POS[i];
-
-      if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0) {
-        if (borderColors[ledPos[0]] == BLACK) {
-          borderColors[ledPos[0]] = PLAYER_COLORS[currentPlayer];
-        } else if (borderColors[ledPos[0]] == PLAYER_COLORS[currentPlayer]) {
-          if  (!isCity[i]) {
-            borderColors[ledPos[1]] = PLAYER_COLORS[currentPlayer];
-            isCity[i] = true;
-          } else {
-            borderColors[ledPos[0]] = BLACK;
-            borderColors[ledPos[1]] = BLACK;
-            isCity[i] = false;
-          }
-        }
-      }
-    }
-
-    if (((previousState >> LAND_BTN_POS) & 1) && ((state >> LAND_BTN_POS) & 1) == 0) {
-      if (hasRobber) {
-        hasRobber = false;
-        sprintf(buf, "%02d", rollValue);
-        tileValue.setChars(buf);
-      } else {
-        hasRobber = true;
-        tileValue.setChars("Rb");
-      }
-    }
+    updateRoads(state);
+    updateSettlements(state);
+    updateRobber(state);
 
     if (((previousState >> BRIGHTNESS_BTN) & 1) && ((state >> BRIGHTNESS_BTN) & 1) == 0) {
       brightness += BRIGHTNESS_STEP;
@@ -172,4 +133,55 @@ void loop()
   }
   tileStateDisplay.setState(borderColors, max(brightness, MIN_BRIGHTNESS));
   previousState = state;
+}
+
+void updateRoads(uint16_t newBtnState) {
+  for (int i = 0; i < NUM_ROADS; i++) {
+    byte ledPos = ROAD_LED_POS[i];
+    byte btnPos = ROAD_BTN_POS[i];
+
+    if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0) {
+      if (borderColors[ledPos] == BLACK) {
+        borderColors[ledPos] = PLAYER_COLORS[currentPlayer];
+      } else if (borderColors[ledPos] == PLAYER_COLORS[currentPlayer]) {
+        borderColors[ledPos] = BLACK;
+      }
+    }
+  }
+}
+
+void updateSettlements(uint16_t newBtnState) {
+  for (int i = 0; i < NUM_SETTLEMENTS; i++) {
+    byte *ledPos = SETTLEMENT_LED_POS[i];
+    byte btnPos = SETTLEMENT_BTN_POS[i];
+
+    if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0) {
+      if (borderColors[ledPos[0]] == BLACK) {
+        borderColors[ledPos[0]] = PLAYER_COLORS[currentPlayer];
+      } else if (borderColors[ledPos[0]] == PLAYER_COLORS[currentPlayer]) {
+        if  (!isCity[i]) {
+          borderColors[ledPos[1]] = PLAYER_COLORS[currentPlayer];
+          isCity[i] = true;
+        } else {
+          borderColors[ledPos[0]] = BLACK;
+          borderColors[ledPos[1]] = BLACK;
+          isCity[i] = false;
+        }
+      }
+    }
+  }
+}
+
+void updateRobber(uint16_t newBtnState) {
+  char buf[3] = {0};
+  if (((previousState >> LAND_BTN_POS) & 1) && ((newBtnState >> LAND_BTN_POS) & 1) == 0) {
+    if (hasRobber) {
+      hasRobber = false;
+      sprintf(buf, "%02d", rollValue);
+      tileValue.setChars(buf);
+    } else {
+      hasRobber = true;
+      tileValue.setChars("Rb");
+    }
+  }
 }

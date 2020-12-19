@@ -79,6 +79,7 @@ class ButtonArray16 : Component {
 
     void render(unsigned long currentMillis);
     uint16_t getState() { return state; }
+    uint16_t getOnDuration(int pos) { return onDuration[pos]; }
 };
 
 #endif // _COMPONENTS_H_

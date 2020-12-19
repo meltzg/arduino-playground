@@ -39,6 +39,8 @@
 #define NUM_LEDS 13
 #define NUM_BUTTONS 10
 
+#define PLAYER_SELECT_DELAY 1000
+
 #define NUM_ROADS 6
 #define NUM_SETTLEMENTS 3
 
@@ -87,7 +89,7 @@ __int24 landType = WOOD;
 byte rollValue = 0;
 bool hasRobber = false;
 
-bool playerSelectMode;
+bool playerSelectMode = false;
 
 byte currentPlayer = 0;
 uint16_t previousState = 0;
@@ -122,10 +124,19 @@ SIGNAL(TIMER0_COMPA_vect)
 void loop()
 {
   uint16_t state = interface.getState();
+  if (!playerSelectMode && interface.getOnDuration(LAND_BTN_POS) >= PLAYER_SELECT_DELAY) {
+    playerSelectMode = true;
+  } else if (playerSelectMode && interface.getOnDuration(LAND_BTN_POS) == 0) {
+    playerSelectMode = false;
+  }
   if (state != previousState) {
-    updateRoads(state);
-    updateSettlements(state);
-    updateRobber(state);
+    if (!playerSelectMode) {
+      updateRoads(state);
+      updateSettlements(state);
+      updateRobber(state);
+    } else {
+      updateCurrentPlayer(state);
+    }
 
     if (((previousState >> BRIGHTNESS_BTN) & 1) && ((state >> BRIGHTNESS_BTN) & 1) == 0) {
       brightness += BRIGHTNESS_STEP;
@@ -182,6 +193,17 @@ void updateRobber(uint16_t newBtnState) {
     } else {
       hasRobber = true;
       tileValue.setChars("Rb");
+    }
+  }
+}
+
+void updateCurrentPlayer(uint16_t newBtnState) {
+  for (int i = 0; i < NUM_ROADS; i++) {
+    byte btnPos = ROAD_BTN_POS[i];
+
+    if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0) {
+      currentPlayer = i;
+      break;
     }
   }
 }

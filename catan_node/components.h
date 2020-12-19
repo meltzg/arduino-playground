@@ -4,6 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 
 #define DIGIT_SWITCH_DELAY 5
+#define BTN_POLL_DELAY 10
 #define PULSE_WIDTH_USEC 5
 
 #define RED 0x00FF00
@@ -12,6 +13,8 @@
 #define GREEN 0x800000
 #define BLUE 0x0000FF
 #define PURPLE 0x008080
+#define BLACK 0x00
+#define WHITE 0xFFFFFF
 
 class Component {
   protected:
@@ -49,13 +52,16 @@ class LEDStatusDisplay : public Component
 
     const int dataPin;
     const int numLeds;
-    byte shiftCounter = 0;
     Adafruit_NeoPixel pixels;
+
+    __int24 *grbs = NULL;
+    byte brightness = 50;
 
   public:
     LEDStatusDisplay(int dataPin, int numLeds);
 
     void render(unsigned long currentMillis);
+    void setState(__int24 *grbs, byte brightness);
 };
 
 class ButtonArray16 : Component {

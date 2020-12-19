@@ -1,17 +1,22 @@
 #import "components.h"
 
 /*
-   Edges
-   1 /\ 2
-   0 | | 3
-   5 \/ 4
+   Edges         LEDs
+   1 /\ 2        3 /\ 6
+   0 | | 3       0 | | 9
+   5 \/ 4        11 \/ 10
 
-   Settlements
-      1
-   0 /\ 2
+   Settlements   LEDs
+      1              4,5
+   0 /\ 2        1,2 /\ 7,8
      | |
    5 \/ 3
      4
+
+    Land
+     /\
+    |12|
+     \/
 */
 
 #define SEGMENT_LATCH 2
@@ -28,6 +33,18 @@
 #define BTN_CLOCK A3
 
 #define NUM_LEDS 13
+#define NUM_BUTTONS 10
+
+#define NUM_ROADS 6
+#define NUM_SETTLEMENTS 3
+
+#define DESERT 0xB4D28C
+
+const __int24 PLAYER_COLORS[] = { RED, ORANGE, GREEN, BLUE, PURPLE, WHITE };
+
+const byte ROAD_POSITIONS[] = {0, 3, 6, 9, 10, 11};
+const byte SETTLEMENT_POSITIONS[][2] = {{1, 2}, {4, 5}, {7, 8}};
+#define LAND_POSITION 12
 
 
 SegmentDisplay tileValue(
@@ -46,6 +63,15 @@ ButtonArray16 interface(
   BTN_DATA,
   BTN_CLOCK
 );
+
+__int24 borderColors[NUM_LEDS] = { BLACK };
+
+byte roadOwners[NUM_ROADS] = { 0 };
+byte settlementOwners[NUM_SETTLEMENTS] = { 0 };
+bool isCity[NUM_SETTLEMENTS] = { false };
+__int24 landType = DESERT;
+
+byte currentPlayer = 0;
 
 void setup()
 {
@@ -67,7 +93,15 @@ void loop()
 {
   char buf[3] = {0};
   uint16_t state = interface.getState();
+  for (int i = 0; i < NUM_BUTTONS; i++) {
+    if ((state >> i) & 1) {
+      borderColors[i] = PLAYER_COLORS[currentPlayer];
+    } else {
+      borderColors[i] = 0;
+    }
+  }
   sprintf(buf, "%02x", state);
 
   tileValue.setChars(buf);
+  tileStateDisplay.setState(borderColors, 50);
 }

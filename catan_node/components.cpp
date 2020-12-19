@@ -256,14 +256,20 @@ LEDStatusDisplay::LEDStatusDisplay(int dataPin, int numLeds) : dataPin(dataPin),
 void LEDStatusDisplay::render(unsigned long currentMillis) {
   if (currentMillis - previousMillis >= updateDelay) {
     previousMillis = currentMillis;
-    shiftCounter++;
     pixels.clear();
-    for (int i = 0; i < 13; i++) {
-      pixels.setPixelColor((i + shiftCounter) % 13, RAINBOW[i % 6]);
+    pixels.setBrightness(brightness);
+    for (int i = 0; i < numLeds; i++) {
+      pixels.setPixelColor(i, grbs[i]);
     }
     pixels.show();
   }
 }
+
+void LEDStatusDisplay::setState(__int24 *grbs, byte brightness) {
+  this->brightness = brightness;
+  this->grbs = grbs;
+}
+
 
 ButtonArray16::ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin) : loadPin(loadPin), clockEnablePin(clockEnablePin), dataPin(dataPin), clockPin(clockPin) {
   pinMode(loadPin, OUTPUT);
@@ -276,28 +282,30 @@ ButtonArray16::ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int c
 }
 
 void ButtonArray16::render(unsigned long currentMillis) {
-  long bitVal;
-  this->state = 0;
+  if (currentMillis - previousMillis >= BTN_POLL_DELAY) {
+    long bitVal;
+    this->state = 0;
 
-  // Trigger a parallel Load to latch the state of the data lines,
-  digitalWrite(clockEnablePin, HIGH);
-  digitalWrite(loadPin, LOW);
-  delayMicroseconds(PULSE_WIDTH_USEC);
-  digitalWrite(loadPin, HIGH);
-  digitalWrite(clockEnablePin, LOW);
-
-  for (int i = 0; i < 16; i++)
-  {
-    bitVal = digitalRead(dataPin);
-
-    /* Set the corresponding bit in bytesVal.
-    */
-    this->state |= (bitVal << ((16 - 1) - i));
-
-    /* Pulse the Clock (rising edge shifts the next bit).
-    */
-    digitalWrite(clockPin, HIGH);
+    // Trigger a parallel Load to latch the state of the data lines,
+    digitalWrite(clockEnablePin, HIGH);
+    digitalWrite(loadPin, LOW);
     delayMicroseconds(PULSE_WIDTH_USEC);
-    digitalWrite(clockPin, LOW);
+    digitalWrite(loadPin, HIGH);
+    digitalWrite(clockEnablePin, LOW);
+
+    for (int i = 0; i < 16; i++)
+    {
+      bitVal = digitalRead(dataPin);
+
+      /* Set the corresponding bit in bytesVal.
+      */
+      this->state |= (bitVal << ((16 - 1) - i));
+
+      /* Pulse the Clock (rising edge shifts the next bit).
+      */
+      digitalWrite(clockPin, HIGH);
+      delayMicroseconds(PULSE_WIDTH_USEC);
+      digitalWrite(clockPin, LOW);
+    }
   }
 }

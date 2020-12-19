@@ -41,6 +41,11 @@
 #define NUM_SETTLEMENTS 3
 
 #define DESERT 0xB4D28C
+#define BRICK 0x41CB54
+#define SHEEP 0xFCB038
+#define WOOD 0xAC0313
+#define STONE 0xED3D97
+#define WHEAT YELLOW
 
 const __int24 PLAYER_COLORS[] = { RED, ORANGE, GREEN, BLUE, PURPLE, WHITE };
 
@@ -74,7 +79,7 @@ __int24 borderColors[NUM_LEDS] = { BLACK };
 byte roadOwners[NUM_ROADS] = { 0 };
 byte settlementOwners[NUM_SETTLEMENTS] = { 0 };
 bool isCity[NUM_SETTLEMENTS] = { false };
-__int24 landType = DESERT;
+__int24 landType = WOOD;
 byte rollValue = 0;
 bool hasRobber = false;
 

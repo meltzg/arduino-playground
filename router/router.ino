@@ -10,7 +10,8 @@
 // System commands
 #define GET_ID 0x01
 #define GET_NEIGHBORS 0x02
-#define ADD_EDGES 0x04
+#define UPDATE_NEIGHBORS 0x04
+#define ADD_EDGES 0x08
 
 #define STATUS_IDX 0
 #define STATUS_DURATION 100

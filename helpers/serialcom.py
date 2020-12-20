@@ -33,7 +33,7 @@ def get_id(ser):
 
 
 def get_neighbors(ser, dest):
-    send_message(ser, dest, 0x04, b'')
+    send_message(ser, dest, 0x02, b'')
     resp = ser.read(10000)
     print(resp)
     idstr = resp[-(6 * ID_SIZE):]

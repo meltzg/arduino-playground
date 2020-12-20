@@ -9,11 +9,8 @@
 #define EMPTY 0x0000
 // System commands
 #define GET_ID 0x01
-#define UPDATE_NEIGHBORS 0x02
-#define GET_NEIGHBORS 0x04
-#define GET_ROUTING 0x08
-#define UPDATE_ROUTING 0x10
-#define DISCOVER_TOPOLOGY 0x20
+#define GET_NEIGHBORS 0x02
+#define ADD_EDGES 0x04
 
 #define STATUS_IDX 0
 #define STATUS_DURATION 100
@@ -24,7 +21,6 @@
 #define SENDING 0xC8991F
 #define FAIL 0x00FF00
 
-#define DISCOVERY_DURATION 30 * 1000
 
 /*
    Each node has a SoftwareSerial connection to its neighbor and another to the
@@ -40,20 +36,8 @@
      Retrieve the ID of the node. During newtork discovery, this can be used
      to determine the ID of one's neightbors
 
-   Update Neighbors: 0x02
-     Payload contains the ordered neighbor IDs of the source node
-
-   Get Neighbors: 0x04
+   Get Neighbors: 0x02
      Retrieve the neighbors of the Source address
-
-   Get Routing Table: 0x08
-     Return the routing table of the node
-
-   Update Routing Table: 0x10
-     The payload contains all known edges in the network to be used to update routing table
-
-   Discover: 0x20
-     Discover network topology, create and distribute routing tables
 */
 
 #if defined(__AVR_ATmega328P__)
@@ -78,7 +62,7 @@ SoftwareSerial PORT_A(67, 68);
 
 SoftwareSerial *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
 SoftwareSerial *ALL_PORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_A};
-NodeId_t *neighbors[6] = { NULL };
+NodeId_t *neighborIds[6] = { NULL };
 
 NodeId_t NODE_ID;
 
@@ -86,7 +70,6 @@ Graph<NodeId_t> topology;
 bool discoveryDone = true;
 
 StatusLed statusLed(STATUS_LED);
-unsigned long previousMillis = 0;
 
 void setup() {
   NODE_ID = getNodeId();
@@ -97,25 +80,9 @@ void setup() {
   PORT_3.begin(9600);
   PORT_4.begin(9600);
   PORT_5.begin(9600);
-  pinMode(STATUS_LED, OUTPUT);
 
   Serial.println("starting");
   discoveryDone = false;
-  OCR0A = 0xAF;
-  TIMSK0 |= _BV(OCIE0A);
-}
-
-SIGNAL(TIMER0_COMPA_vect)
-{
-  if (!discoveryDone) {
-    if (millis() - previousMillis > DISCOVERY_DURATION) {
-      discoveryDone = true;
-      statusLed.set(0x0000ff, BRIGHTNESS);
-    } else {
-      statusLed.set(WAITING, BRIGHTNESS);
-    }
-  }
-}
 
 void loop() {
   NodeId_t source, dest;
@@ -159,21 +126,11 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
     routeMessage(srcPort, source, dest, payloadSize, sysCommand, message);
     return;
   }
-  if (sysCommand & UPDATE_NEIGHBORS) {
-
-  }
   if (sysCommand & GET_NEIGHBORS) {
     sprintf(buff, "Node Neighbors requested by %hu", source);
     Serial.println(buff);
     resetNeigbors();
-    routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
-  }
-  if (sysCommand & GET_ROUTING) {
-    sprintf(buff, "Network Topology requested by %hu", source);
-    Serial.println(buff);
-    //    byte *serialized = NULL;
-    //    const MessageSize_t topologySize = serializeRoutingTable(routingTable, serialized);
-    //    routeMessage(srcPort, dest, source, topologySize, UPDATE_ROUTING, topology);
+    routeMessage(srcPort, dest, source, sizeof(neighborIds), ADD_EDGES, (byte *) neighborIds);
   }
 }
 
@@ -201,96 +158,6 @@ void resetNeigbors() {
       neighborIds[i] = EMPTY;
     }
   }
-}
-
-void startDiscovery() {
-  Serial.println("Purge queue");
-  discoveryQueue.purge();
-  Serial.println("Purge visited");
-  discoverVisited.purge();
-  Serial.println("Purge edges");
-  topology.purge();
-  discoveryDone = false;
-
-  char buff[100] = { 0 };
-  sprintf(buff, "collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, topology.adj.values.count);
-  Serial.println(buff);
-
-  resetNeigbors();
-  updateNetwork(NODE_ID, neighborIds);
-}
-
-void updateNetwork(const NodeId_t source, const NodeId_t *dest) {
-  char buff[100] = { 0 };
-  discoverVisited.pushBack(source);
-  sprintf(buff, "%hu == %hu, %d", source, NODE_ID, discoverVisited.count);
-  Serial.println(buff);
-  for (int i = 0; i < 6; i++) {
-    sprintf(buff, "source %hu dest %hu", source, dest[i]);
-    Serial.println(buff);
-    if (dest[i] != EMPTY) {
-      if (!discoverVisited.contains(dest[i])) {
-        discoveryQueue.pushBack(dest[i]);
-      }
-      topology.addEdge(source, dest[i]);
-    }
-  }
-
-  sprintf(buff, "UPDATE collection sizes %u %u %u", discoveryQueue.count, discoverVisited.count, topology.adj.values.count);
-  Serial.println(buff);
-
-  distributeTopology();
-
-  //  if (discoveryQueue.isEmpty()) {
-  //    discoveryDone = true;
-  //    return;
-  //  }
-  //
-  //  while (!discoveryQueue.isEmpty()) {
-  //    NodeId_t next = discoveryQueue.popFront();
-  //    routeMessage(NULL, NODE_ID, next, 0, GET_NEIGHBORS, NULL);
-  //  }
-}
-
-void distributeTopology() {
-  byte *message = NULL;
-  //  const MessageSize_t messageSize = serializeTopology(message);
-
-  Serial.println("DISTRIBUTE TOPO");
-
-  //  Set<NodeId_t> allNodes;
-  //  for (LinkedNode<GraphEdge<NodeId_t>> *edge = edges.front; edge != NULL; edge = edge->next) {
-  //    allNodes.pushBack(edge->val.src);
-  //    allNodes.pushBack(edge->val.dest);
-  //  }
-  //
-  //  for (LinkedNode<NodeId_t> *i = allNodes.front; i != NULL; i = i->next) {
-  //    Serial.println(i->val, HEX);
-  //    if (i->val == NODE_ID) {
-  //      continue;
-  //    }
-  //    routeMessage(NULL, NODE_ID, i->val, messageSize, UPDATE_ROUTING, message);
-  //  }
-
-  Serial.println("DISTRIBUTE TOPO DONE");
-
-  delete[] message;
-}
-
-MessageSize_t serializeRoutingTable(const Map<NodeId_t, NodeId_t> &table, byte *&destination) {
-  char buff[100] = { 0 };
-  const MessageSize_t messageSize = table.values.count * sizeof(NodeId_t) * 2;
-  destination = new byte[messageSize] { EMPTY };
-  LinkedNode<Pair<NodeId_t, NodeId_t>> *pair = table.values.front;
-  for (int i = 0; pair != NULL; i++, pair = pair->next) {
-    sprintf(buff, "%#5hX <-> %#5hX", pair->val.left, pair->val.right);
-    Serial.println(buff);
-    int pairSize = sizeof(pair->val.left) + sizeof(pair->val.right);
-    memcpy(destination + i * pairSize, (byte *) &pair->val.left, sizeof(pair->val.left));
-    memcpy(destination + i * pairSize + sizeof(pair->val.left), (byte *) &pair->val.right, sizeof(pair->val.right));
-  }
-
-  return messageSize;
 }
 
 int strcicmp(char const *a, char const *b)

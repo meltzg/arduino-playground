@@ -130,14 +130,14 @@ void processMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSiz
     return;
   }
   if (dest != NODE_ID) {
-    routeMessage(srcPort, source, dest, payloadSize, sysCommand, message);
+    routeMessage(source, dest, payloadSize, sysCommand, message);
     return;
   }
   if (sysCommand & GET_NEIGHBORS) {
     sprintf(buf, "Node Neighbors requested by %hx", source);
     Serial.println(buf);
     resetNeigbors();
-    routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
+    routeMessage(dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
   }
   if (sysCommand & ADD_NODE) {
     sprintf(buf, "Adding node to topology", source);
@@ -146,7 +146,7 @@ void processMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSiz
   }
 }
 
-void routeMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
+void routeMessage(NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
   char buf[PRINT_BUF_SIZE];
   sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", source, dest, NODE_ID, payloadSize);
   Serial.println(buf);

@@ -11,7 +11,7 @@
 #define GET_ID 0x01
 #define GET_NEIGHBORS 0x02
 #define UPDATE_NEIGHBORS 0x04
-#define ADD_EDGES 0x08
+#define ADD_NODE 0x08
 
 #define STATUS_IDX 0
 #define STATUS_DURATION 100
@@ -21,6 +21,8 @@
 #define PROCESSING 0x0000FF
 #define SENDING 0xC8991F
 #define FAIL 0x00FF00
+
+#define PRINT_BUF_SIZE 100
 
 
 /*
@@ -116,11 +118,11 @@ void loop() {
 }
 
 void processMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
-  char buff[100];
+  char buf[PRINT_BUF_SIZE];
   if (sysCommand & GET_ID) {
     // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
-    sprintf(buff, "Node ID requested by %hu", source);
-    Serial.println(buff);
+    sprintf(buf, "Node ID requested by %hx", source);
+    Serial.println(buf);
     srcPort->write((char *) &NODE_ID, sizeof(NODE_ID));
     return;
   }
@@ -129,17 +131,22 @@ void processMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSiz
     return;
   }
   if (sysCommand & GET_NEIGHBORS) {
-    sprintf(buff, "Node Neighbors requested by %hu", source);
-    Serial.println(buff);
+    sprintf(buf, "Node Neighbors requested by %hx", source);
+    Serial.println(buf);
     resetNeigbors();
-    routeMessage(srcPort, dest, source, sizeof(neighborIds), ADD_EDGES, (byte *) neighborIds);
+    routeMessage(srcPort, dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
+  }
+  if (sysCommand & ADD_NODE) {
+    sprintf(buf, "Adding node to topology", source);
+    Serial.println(buf);
+    addNode((NodeId_t *)message, payloadSize / sizeof(NodeId_t));
   }
 }
 
 void routeMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
-  char buff[100];
-  sprintf(buff, "Routing message from %hu to %hu via %hu size %hu", source, dest, NODE_ID, payloadSize);
-  Serial.println(buff);
+  char buf[PRINT_BUF_SIZE];
+  sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", source, dest, NODE_ID, payloadSize);
+  Serial.println(buf);
   if (dest == PORT_H) {
     writeMessage(&Serial, source, PORT_H, payloadSize, sysCommand, message);
     return;
@@ -160,6 +167,26 @@ void resetNeigbors() {
       neighborIds[i] = EMPTY;
     }
   }
+}
+
+void addNode(NodeId_t *dests, int numDests) {
+  if (numDests <= 0) {
+    return;
+  }
+
+  // the first "dest" is the source node. The remaining are the node's neighbors
+  char buf[PRINT_BUF_SIZE];
+  NodeId_t source = dests[0];
+  for (int i = 1; i < numDests; i++) {
+    if (dests[i] != EMPTY) {
+      sprintf(buf, "Adding Edge %hx <-> %hx", source, dests[i]);
+      Serial.println(buf);
+      topology.addEdge(source, dests[i]);
+    }
+  }
+
+  sprintf(buf, "Total Nodes: %d", topology.adj.values.count);
+  Serial.println(buf);
 }
 
 int strcicmp(char const * a, char const * b)
@@ -230,16 +257,3 @@ NodeId_t getNodeId() {
 
   return nodeId;
 }
-
-//void setStatusLed(__uint24 grb, int duration) {
-//  pixels.clear();
-//  pixels.setBrightness(BRIGHTNESS);
-//  pixels.setPixelColor(STATUS_IDX, grb);
-//  pixels.show();
-//  if (duration > 0) {
-//    delay(duration);
-//    pixels.setBrightness(BRIGHTNESS);
-//    pixels.setPixelColor(STATUS_IDX, 0x000000);
-//    pixels.show();
-//  }
-//}

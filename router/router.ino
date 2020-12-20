@@ -12,6 +12,7 @@
 #define GET_NEIGHBORS 0x02
 #define UPDATE_NEIGHBORS 0x04
 #define ADD_NODE 0x08
+#define START_DISCOVERY 0x10
 
 #define STATUS_IDX 0
 #define STATUS_DURATION 100
@@ -70,6 +71,9 @@ NodeId_t *neighborIds[6] = { NULL };
 NodeId_t NODE_ID;
 
 Graph<NodeId_t> topology;
+Set<NodeId_t> discoveryVisited;
+LinkedList<NodeId_t> discoveryQueue;
+int outstandingNeighborRequests = 0;
 bool discoveryDone = true;
 
 StatusLed statusLed(STATUS_LED);
@@ -85,7 +89,6 @@ void setup() {
   PORT_5.begin(9600);
 
   Serial.println("starting");
-  discoveryDone = false;
 }
 
 void loop() {

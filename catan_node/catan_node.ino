@@ -39,7 +39,7 @@
 #define NUM_LEDS 13
 #define NUM_BUTTONS 10
 
-#define PLAYER_SELECT_DELAY 1000
+#define PLAYER_SELECT_DELAY 500
 
 #define NUM_ROADS 6
 #define NUM_SETTLEMENTS 3
@@ -131,17 +131,24 @@ SIGNAL(TIMER0_COMPA_vect)
 
 void loop()
 {
+  bool skipRobber = false;
+
   uint16_t state = interface.getState();
   if (!playerSelectMode && interface.getOnDuration(LAND_BTN_POS) >= PLAYER_SELECT_DELAY) {
     playerSelectMode = true;
+    updateCurrentPlayer(state);
   } else if (playerSelectMode && interface.getOnDuration(LAND_BTN_POS) == 0) {
     playerSelectMode = false;
+    skipRobber = true;
+    borderColors[LAND_LED_POS] = landType;
   }
   if (state != previousState) {
     if (!playerSelectMode) {
       updateRoads(state);
       updateSettlements(state);
-      updateRobber(state);
+      if (!skipRobber) {
+        updateRobber(state);
+      }
     } else {
       updateCurrentPlayer(state);
     }
@@ -172,6 +179,7 @@ void updateRoads(uint16_t newBtnState) {
     } else {
       borderColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
     }
+
   }
 }
 
@@ -232,4 +240,14 @@ void updateCurrentPlayer(uint16_t newBtnState) {
       break;
     }
   }
+  for (int i = 0; i < NUM_ROADS; i++) {
+    byte ledPos = ROAD_LED_POS[i];
+    borderColors[ledPos] = PLAYER_COLORS[i];
+  }
+  for (int i = 0; i < NUM_SETTLEMENTS; i++) {
+    byte *ledPos = SETTLEMENT_LED_POS[i];
+    borderColors[ledPos[0]] = BLACK;
+    borderColors[ledPos[1]] = BLACK;
+  }
+  borderColors[LAND_LED_POS] = PLAYER_COLORS[currentPlayer];
 }

@@ -6,6 +6,7 @@
 #define DIGIT_SWITCH_DELAY 5
 #define BTN_POLL_DELAY 50
 #define PULSE_WIDTH_USEC 5
+#define LED_UPDATE_DELAY 100
 
 #define RED 0x00FF00
 #define ORANGE 0xA5FF00
@@ -48,8 +49,6 @@ class SegmentDisplay : public Component
 class LEDStatusDisplay : public Component
 {
   private:
-    const static int updateDelay = 100;
-
     const int dataPin;
     const int numLeds;
     Adafruit_NeoPixel pixels;

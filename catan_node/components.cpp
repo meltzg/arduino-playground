@@ -254,7 +254,7 @@ LEDStatusDisplay::LEDStatusDisplay(int dataPin, int numLeds) : dataPin(dataPin),
 }
 
 void LEDStatusDisplay::render(unsigned long currentMillis) {
-  if (currentMillis - previousMillis >= updateDelay) {
+  if (currentMillis - previousMillis >= LED_UPDATE_DELAY) {
     previousMillis = currentMillis;
     pixels.clear();
     pixels.setBrightness(brightness);

@@ -19,20 +19,20 @@
      \/           \/          \/
 */
 
-#define SEGMENT_LATCH 2
-#define SEGMENT_CLOCK 3
-#define SEGMENT_DATA 4
-#define SEGMENT_LEFT 5
-#define SEGMENT_RIGHT 6
+#define SEGMENT_LATCH A0
+#define SEGMENT_CLOCK A1
+#define SEGMENT_DATA A2
+#define SEGMENT_LEFT A3
+#define SEGMENT_RIGHT A4
 
 #define LED_ARRAY 9
 #define BRIGHTNESS_STEP 32
 #define MIN_BRIGHTNESS 5
 
-#define BTN_LOAD A0
-#define BTN_CLK_ENABLE A1
-#define BTN_DATA A2
-#define BTN_CLOCK A3
+#define BTN_LOAD 10
+#define BTN_CLK_ENABLE 11
+#define BTN_DATA 12
+#define BTN_CLOCK 13
 
 #define SEED_PIN A5
 
@@ -53,6 +53,7 @@
 #define WHEAT YELLOW
 
 const __int24 PLAYER_COLORS[] = { RED, ORANGE, GREEN, BLUE, PURPLE, WHITE };
+//const __int24 LAND_COLORS[] = { DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT };
 
 const byte ROAD_LED_POS[] = { 0, 3, 6, 9, 10, 11 };
 const byte ROAD_BTN_POS[] = { 0, 2, 4, 6, 7, 8 };
@@ -205,9 +206,9 @@ void updateSettlements(uint16_t newBtnState) {
       borderColors[ledPos[0]] = BLACK;
       borderColors[ledPos[1]] = BLACK;
     } else {
-      borderColors[ledPos[0]] = PLAYER_COLORS[currentPlayer];
+      borderColors[ledPos[0]] = PLAYER_COLORS[settlementOwners[i]];
       if (isCity[i]) {
-        borderColors[ledPos[1]] = PLAYER_COLORS[currentPlayer];
+        borderColors[ledPos[1]] = PLAYER_COLORS[settlementOwners[i]];
       }
     }
 

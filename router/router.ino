@@ -2,7 +2,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "structures.h"
 #include "messaging.h"
-#import "components.h"
+#include "components.h"
 
 // Hardware serial has a special case address
 #define PORT_H 0xffff
@@ -83,6 +83,7 @@ void setup() {
 
   Serial.println("starting");
   discoveryDone = false;
+}
 
 void loop() {
   NodeId_t source, dest;
@@ -113,7 +114,7 @@ void loop() {
   }
 }
 
-void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
+void processMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
   char buff[100];
   if (sysCommand & GET_ID) {
     // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
@@ -134,7 +135,7 @@ void processMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize
   }
 }
 
-void routeMessage(Stream *srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
+void routeMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
   char buff[100];
   sprintf(buff, "Routing message from %hu to %hu via %hu size %hu", source, dest, NODE_ID, payloadSize);
   Serial.println(buff);
@@ -160,7 +161,7 @@ void resetNeigbors() {
   }
 }
 
-int strcicmp(char const *a, char const *b)
+int strcicmp(char const * a, char const * b)
 {
   for (;; a++, b++) {
     int d = tolower((unsigned char) * a) - tolower((unsigned char) * b);

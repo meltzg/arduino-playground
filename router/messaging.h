@@ -35,8 +35,6 @@
 #define PING_DELAY 1
 #define LISTEN_WAIT 2
 
-#endif _MESSAGING_H_
-
 typedef uint8_t StartCode_t;
 typedef uint16_t NodeId_t;
 typedef uint16_t MessageSize_t;
@@ -49,3 +47,5 @@ bool hasIncoming(Stream *port);
 void readMessage(Stream *srcPort, NodeId_t &source, NodeId_t &dest, MessageSize_t &payloadSize, SysCommand_t &sysCommand, byte *&body);
 
 void writeMessage(Stream *destPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message);
+
+#endif _MESSAGING_H_

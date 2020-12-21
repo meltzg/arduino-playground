@@ -53,7 +53,7 @@
 #define WHEAT YELLOW
 
 const __int24 PLAYER_COLORS[] = { RED, ORANGE, GREEN, BLUE, PURPLE, WHITE };
-//const __int24 LAND_COLORS[] = { DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT };
+const __int24 LAND_COLORS[] = { DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT };
 
 const byte ROAD_LED_POS[] = { 0, 3, 6, 9, 10, 11 };
 const byte ROAD_BTN_POS[] = { 0, 2, 4, 6, 7, 8 };
@@ -116,6 +116,7 @@ void setup()
   sprintf(buf, "%02d", rollValue);
   tileValue.setChars(buf);
 
+  landType = LAND_COLORS[random(0, 6)];
   borderColors[LAND_LED_POS] = landType;
 
   OCR0A = 0xAF;

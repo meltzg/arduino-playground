@@ -12,6 +12,7 @@
 #define UPDATE_NEIGHBORS 0x04
 #define ADD_NODE 0x08
 #define START_DISCOVERY 0x10
+#define CLEAR_TOPOLOGY 0x20
 
 #define PRINT_BUF_SIZE 100
 
@@ -54,7 +55,7 @@ SoftwareSerial PORT_A(67, 68);
 
 SoftwareSerial *NEIGHBORS[6] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5};
 SoftwareSerial *ALL_PORTS[7] = {&PORT_0, &PORT_1, &PORT_2, &PORT_3, &PORT_4, &PORT_5, &PORT_A};
-NodeId_t *neighborIds[6] = { NULL };
+NodeId_t neighborIds[6] = { NULL };
 
 NodeId_t NODE_ID;
 
@@ -119,16 +120,25 @@ void processMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSiz
     routeMessage(source, dest, payloadSize, sysCommand, message);
     return;
   }
+  if (sysCommand & CLEAR_TOPOLOGY) {
+    Serial.println("Clear topology");
+    topology.purge();
+  }
   if (sysCommand & GET_NEIGHBORS) {
     sprintf(buf, "Node Neighbors requested by %hx", source);
     Serial.println(buf);
-    resetNeigbors();
+    resetNeighbors();
     routeMessage(dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
   }
   if (sysCommand & ADD_NODE) {
     sprintf(buf, "Adding node to topology", source);
     Serial.println(buf);
-    addNode((NodeId_t *)message, payloadSize / sizeof(NodeId_t));
+    NodeId_t *nodeIds = (NodeId_t *) message;
+    updateNeighbors(nodeIds[0], nodeIds + 1, (payloadSize / sizeof(NodeId_t)) - 1);
+  }
+  if (sysCommand & START_DISCOVERY) {
+    Serial.println("Start Discovery");
+    startDiscovery();
   }
 }
 
@@ -142,7 +152,7 @@ void routeMessage(NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, Sys
   }
 }
 
-void resetNeigbors() {
+void resetNeighbors() {
   Serial.println("Reset Edges");
   int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
   for (int i = 0; i < 6; i++) {
@@ -158,24 +168,42 @@ void resetNeigbors() {
   }
 }
 
-void addNode(NodeId_t *dests, int numDests) {
-  if (numDests <= 0) {
+void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
+  if (numNeighbors <= 0) {
     return;
   }
 
-  // the first "dest" is the source node. The remaining are the node's neighbors
   char buf[PRINT_BUF_SIZE];
-  NodeId_t source = dests[0];
-  for (int i = 1; i < numDests; i++) {
-    if (dests[i] != EMPTY) {
-      sprintf(buf, "Adding Edge %hx <-> %hx", source, dests[i]);
+  for (int i = 0; i < numNeighbors; i++) {
+    if (neighbors[i] != EMPTY) {
+      sprintf(buf, "Adding Edge %hx <-> %hx", src, neighbors[i]);
       Serial.println(buf);
-      topology.addEdge(source, dests[i]);
+      topology.addEdge(src, neighbors[i]);
     }
   }
 
   sprintf(buf, "Total Nodes: %d", topology.adj.values.count);
   Serial.println(buf);
+}
+
+void startDiscovery() {
+  topology.purge();
+  discoveryVisited.purge();
+  discoveryQueue.purge();
+  outstandingNeighborRequests = 0;
+  discoveryDone = false;
+
+  resetNeighbors();
+  NodeId_t initialNode[7];
+  initialNode[0] = NODE_ID;
+  for (int i = 0; i < 6; i++) {
+    initialNode[i + 1] = neighborIds[i];
+  }
+
+  discoveryVisited.pushBack(NODE_ID);
+  discoveryVisited.pushBack(NODE_ID);
+
+  updateNeighbors(NODE_ID, neighborIds, 6);
 }
 
 int strcicmp(char const * a, char const * b)

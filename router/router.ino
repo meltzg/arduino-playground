@@ -2,7 +2,6 @@
 #include <Adafruit_NeoPixel.h>
 #include "structures.h"
 #include "messaging.h"
-#include "components.h"
 
 // Hardware serial has a special case address
 #define PORT_H 0xffff
@@ -13,15 +12,6 @@
 #define UPDATE_NEIGHBORS 0x04
 #define ADD_NODE 0x08
 #define START_DISCOVERY 0x10
-
-#define STATUS_IDX 0
-#define STATUS_DURATION 100
-#define BRIGHTNESS 0x10
-#define INCOMING 0x00FFFF
-#define WAITING 0xE2FC2A
-#define PROCESSING 0x0000FF
-#define SENDING 0xC8991F
-#define FAIL 0x00FF00
 
 #define PRINT_BUF_SIZE 100
 
@@ -45,7 +35,6 @@
 */
 
 #if defined(__AVR_ATmega328P__)
-#define STATUS_LED A2
 SoftwareSerial PORT_0(2, 3);
 SoftwareSerial PORT_1(4, 5);
 SoftwareSerial PORT_2(6, 7);
@@ -54,7 +43,6 @@ SoftwareSerial PORT_4(10, 11);
 SoftwareSerial PORT_5(12, 13);
 SoftwareSerial PORT_A(14, 15);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-#define STATUS_LED A0
 SoftwareSerial PORT_0(10, 11);
 SoftwareSerial PORT_1(12, 13);
 SoftwareSerial PORT_2(50, 51);
@@ -75,8 +63,6 @@ Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
 int outstandingNeighborRequests = 0;
 bool discoveryDone = true;
-
-StatusLed statusLed(STATUS_LED);
 
 void setup() {
   NODE_ID = getNodeId();

@@ -169,11 +169,14 @@ void resetNeighbors() {
 }
 
 void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
+  outstandingNeighborRequests = max(outstandingNeighborRequests - 1, 0);
   if (numNeighbors <= 0) {
     return;
   }
 
   char buf[PRINT_BUF_SIZE];
+  
+  // Add edges to local topology graph
   for (int i = 0; i < numNeighbors; i++) {
     if (neighbors[i] != EMPTY) {
       sprintf(buf, "Adding Edge %hx <-> %hx", src, neighbors[i]);
@@ -182,23 +185,63 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
     }
   }
 
+  // if the queue is empty and we're not waiting for more requests, we're done
   if (discoveryQueue.isEmpty() && outstandingNeighborRequests <= 0) {
+    Serial.println("Discovery complete");
     discoveryDone = true;
   }
-  if (discoveryDone) {
-    Serial.println("Discovery complete");
+  if (discoveryDone || outstandingNeighborRequests > 0) {
+    // don't continute if discovery is done or we're still waiting to hear back from outstanding requests
     return;
   }
 
+  Serial.println("Continuing discover");
+
+  // before discovery can continue, we need to distribute the current state of the graph to all nodes
+  for (GraphIterator<NodeId_t> toDistribute(topology, NODE_ID); toDistribute.hasNext();) {
+    NodeId_t distribId = toDistribute.next();
+    sprintf(buf, "creating add node message for %hx: ", distribId);
+    Serial.print(buf);
+    LinkedList<NodeId_t> *adj = topology.adj.get(distribId);
+    LinkedNode<NodeId_t> *adjIter = adj->front;
+
+    MessageSize_t msgSize = 1 + adj->count;
+    NodeId_t nodeMessage[msgSize] = { 0 };
+    nodeMessage[0] = distribId;
+    for (int i = 1; adjIter != NULL; adjIter = adjIter->next, i++) {
+      sprintf(buf, "%hx, ", adjIter->val);
+      Serial.print(buf);
+      nodeMessage[i] = adjIter->val;
+    }
+    Serial.println();
+
+    SysCommand_t sysCommand = ADD_NODE;
+    if (distribId == NODE_ID) {
+      // clear destination's topology to ensure it always has the most correct graph
+      // Needed in the case of rediscovery
+      Serial.println("Destination will clear its topology");
+      sysCommand |= CLEAR_TOPOLOGY;
+    }
+    for (GraphIterator<NodeId_t> destination(topology, NODE_ID); destination.hasNext();) {
+      NodeId_t destId = destination.next();
+      if (destId == NODE_ID) {
+        continue;
+      }
+      routeMessage(NODE_ID, destId, msgSize * sizeof(NodeId_t), sysCommand, (byte *) nodeMessage);
+    }
+  }
+
+  Serial.println("Sending get neighbor requests");
+
   NodeId_t next = discoveryQueue.popFront();
   for (auto iter = topology.adj.get(next)->front; iter != NULL; iter = iter->next) {
-      if (!discoveryVisited.contains(iter->val)) {
-          discoveryVisited.pushBack(iter->val);
-          discoveryQueue.pushBack(iter->val);
-          routeMessage(NODE_ID, iter->val, 0, GET_NEIGHBORS, NULL);
-          outstandingNeighborRequests++;
-      }
+    if (!discoveryVisited.contains(iter->val)) {
+      discoveryVisited.pushBack(iter->val);
+      discoveryQueue.pushBack(iter->val);
+      routeMessage(NODE_ID, iter->val, 0, GET_NEIGHBORS, NULL);
+      outstandingNeighborRequests++;
     }
+  }
 
   sprintf(buf, "Total Nodes: %d", topology.adj.values.count);
   Serial.println(buf);

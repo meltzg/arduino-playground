@@ -182,6 +182,24 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
     }
   }
 
+  if (discoveryQueue.isEmpty() && outstandingNeighborRequests <= 0) {
+    discoveryDone = true;
+  }
+  if (discoveryDone) {
+    Serial.println("Discovery complete");
+    return;
+  }
+
+  NodeId_t next = discoveryQueue.popFront();
+  for (auto iter = topology.adj.get(next)->front; iter != NULL; iter = iter->next) {
+      if (!discoveryVisited.contains(iter->val)) {
+          discoveryVisited.pushBack(iter->val);
+          discoveryQueue.pushBack(iter->val);
+          routeMessage(NODE_ID, iter->val, 0, GET_NEIGHBORS, NULL);
+          outstandingNeighborRequests++;
+      }
+    }
+
   sprintf(buf, "Total Nodes: %d", topology.adj.values.count);
   Serial.println(buf);
 }
@@ -200,7 +218,7 @@ void startDiscovery() {
     initialNode[i + 1] = neighborIds[i];
   }
 
-  discoveryVisited.pushBack(NODE_ID);
+  discoveryQueue.pushBack(NODE_ID);
   discoveryVisited.pushBack(NODE_ID);
 
   updateNeighbors(NODE_ID, neighborIds, 6);

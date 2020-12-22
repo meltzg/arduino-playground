@@ -231,8 +231,8 @@ template <typename T> struct GraphIterator {
     T next = queue.popFront();
     for (auto iter = g.adj.get(next)->front; iter != NULL; iter = iter->next) {
       if (!visited.contains(iter->val)) {
-          visited.pushBack(iter->val);
-          queue.pushBack(iter->val);
+        visited.pushBack(iter->val);
+        queue.pushBack(iter->val);
       }
     }
     return next;

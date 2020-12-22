@@ -9,10 +9,9 @@
 // System commands
 #define GET_ID 0x01
 #define GET_NEIGHBORS 0x02
-#define UPDATE_NEIGHBORS 0x04
-#define ADD_NODE 0x08
-#define START_DISCOVERY 0x10
-#define CLEAR_TOPOLOGY 0x20
+#define ADD_NODE 0x04
+#define START_DISCOVERY 0x08
+#define CLEAR_TOPOLOGY 0x10
 
 #define PRINT_BUF_SIZE 100
 
@@ -124,12 +123,17 @@ void processMessage(Stream * srcPort, const Message &message) {
     sprintf(buf, "Node Neighbors requested by %hx", message.source);
     Serial.println(buf);
     resetNeighbors();
+    NodeId_t nodeMessage[7] = { 0 };
+    nodeMessage[0] = NODE_ID;
+    for (int i = 0; i < 6; i++) {
+      nodeMessage[i + 1] = neighborIds[i];
+    }
     Message response;
     response.source = NODE_ID;
     response.dest = message.source;
-    response.payloadSize = sizeof(neighborIds);
-    response.sysCommand = UPDATE_NEIGHBORS;
-    response.body = (byte *) neighborIds;
+    response.payloadSize = sizeof(nodeMessage);
+    response.sysCommand = ADD_NODE;
+    response.body = (byte *) nodeMessage;
     routeMessage(response);
   }
   if (message.sysCommand & ADD_NODE) {
@@ -183,7 +187,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
   }
 
   char buf[PRINT_BUF_SIZE];
-  
+
   // Add edges to local topology graph
   for (int i = 0; i < numNeighbors; i++) {
     if (neighbors[i] != EMPTY) {

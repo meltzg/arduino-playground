@@ -11,7 +11,8 @@
 #define GET_NEIGHBORS 0x02
 #define ADD_NODE 0x04
 #define START_DISCOVERY 0x08
-#define CLEAR_TOPOLOGY 0x10
+#define GET_DISCOVERY_STATUS 0x10
+#define CLEAR_TOPOLOGY 0x20
 
 #define PRINT_BUF_SIZE 100
 
@@ -145,6 +146,19 @@ void processMessage(Stream * srcPort, const Message &message) {
   if (message.sysCommand & START_DISCOVERY) {
     Serial.println("Start Discovery");
     startDiscovery();
+  }
+  if (message.sysCommand & GET_DISCOVERY_STATUS) {
+    Serial.println("Get discovery stats");
+    byte discoStats[sizeof(bool) + sizeof(size_t)] = { 0 };
+    memcpy(discoStats, &discoveryDone, sizeof(bool));
+    memcpy(discoStats + sizeof(bool), &(topology.adj.values.count), sizeof(size_t));
+    Message response;
+    response.source = NODE_ID;
+    response.dest = message.source;
+    response.payloadSize = sizeof(discoStats);
+    response.sysCommand = 0;
+    response.body = discoStats;
+    routeMessage(response);
   }
 }
 

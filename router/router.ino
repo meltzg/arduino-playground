@@ -79,17 +79,13 @@ void setup() {
 }
 
 void loop() {
-  NodeId_t source, dest;
-  MessageSize_t payloadSize;
-  SysCommand_t sysCommand;
-  byte *body;
   // Loop through ports and process messages
   if (Serial.available() > 0) {
-    readMessage(&Serial, source, dest, payloadSize, sysCommand, body);
-    source = PORT_H;
-    processMessage(&Serial, source, dest, payloadSize, sysCommand, body);
-    delete[] body;
-    body = NULL;
+    Message message = readMessage(&Serial);
+    message.source = PORT_H;
+    processMessage(&Serial, message);
+    delete[] message.body;
+    message.body = NULL;
   }
 
   for (int i = 0; i < 7; i++) {
@@ -97,57 +93,63 @@ void loop() {
     port->listen();
     if (hasIncoming(port)) {
       Serial.println("recieving message");
-      readMessage(port, source, dest, payloadSize, sysCommand, body);
-      Serial.write((char *)body, payloadSize);
+      Message message = readMessage(port);
+      Serial.write((char *)message.body, message.payloadSize);
       Serial.println();
-      processMessage(port, source, dest, payloadSize, sysCommand, body);
-      delete[] body;
-      body = NULL;
+      processMessage(port, message);
+      delete[] message.body;
+      message.body = NULL;
     }
   }
 }
 
-void processMessage(Stream * srcPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
+void processMessage(Stream * srcPort, const Message &message) {
   char buf[PRINT_BUF_SIZE];
-  if (sysCommand & GET_ID) {
+  if (message.sysCommand & GET_ID) {
     // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
-    sprintf(buf, "Node ID requested by %hx", source);
+    sprintf(buf, "Node ID requested by %hx", message.source);
     Serial.println(buf);
     srcPort->write((char *) &NODE_ID, sizeof(NODE_ID));
     return;
   }
-  if (dest != NODE_ID) {
-    routeMessage(source, dest, payloadSize, sysCommand, message);
+  if (message.dest != NODE_ID) {
+    routeMessage(message);
     return;
   }
-  if (sysCommand & CLEAR_TOPOLOGY) {
+  if (message.sysCommand & CLEAR_TOPOLOGY) {
     Serial.println("Clear topology");
     topology.purge();
   }
-  if (sysCommand & GET_NEIGHBORS) {
-    sprintf(buf, "Node Neighbors requested by %hx", source);
+  if (message.sysCommand & GET_NEIGHBORS) {
+    sprintf(buf, "Node Neighbors requested by %hx", message.source);
     Serial.println(buf);
     resetNeighbors();
-    routeMessage(dest, source, sizeof(neighborIds), UPDATE_NEIGHBORS, (byte *) neighborIds);
+    Message response;
+    response.source = NODE_ID;
+    response.dest = message.source;
+    response.payloadSize = sizeof(neighborIds);
+    response.sysCommand = UPDATE_NEIGHBORS;
+    response.body = (byte *) neighborIds;
+    routeMessage(response);
   }
-  if (sysCommand & ADD_NODE) {
-    sprintf(buf, "Adding node to topology", source);
+  if (message.sysCommand & ADD_NODE) {
+    sprintf(buf, "Adding node to topology", message.source);
     Serial.println(buf);
-    NodeId_t *nodeIds = (NodeId_t *) message;
-    updateNeighbors(nodeIds[0], nodeIds + 1, (payloadSize / sizeof(NodeId_t)) - 1);
+    NodeId_t *nodeIds = (NodeId_t *) message.body;
+    updateNeighbors(nodeIds[0], nodeIds + 1, (message.payloadSize / sizeof(NodeId_t)) - 1);
   }
-  if (sysCommand & START_DISCOVERY) {
+  if (message.sysCommand & START_DISCOVERY) {
     Serial.println("Start Discovery");
     startDiscovery();
   }
 }
 
-void routeMessage(NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte * message) {
+void routeMessage(const Message &message) {
   char buf[PRINT_BUF_SIZE];
-  sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", source, dest, NODE_ID, payloadSize);
+  sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", message.source, message.dest, NODE_ID, message.payloadSize);
   Serial.println(buf);
-  if (dest == PORT_H) {
-    writeMessage(&Serial, source, PORT_H, payloadSize, sysCommand, message);
+  if (message.dest == PORT_H) {
+    writeMessage(&Serial, message);
     return;
   }
 }
@@ -155,10 +157,16 @@ void routeMessage(NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, Sys
 void resetNeighbors() {
   Serial.println("Reset Edges");
   int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
+  Message idRequest;
+  idRequest.source = NODE_ID;
+  idRequest.dest = EMPTY;
+  idRequest.payloadSize = 0;
+  idRequest.sysCommand = GET_ID;
+  idRequest.body = NULL;
   for (int i = 0; i < 6; i++) {
     NEIGHBORS[i]->listen();
     if (ackWait(NEIGHBORS[i], maxRetries)) {
-      writeMessage(NEIGHBORS[i], NODE_ID, EMPTY, 0, GET_ID, NULL);
+      writeMessage(NEIGHBORS[i], idRequest);
       NodeId_t neighbor = EMPTY;
       NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));
       neighborIds[i] = neighbor;
@@ -205,8 +213,8 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
     LinkedList<NodeId_t> *adj = topology.adj.get(distribId);
     LinkedNode<NodeId_t> *adjIter = adj->front;
 
-    MessageSize_t msgSize = 1 + adj->count;
-    NodeId_t nodeMessage[msgSize] = { 0 };
+    int numAdj = 1 + adj->count;
+    NodeId_t nodeMessage[numAdj] = { 0 };
     nodeMessage[0] = distribId;
     for (int i = 1; adjIter != NULL; adjIter = adjIter->next, i++) {
       sprintf(buf, "%hx, ", adjIter->val);
@@ -215,30 +223,41 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
     }
     Serial.println();
 
-    SysCommand_t sysCommand = ADD_NODE;
+    Message message;
+    message.source = NODE_ID;
+    message.payloadSize = numAdj * sizeof(NodeId_t);
+    message.sysCommand = ADD_NODE;
+    message.body = (byte *) nodeMessage;
+
     if (distribId == NODE_ID) {
       // clear destination's topology to ensure it always has the most correct graph
       // Needed in the case of rediscovery
       Serial.println("Destination will clear its topology");
-      sysCommand |= CLEAR_TOPOLOGY;
+      message.sysCommand |= CLEAR_TOPOLOGY;
     }
     for (GraphIterator<NodeId_t> destination(topology, NODE_ID); destination.hasNext();) {
       NodeId_t destId = destination.next();
       if (destId == NODE_ID) {
         continue;
       }
-      routeMessage(NODE_ID, destId, msgSize * sizeof(NodeId_t), sysCommand, (byte *) nodeMessage);
+      message.dest = destId;
+      routeMessage(message);
     }
   }
 
   Serial.println("Sending get neighbor requests");
 
   NodeId_t next = discoveryQueue.popFront();
+  Message neighborRequest;
+  neighborRequest.source = NODE_ID;
+  neighborRequest.payloadSize = 0;
+  neighborRequest.sysCommand = GET_NEIGHBORS;
+  neighborRequest.body = NULL;
   for (auto iter = topology.adj.get(next)->front; iter != NULL; iter = iter->next) {
     if (!discoveryVisited.contains(iter->val)) {
       discoveryVisited.pushBack(iter->val);
       discoveryQueue.pushBack(iter->val);
-      routeMessage(NODE_ID, iter->val, 0, GET_NEIGHBORS, NULL);
+      routeMessage(neighborRequest);
       outstandingNeighborRequests++;
     }
   }

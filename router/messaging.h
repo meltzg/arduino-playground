@@ -40,12 +40,20 @@ typedef uint16_t NodeId_t;
 typedef uint16_t MessageSize_t;
 typedef uint8_t SysCommand_t;
 
+struct Message {
+  NodeId_t source;
+  NodeId_t dest;
+  MessageSize_t payloadSize;
+  SysCommand_t sysCommand;
+  byte *body;
+};
+
 bool ackWait(Stream *port, int maxRetries = -1);
 
 bool hasIncoming(Stream *port);
 
-void readMessage(Stream *srcPort, NodeId_t &source, NodeId_t &dest, MessageSize_t &payloadSize, SysCommand_t &sysCommand, byte *&body);
+Message readMessage(Stream *srcPort);
 
-void writeMessage(Stream *destPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message);
+void writeMessage(Stream *destPort, const Message &message);
 
 #endif _MESSAGING_H_

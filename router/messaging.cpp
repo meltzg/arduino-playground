@@ -31,24 +31,26 @@ bool hasIncoming(Stream *port) {
   return false;
 }
 
-void readMessage(Stream *srcPort, NodeId_t &source, NodeId_t &dest, MessageSize_t &payloadSize, SysCommand_t &sysCommand, byte *&body) {
+Message readMessage(Stream *srcPort) {
   byte startByte;
   do {
     srcPort->readBytes(&startByte, sizeof(StartCode_t));
   } while (startByte != START_CODE);
-  srcPort->readBytes((byte *) &source, sizeof(NodeId_t));
-  srcPort->readBytes((byte *) &dest, sizeof(NodeId_t));
-  srcPort->readBytes((byte *) &payloadSize, sizeof(MessageSize_t));
-  srcPort->readBytes((byte *) &sysCommand, sizeof(SysCommand_t));
-  body = new byte[payloadSize];
-  srcPort->readBytes(body, payloadSize);
+  Message message;
+  srcPort->readBytes((byte *) &(message.source), sizeof(NodeId_t));
+  srcPort->readBytes((byte *) &(message.dest), sizeof(NodeId_t));
+  srcPort->readBytes((byte *) &(message.payloadSize), sizeof(MessageSize_t));
+  srcPort->readBytes((byte *) &(message.sysCommand), sizeof(SysCommand_t));
+  message.body = new byte[message.payloadSize];
+  srcPort->readBytes(message.body, message.payloadSize);
+  return message;
 }
 
-void writeMessage(Stream *destPort, NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *message) {
+void writeMessage(Stream *destPort, const Message &message) {
   destPort->write(START_CODE);
-  destPort->write((char *) &source, sizeof(source));
-  destPort->write((char *) &dest, sizeof(dest));
-  destPort->write((char *) &payloadSize, sizeof(payloadSize));
-  destPort->write((char *) &sysCommand, sizeof(sysCommand));
-  destPort->write(message, payloadSize);
+  destPort->write((char *) &(message.source), sizeof(message.source));
+  destPort->write((char *) &(message.dest), sizeof(message.dest));
+  destPort->write((char *) &(message.payloadSize), sizeof(message.payloadSize));
+  destPort->write((char *) &(message.sysCommand), sizeof(message.sysCommand));
+  destPort->write(message.body, message.payloadSize);
 }

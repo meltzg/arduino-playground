@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
-#include "structures.h"
-#include "messaging.h"
+#include "DataStructures.h"
+#include "CommonMessaging.h"
 
 // Hardware serial has a special case address
 #define PORT_H 0xffff

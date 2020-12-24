@@ -152,91 +152,100 @@ template <typename K, typename V> struct Map {
   }
 };
 
+template <typename T> struct GraphEdge : public Pair<T, T> {
+  using Pair<T, T>::Pair;
+  
+  bool operator==(const GraphEdge<T> &other) {
+    return (this->left == other.left && this->right == other.right) or (this->left == other.right && this->right == other.left);
+  }
+};
+
 template <typename T> struct Graph {
-  Map<T, Set<T>> adj;
+  Set<GraphEdge<T>> edges;
 
   void addEdge(T src, T dest) {
-    if (!adj.containsKey(src)) {
-      adj.put(src, Set<T>());
-    }
-    if (!adj.containsKey(dest)) {
-      adj.put(dest, Set<T>());
-    }
+    // if (!adj.containsKey(src)) {
+    //   adj.put(src, Set<T>());
+    // }
+    // if (!adj.containsKey(dest)) {
+    //   adj.put(dest, Set<T>());
+    // }
 
-    adj.get(src)->pushBack(dest);
-    adj.get(dest)->pushBack(src);
+    // adj.get(src)->pushBack(dest);
+    // adj.get(dest)->pushBack(src);
+    edges.pushBack(GraphEdge<T>(src, dest));
   }
 
   void purge() {
-    adj.purge();
+    edges.purge();
   }
 
-  bool bfs(T src, T dest, Map<T, T> &pred, Map<T, int> &dist) {
-    Set<T> visited;
-    LinkedList<T> queue;
+//   bool bfs(T src, T dest, Map<T, T> &pred, Map<T, int> &dist) {
+//     Set<T> visited;
+//     LinkedList<T> queue;
 
-    visited.pushBack(src);
-    dist.put(src, 0);
-    queue.pushBack(src);
+//     visited.pushBack(src);
+//     dist.put(src, 0);
+//     queue.pushBack(src);
 
-    while (!queue.isEmpty()) {
-      T node = queue.popFront();
-      for (auto iter = adj.get(node)->front; iter != NULL; iter = iter->next) {
-        if (!visited.contains(iter->val)) {
-          visited.pushBack(iter->val);
-          dist.put(iter->val, *(dist.get(node)) + 1);
-          pred.put(iter->val, node);
-          queue.pushBack(iter->val);
+//     while (!queue.isEmpty()) {
+//       T node = queue.popFront();
+//       for (auto iter = adj.get(node)->front; iter != NULL; iter = iter->next) {
+//         if (!visited.contains(iter->val)) {
+//           visited.pushBack(iter->val);
+//           dist.put(iter->val, *(dist.get(node)) + 1);
+//           pred.put(iter->val, node);
+//           queue.pushBack(iter->val);
 
-          if (iter->val == dest) {
-            return true;
-          }
-        }
-      }
-    }
+//           if (iter->val == dest) {
+//             return true;
+//           }
+//         }
+//       }
+//     }
 
-    return false;
-  }
+//     return false;
+//   }
 
-  void getShortestPath(T src, T dest, LinkedList<T> &path) {
-    Map<T, T> pred;
-    Map<T, int> dist;
+//   void getShortestPath(T src, T dest, LinkedList<T> &path) {
+//     Map<T, T> pred;
+//     Map<T, int> dist;
 
-    if (bfs(src, dest, pred, dist)) {
-      T crawl = dest;
-      path.pushFront(crawl);
-      while (pred.containsKey(crawl)) {
-        path.pushFront(*(pred.get(crawl)));
-        crawl = *(pred.get(crawl));
-      }
-    }
-  }
+//     if (bfs(src, dest, pred, dist)) {
+//       T crawl = dest;
+//       path.pushFront(crawl);
+//       while (pred.containsKey(crawl)) {
+//         path.pushFront(*(pred.get(crawl)));
+//         crawl = *(pred.get(crawl));
+//       }
+//     }
+//   }
 };
 
-template <typename T> struct GraphIterator {
-  Graph<T> g;
-  Set<T> visited;
-  LinkedList<T> queue;
+// template <typename T> struct GraphIterator {
+//   Graph<T> g;
+//   Set<T> visited;
+//   LinkedList<T> queue;
 
-  GraphIterator(Graph<T> g, T start) : g(g) {
-    queue.pushBack(start);
-    visited.pushBack(start);
-  }
+//   GraphIterator(Graph<T> g, T start) : g(g) {
+//     queue.pushBack(start);
+//     visited.pushBack(start);
+//   }
 
-  bool hasNext() {
-    return !queue.isEmpty();
-  }
+//   bool hasNext() {
+//     return !queue.isEmpty();
+//   }
 
-  T next() {
-    T next = queue.popFront();
-    for (auto iter = g.adj.get(next)->front; iter != NULL; iter = iter->next) {
-      if (!visited.contains(iter->val)) {
-        visited.pushBack(iter->val);
-        queue.pushBack(iter->val);
-      }
-    }
-    return next;
-  }
-};
+//   T next() {
+//     T next = queue.popFront();
+//     for (auto iter = g.adj.get(next)->front; iter != NULL; iter = iter->next) {
+//       if (!visited.contains(iter->val)) {
+//         visited.pushBack(iter->val);
+//         queue.pushBack(iter->val);
+//       }
+//     }
+//     return next;
+//   }
+// };
 
 #endif // _STRUCTURES_H_

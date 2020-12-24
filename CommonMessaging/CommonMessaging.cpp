@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "messaging.h"
+#include "CommonMessaging.h"
 
 
 bool ackWait(Stream *port, int maxRetries = -1) {

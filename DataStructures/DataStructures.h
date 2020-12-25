@@ -1,80 +1,108 @@
 #ifndef _STRUCTURES_H_
 #define _STRUCTURES_H_
 
-template <typename T> struct LinkedNode {
+#ifndef __AVR__
+#include <cstddef>
+#endif
+
+template <typename T>
+struct LinkedNode
+{
   T val;
   LinkedNode *next;
 
   LinkedNode(T val) : val(val), next(NULL) {}
 };
 
-template <typename T> struct LinkedList {
+template <typename T>
+struct LinkedList
+{
   LinkedNode<T> *front, *back;
   size_t count = 0;
 
-  LinkedList() {
+  LinkedList()
+  {
     front = back = NULL;
   }
-  ~LinkedList() {
+  ~LinkedList()
+  {
     purge();
   }
-  LinkedList(LinkedList<T> const &other) {
+  LinkedList(LinkedList<T> const &other)
+  {
     front = back = NULL;
-    for (auto iter = other.front; iter != NULL; iter = iter->next) {
+    for (auto iter = other.front; iter != NULL; iter = iter->next)
+    {
       pushBack(iter->val);
     }
   }
 
-  virtual void pushBack(T val) {
+  virtual void pushBack(T val)
+  {
     LinkedNode<T> *tmp = new LinkedNode<T>(val);
-    if (isEmpty()) {
+    if (isEmpty())
+    {
       front = back = tmp;
-    } else {
+    }
+    else
+    {
       back->next = tmp;
       back = tmp;
     }
     count++;
   }
 
-  virtual void pushFront(T val) {
+  virtual void pushFront(T val)
+  {
     LinkedNode<T> *tmp = new LinkedNode<T>(val);
-    if (isEmpty()) {
+    if (isEmpty())
+    {
       front = back = tmp;
-    } else {
+    }
+    else
+    {
       tmp->next = front;
       front = tmp;
     }
     count++;
   }
 
-  T popFront() {
+  T popFront()
+  {
     LinkedNode<T> *tmp = front;
     T val = tmp->val;
     front = front->next;
     delete tmp;
     count--;
-    if (count == 0) {
+    if (count == 0)
+    {
       back = NULL;
     }
     return val;
   }
 
-  T peekFront() {
+  T peekFront()
+  {
     return front->val;
   }
 
-  T peekBack() {
+  T peekBack()
+  {
     return back->val;
   }
 
-  bool isEmpty() {
+  bool isEmpty()
+  {
     return back == NULL;
   }
 
-  bool contains(T val) {
+  bool contains(T val)
+  {
     LinkedNode<T> *node = front;
-    while (node != NULL) {
-      if (node->val == val) {
+    while (node != NULL)
+    {
+      if (node->val == val)
+      {
         return true;
       }
       node = node->next;
@@ -82,46 +110,83 @@ template <typename T> struct LinkedList {
     return false;
   }
 
-  void purge() {
-    while (front != NULL) {
+  void purge()
+  {
+    while (front != NULL)
+    {
       popFront();
     }
   }
 };
 
-template <typename T> struct Set : public LinkedList<T> {
-  void pushBack(T val) {
-    if (this->contains(val)) {
+template <typename T>
+class ListIterator
+{
+private:
+  LinkedNode<T> *current;
+public:
+  ListIterator(const LinkedList<T> &list) {
+    current = list.front;
+  }
+
+  bool hasNext() {
+    return current != NULL;
+  }
+
+  T next() {
+    T val = current->val;
+    current = current->next;
+    return T;
+  }
+};
+
+template <typename T>
+struct Set : public LinkedList<T>
+{
+  void pushBack(T val)
+  {
+    if (this->contains(val))
+    {
       return;
     }
     LinkedList<T>::pushBack(val);
   }
 
-  void pushFront(T val) {
-    if (this->contains(val)) {
+  void pushFront(T val)
+  {
+    if (this->contains(val))
+    {
       return;
     }
     LinkedList<T>::pushFront(val);
   }
 };
 
-template <typename K, typename V> struct Pair {
+template <typename K, typename V>
+struct Pair
+{
   K left;
   V right;
 
   Pair(K left, V right) : left(left), right(right) {}
 };
 
-template <typename K, typename V> struct Map {
+template <typename K, typename V>
+struct Map
+{
   LinkedList<Pair<K, V>> values;
 
-  ~Map() {
+  ~Map()
+  {
     purge();
   }
 
-  void put(K key, V value) {
-    for (auto iter = values.front; iter != NULL; iter = iter->next) {
-      if (iter->val.left == key) {
+  void put(K key, V value)
+  {
+    for (auto iter = values.front; iter != NULL; iter = iter->next)
+    {
+      if (iter->val.left == key)
+      {
         iter->val.right = value;
         return;
       }
@@ -129,17 +194,23 @@ template <typename K, typename V> struct Map {
     values.pushBack(Pair<K, V>(key, value));
   }
 
-  V *get(K key) {
-    for (auto iter = values.front; iter != NULL; iter = iter->next) {
-      if (iter->val.left == key) {
+  V *get(K key)
+  {
+    for (auto iter = values.front; iter != NULL; iter = iter->next)
+    {
+      if (iter->val.left == key)
+      {
         return &(iter->val.right);
       }
     }
   }
 
-  bool containsKey(K key) {
-    for (auto iter = values.front; iter != NULL; iter = iter->next) {
-      if (iter->val.left == key) {
+  bool containsKey(K key)
+  {
+    for (auto iter = values.front; iter != NULL; iter = iter->next)
+    {
+      if (iter->val.left == key)
+      {
         return true;
       }
     }
@@ -147,79 +218,78 @@ template <typename K, typename V> struct Map {
     return false;
   }
 
-  void purge() {
+  void purge()
+  {
     values.purge();
   }
 };
 
-template <typename T> struct GraphEdge : public Pair<T, T> {
+template <typename T>
+struct GraphEdge : public Pair<T, T>
+{
   using Pair<T, T>::Pair;
-  
-  bool operator==(const GraphEdge<T> &other) {
+
+  bool operator==(const GraphEdge<T> &other)
+  {
     return (this->left == other.left && this->right == other.right) or (this->left == other.right && this->right == other.left);
   }
 };
 
-template <typename T> struct Graph {
+template <typename T>
+struct Graph
+{
   Set<GraphEdge<T>> edges;
 
-  void addEdge(T src, T dest) {
-    // if (!adj.containsKey(src)) {
-    //   adj.put(src, Set<T>());
-    // }
-    // if (!adj.containsKey(dest)) {
-    //   adj.put(dest, Set<T>());
-    // }
-
-    // adj.get(src)->pushBack(dest);
-    // adj.get(dest)->pushBack(src);
+  void addEdge(T src, T dest)
+  {
     edges.pushBack(GraphEdge<T>(src, dest));
   }
 
-  void purge() {
+  void purge()
+  {
     edges.purge();
   }
 
-//   bool bfs(T src, T dest, Map<T, T> &pred, Map<T, int> &dist) {
-//     Set<T> visited;
-//     LinkedList<T> queue;
+  //   bool bfs(T src, T dest, Map<T, T> &pred, Map<T, int> &dist) {
+  //     Set<T> visited;
+  //     LinkedList<T> queue;
 
-//     visited.pushBack(src);
-//     dist.put(src, 0);
-//     queue.pushBack(src);
+  //     visited.pushBack(src);
+  //     dist.put(src, 0);
+  //     queue.pushBack(src);
 
-//     while (!queue.isEmpty()) {
-//       T node = queue.popFront();
-//       for (auto iter = adj.get(node)->front; iter != NULL; iter = iter->next) {
-//         if (!visited.contains(iter->val)) {
-//           visited.pushBack(iter->val);
-//           dist.put(iter->val, *(dist.get(node)) + 1);
-//           pred.put(iter->val, node);
-//           queue.pushBack(iter->val);
+  //     while (!queue.isEmpty()) {
+  //       T node = queue.popFront();
+  //       for (auto iter = adj.get(node)->front; iter != NULL; iter = iter->next) {
+  //         if (!visited.contains(iter->val)) {
+  //           visited.pushBack(iter->val);
+  //           dist.put(iter->val, *(dist.get(node)) + 1);
+  //           pred.put(iter->val, node);
+  //           queue.pushBack(iter->val);
 
-//           if (iter->val == dest) {
-//             return true;
-//           }
-//         }
-//       }
-//     }
+  //           if (iter->val == dest) {
+  //             return true;
+  //           }
+  //         }
+  //       }
+  //     }
 
-//     return false;
-//   }
+  //     return false;
+  //   }
 
-//   void getShortestPath(T src, T dest, LinkedList<T> &path) {
-//     Map<T, T> pred;
-//     Map<T, int> dist;
+  //   void getShortestPath(T src, T dest, LinkedList<T> &path) {
+  //     Map<T, T> pred;
+  //     Map<T, int> dist;
 
-//     if (bfs(src, dest, pred, dist)) {
-//       T crawl = dest;
-//       path.pushFront(crawl);
-//       while (pred.containsKey(crawl)) {
-//         path.pushFront(*(pred.get(crawl)));
-//         crawl = *(pred.get(crawl));
-//       }
-//     }
-//   }
+  //     if (bfs(src, dest, pred, dist)) {
+  //       T crawl = dest;
+  //       path.pushFront(crawl);
+  //       while (pred.containsKey(crawl)) {
+  //         path.pushFront(*(pred.get(crawl)));
+  //         crawl = *(pred.get(crawl));
+  //       }
+  //     }
+  //   }
 };
 
 // template <typename T> struct GraphIterator {

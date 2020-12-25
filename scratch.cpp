@@ -28,11 +28,11 @@ int main(int argc, char **argv) {
     dist.purge();
     cout << "connected: " << g.bfs(1, 12, pred, dist) << endl;
 
-    // GraphIterator<int> giter(g, 3);
-    // while (giter.hasNext())
-    // {
-    //   cout << "node: " << giter.next() << endl;
-    // }
+    GraphIterator<int> giter(g, 3);
+    while (giter.hasNext())
+    {
+      cout << "node: " << giter.next() << endl;
+    }
 
     cout << "shortest path 0, 7" << endl;
     LinkedList<int> path;

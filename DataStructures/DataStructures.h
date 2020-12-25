@@ -251,6 +251,10 @@ public:
     edges.pushBack(GraphEdge<T>(src, dest));
   }
 
+  const Set<GraphEdge<T>> *getEdges() {
+    return &edges;
+  }
+
   void purge()
   {
     edges.purge();
@@ -337,30 +341,51 @@ public:
   }
 };
 
-// template <typename T> struct GraphIterator {
-//   Graph<T> g;
-//   Set<T> visited;
-//   LinkedList<T> queue;
+template <typename T>
+struct GraphIterator
+{
+  Graph<T> g;
+  Set<T> visited;
+  LinkedList<T> queue;
 
-//   GraphIterator(Graph<T> g, T start) : g(g) {
-//     queue.pushBack(start);
-//     visited.pushBack(start);
-//   }
+  GraphIterator(Graph<T> g, T start) : g(g)
+  {
+    queue.pushBack(start);
+    visited.pushBack(start);
+  }
 
-//   bool hasNext() {
-//     return !queue.isEmpty();
-//   }
+  bool hasNext()
+  {
+    return !queue.isEmpty();
+  }
 
-//   T next() {
-//     T next = queue.popFront();
-//     for (auto iter = g.adj.get(next)->front; iter != NULL; iter = iter->next) {
-//       if (!visited.contains(iter->val)) {
-//         visited.pushBack(iter->val);
-//         queue.pushBack(iter->val);
-//       }
-//     }
-//     return next;
-//   }
-// };
+  T next()
+  {
+    T next = queue.popFront();
+    Set<T> adjacent;
+      for (ListIterator<GraphEdge<T>> iter(*(g.getEdges())); iter.hasNext();)
+      {
+        GraphEdge<T> edge = iter.next();
+        if (edge.left == next)
+        {
+          adjacent.pushBack(edge.right);
+        }
+        else if (edge.right == next)
+        {
+          adjacent.pushBack(edge.left);
+        }
+      }
+    for (ListIterator<T> iter(adjacent); iter.hasNext();)
+    {
+      T adjNode = iter.next();
+      if (!visited.contains(adjNode))
+      {
+        visited.pushBack(adjNode);
+        queue.pushBack(adjNode);
+      }
+    }
+    return next;
+  }
+};
 
 #endif // _STRUCTURES_H_

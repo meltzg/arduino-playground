@@ -2,7 +2,7 @@
 #define _STRUCTURES_H_
 
 #ifdef __AVR__
-#include <Arduino.h>
+#include <EEPROM.h>
 #else
 #include <cstddef>
 #endif
@@ -246,20 +246,47 @@ class Graph
 {
 private:
   Set<GraphEdge<T>> edges;
+  bool useEeprom;
+  int eepromOffset;
+  int eepromMax;
+  int eepromCount = 0;
 
 public:
-  void addEdge(T src, T dest)
+  Graph(bool useEeprom = false, int eepromOffset = 0, int eepromMax = -1) : useEeprom(useEeprom), eepromOffset(eepromOffset), eepromMax(eepromMax)
   {
-    edges.pushBack(GraphEdge<T>(src, dest));
+    edges.purge();
   }
 
-  const Set<GraphEdge<T>> *getEdges()
+  bool addEdge(T src, T dest)
   {
-    return &edges;
+#ifdef __AVR__
+    if (useEeprom)
+    {
+      int sizeOfEdge = 2 * sizeof(T);
+      int maxLoc = eepromMax >= 0 ? eepromMax : EEPROM.length();
+      if (eepromOffset + (eepromCount * sizeOfEdge) > maxLoc)
+      {
+        return false;
+      }
+      for (int i = 0; i < sizeof(T); i++)
+      {
+        EEPROM.update(eepromOffset + (eepromCount * sizeOfEdge) + i, (src >> (8 * i)));
+      }
+      for (int i = 0; i < sizeof(T); i++)
+      {
+        EEPROM.update(eepromOffset + (eepromCount * sizeOfEdge) + sizeof(T) + i, (dest >> (8 * i)));
+      }
+      eepromCount++;
+      return true;
+    }
+#endif
+    edges.pushBack(GraphEdge<T>(src, dest));
+    return true;
   }
 
   void purge()
   {
+    eepromCount = 0;
     edges.purge();
   }
 
@@ -316,6 +343,36 @@ public:
   void getAdjacent(T node, Set<T> &adjacent)
   {
     adjacent.purge();
+
+#ifdef __AVR__
+    if (useEeprom)
+    {
+      int sizeOfEdge = 2 * sizeof(T);
+      for (int i = 0; i < eepromCount; i++)
+      {
+        int eepromLocation = eepromOffset + (i * sizeOfEdge);
+        T src = 0, dest = 0;
+
+        for (int j = 0; j < sizeof(T); j++)
+        {
+          src += EEPROM.read(eepromLocation + j) << (8 * j);
+        }
+        for (int j = 0; j < sizeof(T); j++)
+        {
+          dest += EEPROM.read(eepromLocation + sizeof(T) + j) << (8 * j);
+        }
+        if (src == node)
+        {
+          adjacent.pushBack(dest);
+        }
+        else if (dest == node)
+        {
+          adjacent.pushBack(src);
+        }
+      }
+      return;
+    }
+#endif
     for (ListIterator<GraphEdge<T>> iter(edges); iter.hasNext();)
     {
       GraphEdge<T> edge = iter.next();
@@ -333,6 +390,28 @@ public:
   size_t numNodes()
   {
     Set<T> nodes;
+#ifdef __AVR__
+    if (useEeprom)
+    {
+      int sizeOfEdge = 2 * sizeof(T);
+      for (int i = 0; i < eepromCount; i++)
+      {
+        int eepromLocation = eepromOffset + (i * sizeOfEdge);
+        T src = 0, dest = 0;
+
+        for (int j = 0; j < sizeof(T); j++)
+        {
+          src += EEPROM.read(eepromLocation + j) << (8 * j);
+        }
+        for (int j = 0; j < sizeof(T); j++)
+        {
+          dest += EEPROM.read(eepromLocation + sizeof(T) + j) << (8 * j);
+        }
+        nodes.pushBack(src);
+        nodes.pushBack(dest);
+      }
+    }
+#endif
     for (ListIterator<GraphEdge<T>> iter(edges); iter.hasNext();)
     {
       GraphEdge<T> edge = iter.next();
@@ -344,6 +423,12 @@ public:
 
   size_t numEdges()
   {
+#ifdef __AVR__
+    if (useEeprom)
+    {
+      return eepromCount;
+    }
+#endif
     return edges.count;
   }
 };

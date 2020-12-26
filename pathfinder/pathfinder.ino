@@ -1,7 +1,7 @@
 #include "DataStructures.h"
 #include "CommonMessaging.h"
 
-Graph<NodeId_t> topology;
+Graph<NodeId_t> topology(true, 0, EEPROM.length());
 char buf[10];
 
 void setup() {
@@ -140,18 +140,7 @@ void setup() {
   topology.addEdge(49, 50);
   topology.addEdge(50, 51);
   Serial.println(freeMemory());
-//  Serial.println("Finding shortest paths");
   doAllShortestPaths();
-  //  LinkedList<NodeId_t> path;
-  //  //      Serial.println(freeMemory());
-  //  topology.getShortestPath(0, 13, path);
-  //  sprintf(buf, "found: %d", !path.isEmpty());
-  //  Serial.println(buf);
-  //  for (ListIterator<NodeId_t> pIter(path); pIter.hasNext();) {
-  //    Serial.print(pIter.next());
-  //    Serial.print(" ");
-  //  }
-  //  Serial.println();
   Serial.println(freeMemory());
   Serial.println("Done");
 
@@ -164,30 +153,23 @@ void loop() {
 }
 
 void doAllShortestPaths() {
+  long paths = 0;
   for (int src = 0; src < 52; src++) {
-    Serial.println(freeMemory());
-
     for (int dest = 0; dest < 52; dest++) {
       if (src == dest) {
         continue;
       }
-      Serial.println(freeMemory());
-
-      sprintf(buf, "src: %d ", src);
-      Serial.print(buf);
-      sprintf(buf, "dest: %d ", dest);
-      Serial.print(buf);
+      Serial.print("Paths: ");
+      Serial.println(++paths, DEC);
       LinkedList<NodeId_t> path;
-      //      Serial.println(freeMemory());
       topology.getShortestPath(src, dest, path);
-      sprintf(buf, "found: %d", !path.isEmpty());
-      Serial.println(buf);
-      for (ListIterator<NodeId_t> pIter(path); pIter.hasNext();) {
-        Serial.print(pIter.next());
-        Serial.print(" ");
+      if (path.isEmpty()) {
+        sprintf(buf, "src: %d ", src);
+        Serial.print(buf);
+        sprintf(buf, "dest: %d ", dest);
+        Serial.print(buf);
+        return;
       }
-      Serial.println();
-      delay(100);
     }
   }
 }

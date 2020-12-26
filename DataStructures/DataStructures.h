@@ -253,7 +253,8 @@ public:
     edges.pushBack(GraphEdge<T>(src, dest));
   }
 
-  const Set<GraphEdge<T>> *getEdges() {
+  const Set<GraphEdge<T>> *getEdges()
+  {
     return &edges;
   }
 
@@ -274,18 +275,7 @@ public:
     {
       T node = queue.popFront();
       Set<T> adjacent;
-      for (ListIterator<GraphEdge<T>> iter(edges); iter.hasNext();)
-      {
-        GraphEdge<T> edge = iter.next();
-        if (edge.left == node)
-        {
-          adjacent.pushBack(edge.right);
-        }
-        else if (edge.right == node)
-        {
-          adjacent.pushBack(edge.left);
-        }
-      }
+      getAdjacent(node, adjacent);
       for (ListIterator<T> iter(adjacent); iter.hasNext();)
       {
         T adjNode = iter.next();
@@ -309,6 +299,7 @@ public:
   void getShortestPath(T src, T dest, LinkedList<T> &path)
   {
     Map<T, T> pred;
+    path.purge();
 
     if (bfs(src, dest, pred))
     {
@@ -318,6 +309,23 @@ public:
       {
         path.pushFront(*(pred.get(crawl)));
         crawl = *(pred.get(crawl));
+      }
+    }
+  }
+
+  void getAdjacent(T node, Set<T> &adjacent)
+  {
+    adjacent.purge();
+    for (ListIterator<GraphEdge<T>> iter(edges); iter.hasNext();)
+    {
+      GraphEdge<T> edge = iter.next();
+      if (edge.left == node)
+      {
+        adjacent.pushBack(edge.right);
+      }
+      else if (edge.right == node)
+      {
+        adjacent.pushBack(edge.left);
       }
     }
   }
@@ -362,18 +370,7 @@ struct GraphIterator
   {
     T next = queue.popFront();
     Set<T> adjacent;
-      for (ListIterator<GraphEdge<T>> iter(*(g.getEdges())); iter.hasNext();)
-      {
-        GraphEdge<T> edge = iter.next();
-        if (edge.left == next)
-        {
-          adjacent.pushBack(edge.right);
-        }
-        else if (edge.right == next)
-        {
-          adjacent.pushBack(edge.left);
-        }
-      }
+    g.getAdjacent(next, adjacent);
     for (ListIterator<T> iter(adjacent); iter.hasNext();)
     {
       T adjNode = iter.next();

@@ -8,7 +8,6 @@ int main(int argc, char **argv)
 {
   Graph<int> g;
   Map<int, int> pred;
-  Map<int, int> dist;
   g.addEdge(0, 1);
   g.addEdge(0, 4);
   g.addEdge(0, 5);
@@ -143,10 +142,9 @@ int main(int argc, char **argv)
 
   cout << "num edges " << g.numEdges() << " num nodes " << g.numNodes() << endl;
 
-  cout << "connected: " << g.bfs(0, 7, pred, dist) << endl;
+  cout << "connected: " << g.bfs(0, 7, pred) << endl;
   pred.purge();
-  dist.purge();
-  cout << "connected: " << g.bfs(1, 12, pred, dist) << endl;
+  cout << "connected: " << g.bfs(1, 12, pred) << endl;
 
   GraphIterator<int> giter(g, 3);
   while (giter.hasNext())
@@ -158,6 +156,9 @@ int main(int argc, char **argv)
   {
     for (int j = 0; j < 52; j++)
     {
+      if (i == j) {
+        continue;
+      }
       LinkedList<int> path;
       LinkedList<int> revPath;
       g.getShortestPath(i, j, path);

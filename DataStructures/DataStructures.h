@@ -1,7 +1,9 @@
 #ifndef _STRUCTURES_H_
 #define _STRUCTURES_H_
 
-#ifndef __AVR__
+#ifdef __AVR__
+#include <Arduino.h>
+#else
 #include <cstddef>
 #endif
 
@@ -260,13 +262,12 @@ public:
     edges.purge();
   }
 
-  bool bfs(T src, T dest, Map<T, T> &pred, Map<T, int> &dist)
+  bool bfs(T src, T dest, Map<T, T> &pred)
   {
     Set<T> visited;
     LinkedList<T> queue;
 
     visited.pushBack(src);
-    dist.put(src, 0);
     queue.pushBack(src);
 
     while (!queue.isEmpty())
@@ -291,7 +292,6 @@ public:
         if (!visited.contains(adjNode))
         {
           visited.pushBack(adjNode);
-          dist.put(adjNode, *(dist.get(node)) + 1);
           pred.put(adjNode, node);
           queue.pushBack(adjNode);
 
@@ -309,9 +309,8 @@ public:
   void getShortestPath(T src, T dest, LinkedList<T> &path)
   {
     Map<T, T> pred;
-    Map<T, int> dist;
 
-    if (bfs(src, dest, pred, dist))
+    if (bfs(src, dest, pred))
     {
       T crawl = dest;
       path.pushFront(crawl);

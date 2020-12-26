@@ -6,17 +6,14 @@ bool ackWait(Stream *port, int maxRetries = -1) {
   bool connected = false;
   char ackBuff[1];
   for (int i = 0; !connected && (i < maxRetries || maxRetries < 0); i++) {
-    Serial.println("pinging");
     port->write(PING_BYTE);
     byte pong = port->read();
     Serial.println(pong, HEX);
     if (pong == ACK_BYTE) {
-      Serial.println("Connected!");
       return true;
     }
     delay(PING_DELAY);
   }
-  Serial.println("Failed!");
   return false;
 }
 
@@ -24,7 +21,6 @@ bool hasIncoming(Stream *port) {
   delay(LISTEN_WAIT);
   byte resp = port->read();
   if (resp == PING_BYTE) {
-    Serial.println("incoming data");
     port->write(ACK_BYTE);
     return true;
   }

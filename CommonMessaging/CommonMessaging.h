@@ -35,6 +35,14 @@
 #define PING_DELAY 1
 #define LISTEN_WAIT 2
 
+// System commands
+#define ROUTER_GET_ID 0x01
+#define ROUTER_GET_NEIGHBORS 0x02
+#define ROUTER_CLEAR_TOPOLOGY 0x20
+#define ROUTER_ADD_NODE 0x04
+#define ROUTER_START_DISCOVERY 0x08
+#define ROUTER_GET_DISCOVERY_STATUS 0x10
+
 typedef uint8_t StartCode_t;
 typedef uint16_t NodeId_t;
 typedef uint16_t MessageSize_t;

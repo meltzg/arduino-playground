@@ -1,5 +1,5 @@
-#ifndef _STRUCTURES_H_
-#define _STRUCTURES_H_
+#ifndef _DATA_STRUCTURES_H_
+#define _DATA_STRUCTURES_H_
 
 #ifdef __AVR__
 #include <EEPROM.h>
@@ -469,4 +469,4 @@ struct GraphIterator
   }
 };
 
-#endif // _STRUCTURES_H_
+#endif // _DATA_STRUCTURES_H_

@@ -1,32 +1,45 @@
+#include <Wire.h>
+
 #include "DataStructures.h"
 #include "CommonMessaging.h"
-
-// Pathfinder commands
-#define FINDER_ADD_NODE 0x01
-#define FINDER_GET_PATH 0x02
-#define FINDER_START_DISCOVERY 0x03
-#define FINDER_GET_DISCOVERY_STATS 0x04
-#define FINDER_GET_NEIGHBOR_REQUEST 0x05
-#define FINDER_ITERATOR_NEXT 0x06
-#define FINDER_ITERATE_NEXT 0x07
-
+#include "PathFinder.h"
 
 Graph<NodeId_t> topology(true, 0, EEPROM.length());
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
-LinkeList<NodeId_t> discoveryUnexplored;
+LinkedList<NodeId_t> discoveryUnexplored;
 
 bool discoveryDone = true;
+byte *received = NULL;
+int receivedLen = 0;
 
 void setup() {
   Serial.begin(9600);
+  Wire.begin(FINDER_I2C_ADDR);
+  Wire.onReceive(onReceive);
+  Wire.onRequest(onRequest);
   Serial.println("Start");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  //  Serial.println(freeMemory());
-  //  delay(500);
+}
+
+void onReceive(int numBytes) {
+  Serial.print("recieved ");
+  Serial.println(numBytes);
+  while (Wire.available() < numBytes);
+  received = new byte[numBytes];
+  Wire.readBytes(received, numBytes);
+  receivedLen = numBytes;
+}
+
+void onRequest() {
+  if (receivedLen) {
+    Wire.write(received, receivedLen);
+    receivedLen = 0;
+    delete[] received;
+    received = NULL;
+  }
 }
 
 #ifdef __arm__

@@ -1,5 +1,5 @@
-#ifndef _MESSAGING_H_
-#define _MESSAGING_H_
+#ifndef _COMMON_MESSAGING_H_
+#define _COMMON_MESSAGING_H_
 
 /*
    Protocol
@@ -64,4 +64,4 @@ Message readMessage(Stream *srcPort);
 
 void writeMessage(Stream *destPort, const Message &message);
 
-#endif _MESSAGING_H_
+#endif _COMMON_MESSAGING_H_

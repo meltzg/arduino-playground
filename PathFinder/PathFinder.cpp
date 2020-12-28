@@ -43,8 +43,8 @@ DiscoveryStats PathFinder::getDiscoveryStats()
     Wire.write(FINDER_GET_DISCOVERY_STATS);
     Wire.endTransmission();
 
-    size_t statSize = sizeof(bool) + sizeof(size_t);
-    Wire.requestFrom(FINDER_I2C_ADDR, sizeof(NodeId_t));
+    size_t statSize = sizeof(bool) + sizeof(size_t) * 2;
+    Wire.requestFrom(FINDER_I2C_ADDR, statSize);
     while (Wire.available() < statSize)
     {
     }
@@ -56,7 +56,7 @@ DiscoveryStats PathFinder::getDiscoveryStats()
     Wire.readBytes((byte *)&numNodes, sizeof(numNodes));
     Wire.readBytes((byte *)&numEdges, sizeof(numEdges));
 
-    return DiscoveryStats(discoveryDone, numNodes);
+    return DiscoveryStats(discoveryDone, numNodes, numEdges);
 }
 
 NodeId_t PathFinder::getNextNeighborRequest()

@@ -20,7 +20,7 @@ struct DiscoveryStats {
     const size_t numNodes;
     const size_t numEdges;
 
-    DiscoveryStats(bool discoveryDone, size_t numNodes) : discoveryDone(discoveryDone), numNodes(numNodes), numEdges(numEdges) {}
+    DiscoveryStats(bool discoveryDone, size_t numNodes, size_t numEdges) : discoveryDone(discoveryDone), numNodes(numNodes), numEdges(numEdges) {}
 };
 
 class PathFinder

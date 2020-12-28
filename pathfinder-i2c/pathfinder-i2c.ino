@@ -28,7 +28,6 @@ void onReceive(int numBytes) {
   Serial.print("recieved ");
   while (Wire.available() < numBytes);
   message = new byte[numBytes];
-  byte *body = message + 1;
   Wire.readBytes(message, numBytes);
   receivedLen = numBytes;
   bool processed = false;
@@ -40,24 +39,25 @@ void onReceive(int numBytes) {
   Serial.println();
 
   // Process requests that do not require data return
+  byte *body = message + 1;
+  byte command = message[0];
   NodeId_t node;
-  switch (message[0]) {
-    case FINDER_ADD_NODE:
-      node = ((NodeId_t *) body)[0];
-      size_t numNodes = ((size_t *) (body + sizeof(node)))[0];
-      NodeId_t *neighbors = ((NodeId_t *) (body + sizeof(node) + sizeof(numNodes)));
-      addNode(node, neighbors, numNodes);
-      processed = true;
-      break;
-    case FINDER_START_DISCOVERY:
-      node = ((NodeId_t *) body)[0];
-      startDiscovery(node);
-      processed = true;
-      break;
-    case FINDER_CLEAR_TOPOLOGY:
-      clearTopology();
-      processed = true;
-      break;
+  if (command == FINDER_ADD_NODE) {
+    Serial.println("Add Node");
+    node = ((NodeId_t *) body)[0];
+    size_t numNodes = ((size_t *) (body + sizeof(node)))[0];
+    NodeId_t *neighbors = ((NodeId_t *) (body + sizeof(node) + sizeof(numNodes)));
+    addNode(node, neighbors, numNodes);
+    processed = true;
+  } else if (command == FINDER_START_DISCOVERY) {
+    Serial.println("Start Discovery");
+    node = ((NodeId_t *) body)[0];
+    startDiscovery(node);
+    processed = true;
+  } else if (command == FINDER_CLEAR_TOPOLOGY) {
+    Serial.println("Clearing topology");
+    clearTopology();
+    processed = true;
   }
 
   if (processed) {
@@ -67,12 +67,15 @@ void onReceive(int numBytes) {
 
 void onRequest() {
   if (receivedLen) {
-    Wire.write(message, receivedLen);
-    clearMessage()
+    if (message[0] == FINDER_GET_DISCOVERY_STATS) {
+      writeDiscoveryStats();
+    }
+    clearMessage();
   }
 }
 
 void clearMessage() {
+  Serial.println("clearing message");
   receivedLen = 0;
   delete[] message;
   message = NULL;
@@ -86,10 +89,6 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
     Serial.println(neighbors[i], HEX);
     topology.addEdge(node, neighbors[i]);
   }
-  Serial.print("num edges: ");
-  Serial.println(topology.numEdges());
-  Serial.print("num nodes: ");
-  Serial.println(topology.numNodes());
 }
 
 void startDiscovery(NodeId_t startNode) {
@@ -102,6 +101,22 @@ void startDiscovery(NodeId_t startNode) {
 
 void clearTopology() {
   topology.purge();
+}
+
+void writeDiscoveryStats() {
+  size_t numEdges;
+  size_t numNodes;
+  numNodes = topology.numNodes();
+  numEdges = topology.numEdges();
+
+  Serial.print("num edges: ");
+  Serial.println(numEdges);
+  Serial.print("num nodes: ");
+  Serial.println(numNodes);
+
+  Wire.write((byte *)&discoveryDone, sizeof(bool));
+  Wire.write((byte *)&numNodes, sizeof(size_t));
+  Wire.write((byte *)&numEdges, sizeof(size_t));
 }
 
 #ifdef __arm__

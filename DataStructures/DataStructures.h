@@ -263,6 +263,26 @@ public:
     if (useEeprom)
     {
       int sizeOfEdge = 2 * sizeof(T);
+
+      for (int i = 0; i < eepromCount; i++)
+      {
+        int eepromLocation = eepromOffset + (i * sizeOfEdge);
+        T existingSrc = 0, existingDest = 0;
+
+        for (int j = 0; j < sizeof(T); j++)
+        {
+          existingSrc += EEPROM.read(eepromLocation + j) << (8 * j);
+        }
+        for (int j = 0; j < sizeof(T); j++)
+        {
+          existingDest += EEPROM.read(eepromLocation + sizeof(T) + j) << (8 * j);
+        }
+        if (src == existingSrc && dest == existingDest || dest == existingSrc && src == existingDest)
+        {
+          return true;
+        }
+      }
+
       int maxLoc = eepromMax >= 0 ? eepromMax : EEPROM.length();
       if (eepromOffset + (eepromCount * sizeOfEdge) > maxLoc)
       {

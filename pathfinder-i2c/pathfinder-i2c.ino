@@ -10,7 +10,7 @@ LinkedList<NodeId_t> discoveryQueue;
 LinkedList<NodeId_t> discoveryUnexplored;
 
 bool discoveryDone = true;
-byte *received = NULL;
+byte *message = NULL;
 int receivedLen = 0;
 
 void setup() {
@@ -26,20 +26,82 @@ void loop() {
 
 void onReceive(int numBytes) {
   Serial.print("recieved ");
-  Serial.println(numBytes);
   while (Wire.available() < numBytes);
-  received = new byte[numBytes];
-  Wire.readBytes(received, numBytes);
+  message = new byte[numBytes];
+  byte *body = message + 1;
+  Wire.readBytes(message, numBytes);
   receivedLen = numBytes;
+  bool processed = false;
+
+  for (int i = 0; i < numBytes; i++) {
+    Serial.print(message[i], HEX);
+    Serial.print(", ");
+  }
+  Serial.println();
+
+  // Process requests that do not require data return
+  NodeId_t node;
+  switch (message[0]) {
+    case FINDER_ADD_NODE:
+      node = ((NodeId_t *) body)[0];
+      size_t numNodes = ((size_t *) (body + sizeof(node)))[0];
+      NodeId_t *neighbors = ((NodeId_t *) (body + sizeof(node) + sizeof(numNodes)));
+      addNode(node, neighbors, numNodes);
+      processed = true;
+      break;
+    case FINDER_START_DISCOVERY:
+      node = ((NodeId_t *) body)[0];
+      startDiscovery(node);
+      processed = true;
+      break;
+    case FINDER_CLEAR_TOPOLOGY:
+      clearTopology();
+      processed = true;
+      break;
+  }
+
+  if (processed) {
+    clearMessage();
+  }
 }
 
 void onRequest() {
   if (receivedLen) {
-    Wire.write(received, receivedLen);
-    receivedLen = 0;
-    delete[] received;
-    received = NULL;
+    Wire.write(message, receivedLen);
+    clearMessage()
   }
+}
+
+void clearMessage() {
+  receivedLen = 0;
+  delete[] message;
+  message = NULL;
+}
+
+void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
+  for (int i = 0; i < numNodes; i++) {
+    Serial.print("Adding ");
+    Serial.print(node, HEX);
+    Serial.print("->");
+    Serial.println(neighbors[i], HEX);
+    topology.addEdge(node, neighbors[i]);
+  }
+  Serial.print("num edges: ");
+  Serial.println(topology.numEdges());
+  Serial.print("num nodes: ");
+  Serial.println(topology.numNodes());
+}
+
+void startDiscovery(NodeId_t startNode) {
+  clearTopology();
+  discoveryVisited.purge();
+  discoveryQueue.purge();
+  discoveryUnexplored.purge();
+  discoveryDone = false;
+}
+
+void clearTopology() {
+  topology.purge();
 }
 
 #ifdef __arm__

@@ -2,9 +2,14 @@
 #include "CommonMessaging.h"
 #include "PathFinder.h"
 
+PathFinder p;
+
 void setup() {
   Serial.begin(9600);
   Wire.begin();
+  NodeId_t node = 0x01ab;
+  NodeId_t neighbors[3] = { 0x02ab, 0x03ab, 0x03ab };
+  p.addNode(node, neighbors, 3);
 }
 
 void loop() {
@@ -17,8 +22,10 @@ void loop() {
     Wire.requestFrom(FINDER_I2C_ADDR, str.length());    // request 6 bytes from slave device #8
 
     while (Wire.available()) { // slave may send less than requested
-      char c = Wire.read(); // receive a byte as character
-      Serial.print(c);         // print the character
+      size_t count = Wire.available();
+      char msg[count + 1] = { 0 };
+      Wire.readBytes(msg, count); // receive a byte as character
+      Serial.write(msg, count);         // print the character
     }
     Serial.println();
   }

@@ -3,12 +3,7 @@
 #include "DataStructures.h"
 #include "CommonMessaging.h"
 
-// Hardware serial has a special case address
-#define PORT_H 0xffff
-#define EMPTY 0x0000
-
 #define PRINT_BUF_SIZE 100
-
 
 /*
    Each node has a SoftwareSerial connection to its neighbor and another to the

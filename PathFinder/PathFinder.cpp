@@ -29,11 +29,10 @@ NodeId_t PathFinder::getNextStep(NodeId_t src, NodeId_t dest)
     return nextStep;
 }
 
-void PathFinder::startDicovery(NodeId_t node)
+void PathFinder::startDiscovery()
 {
     Wire.beginTransmission(FINDER_I2C_ADDR);
     Wire.write(FINDER_START_DISCOVERY);
-    Wire.write((byte *)&node, sizeof(node));
     Wire.endTransmission();
 }
 

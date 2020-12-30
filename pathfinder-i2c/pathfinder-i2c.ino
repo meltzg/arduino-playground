@@ -7,7 +7,6 @@
 Graph<NodeId_t> topology(true, 0, EEPROM.length());
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
-LinkedList<NodeId_t> discoveryUnexplored;
 
 bool discoveryDone = true;
 byte *message = NULL;
@@ -25,7 +24,7 @@ void loop() {
 }
 
 void onReceive(int numBytes) {
-  Serial.print("recieved ");
+  Serial.print("In ");
   while (Wire.available() < numBytes);
   message = new byte[numBytes];
   Wire.readBytes(message, numBytes);
@@ -34,7 +33,7 @@ void onReceive(int numBytes) {
 
   for (int i = 0; i < numBytes; i++) {
     Serial.print(message[i], HEX);
-    Serial.print(", ");
+    Serial.print(",");
   }
   Serial.println();
 
@@ -51,8 +50,7 @@ void onReceive(int numBytes) {
     processed = true;
   } else if (command == FINDER_START_DISCOVERY) {
     Serial.println("Start Discovery");
-    node = ((NodeId_t *) body)[0];
-    startDiscovery(node);
+    startDiscovery();
     processed = true;
   } else if (command == FINDER_CLEAR_TOPOLOGY) {
     Serial.println("Clearing topology");
@@ -67,35 +65,59 @@ void onReceive(int numBytes) {
 
 void onRequest() {
   if (receivedLen) {
-    if (message[0] == FINDER_GET_DISCOVERY_STATS) {
+    byte command = message[0];
+    if (command == FINDER_GET_DISCOVERY_STATS) {
       writeDiscoveryStats();
+    } else if (command == FINDER_GET_NEIGHBOR_REQUEST) {
+      writeNeighborRequest();
     }
     clearMessage();
   }
 }
 
 void clearMessage() {
-  Serial.println("clearing message");
   receivedLen = 0;
   delete[] message;
   message = NULL;
 }
 
 void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
-  for (int i = 0; i < numNodes; i++) {
-    Serial.print("Adding ");
-    Serial.print(node, HEX);
-    Serial.print("->");
-    Serial.println(neighbors[i], HEX);
-    topology.addEdge(node, neighbors[i]);
+  if (node != EMPTY) {
+    for (int i = 0; i < numNodes; i++) {
+      Serial.print("A ");
+      Serial.print(node, HEX);
+      Serial.print("->");
+      Serial.println(neighbors[i], HEX);
+      if (neighbors[i] == EMPTY) {
+        continue;
+      }
+      topology.addEdge(node, neighbors[i]);
+    }
+  } else {
+    return;
+  }
+
+  if (!discoveryDone) {
+    discoveryVisited.pushBack(node);
+    for (int i = 0; i < numNodes; i++) {
+      if (!discoveryVisited.contains(neighbors[i])) {
+        discoveryQueue.pushBack(neighbors[i]);
+        discoveryVisited.pushBack(neighbors[i]);
+      }
+    }
+  }
+
+  if (discoveryQueue.isEmpty()) {
+    Serial.println("Discovery done");
+    discoveryDone = true;
+    discoveryVisited.purge();
   }
 }
 
-void startDiscovery(NodeId_t startNode) {
+void startDiscovery() {
   clearTopology();
   discoveryVisited.purge();
   discoveryQueue.purge();
-  discoveryUnexplored.purge();
   discoveryDone = false;
 }
 
@@ -109,14 +131,26 @@ void writeDiscoveryStats() {
   numNodes = topology.numNodes();
   numEdges = topology.numEdges();
 
-  Serial.print("num edges: ");
+  Serial.print("Es ");
   Serial.println(numEdges);
-  Serial.print("num nodes: ");
+  Serial.print("Ns ");
   Serial.println(numNodes);
 
   Wire.write((byte *)&discoveryDone, sizeof(bool));
   Wire.write((byte *)&numNodes, sizeof(size_t));
   Wire.write((byte *)&numEdges, sizeof(size_t));
+}
+
+void writeNeighborRequest() {
+  NodeId_t nextNeighbor = EMPTY;
+  if (!discoveryQueue.isEmpty()) {
+    nextNeighbor = discoveryQueue.popFront();
+  }
+
+  Serial.print("req ");
+  Serial.println(nextNeighbor, HEX);
+
+  Wire.write((byte *)&nextNeighbor, sizeof(NodeId_t));
 }
 
 #ifdef __arm__

@@ -35,6 +35,10 @@
 #define PING_DELAY 1
 #define LISTEN_WAIT 2
 
+// Hardware serial has a special case address
+#define PORT_H 0xffff
+#define EMPTY 0x0000
+
 // System commands
 #define ROUTER_GET_ID 0x01
 #define ROUTER_GET_NEIGHBORS 0x02

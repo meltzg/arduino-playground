@@ -28,7 +28,7 @@ class PathFinder
 public:
     void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNeighbors);
     NodeId_t getNextStep(NodeId_t src, NodeId_t dest);
-    void startDicovery(NodeId_t node);
+    void startDiscovery();
     DiscoveryStats getDiscoveryStats();
     NodeId_t getNextNeighborRequest();
     void resetIterator(NodeId_t start);

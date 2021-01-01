@@ -12,8 +12,9 @@
 #define FINDER_GET_DISCOVERY_STATS 0x04
 #define FINDER_GET_NEIGHBOR_REQUEST 0x05
 #define FINDER_ITERATOR_RESET 0x06
-#define FINDER_ITERATOR_NEXT 0x07
-#define FINDER_CLEAR_TOPOLOGY 0x08
+#define FINDER_ITERATOR_CLEAR 0x07
+#define FINDER_ITERATOR_NEXT 0x08
+#define FINDER_CLEAR_TOPOLOGY 0x09
 
 struct DiscoveryStats {
     const bool discoveryDone;
@@ -32,7 +33,8 @@ public:
     DiscoveryStats getDiscoveryStats();
     NodeId_t getNextNeighborRequest();
     void resetIterator(NodeId_t start);
-    NodeId_t getNextIterator();
+    void clearIterator(NodeId_t start);
+    NodeId_t getIteratorNext();
     void clearTopology();
 };
 

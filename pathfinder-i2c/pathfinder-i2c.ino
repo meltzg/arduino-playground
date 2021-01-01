@@ -7,6 +7,7 @@
 Graph<NodeId_t> topology(true, 0, EEPROM.length());
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
+GraphIterator<NodeId_t> *iterator = NULL;
 
 bool discoveryDone = true;
 byte *message = NULL;
@@ -66,10 +67,18 @@ void onReceive(int numBytes) {
 void onRequest() {
   if (receivedLen) {
     byte command = message[0];
+    byte *body = message + 1;
     if (command == FINDER_GET_DISCOVERY_STATS) {
+      Serial.println("Get stats");
       writeDiscoveryStats();
     } else if (command == FINDER_GET_NEIGHBOR_REQUEST) {
+      Serial.println("Get neighbor request");
       writeNeighborRequest();
+    } else if (command == FINDER_GET_NEXT_STEP) {
+      Serial.println("Get next step");
+      NodeId_t src = ((NodeId_t *) body)[0];
+      NodeId_t dest = ((NodeId_t *) body)[1];
+      writeNextStep(src, dest);
     }
     clearMessage();
   }
@@ -85,9 +94,9 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
   if (node != EMPTY) {
     for (int i = 0; i < numNodes; i++) {
       Serial.print("A ");
-      Serial.print(node, HEX);
+      Serial.print(node);
       Serial.print("->");
-      Serial.println(neighbors[i], HEX);
+      Serial.println(neighbors[i]);
       if (neighbors[i] == EMPTY) {
         continue;
       }
@@ -111,6 +120,19 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
     Serial.println("Discovery done");
     discoveryDone = true;
     discoveryVisited.purge();
+
+    for (GraphIterator<NodeId_t> iter(topology, node); iter.hasNext();) {
+      NodeId_t curr = iter.next();
+      Serial.print(curr, HEX);
+      Serial.print(": ");
+      Set<NodeId_t> adj;
+      topology.getAdjacent(curr, adj);
+      for (ListIterator<NodeId_t> aIter(adj); aIter.hasNext();) {
+        Serial.print(aIter.next(), HEX);
+        Serial.print(", ");
+      }
+      Serial.println();
+    }
   }
 }
 
@@ -151,6 +173,29 @@ void writeNeighborRequest() {
   Serial.println(nextNeighbor, HEX);
 
   Wire.write((byte *)&nextNeighbor, sizeof(NodeId_t));
+}
+
+void writeNextStep(NodeId_t src, NodeId_t dest) {
+  Serial.print(src, HEX);
+  Serial.print("->");
+  Serial.println(dest, HEX);
+  LinkedList<NodeId_t> path;
+  NodeId_t nextStep = EMPTY;
+
+  topology.getShortestPath(src, dest, path);
+  if (!path.isEmpty()) {
+    int i = 0;
+    for (ListIterator<NodeId_t> iter(path); iter.hasNext(); i++) {
+      NodeId_t node = iter.next();
+      if (i == 1) {
+        nextStep = node;
+      }
+      Serial.print(node);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
+  Wire.write((byte *)&nextStep, sizeof(NodeId_t));
 }
 
 #ifdef __arm__

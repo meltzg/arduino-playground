@@ -167,12 +167,33 @@ void setup() {
   } while (!p.getDiscoveryStats().discoveryDone && currNode != EMPTY);
 
   DiscoveryStats stats = p.getDiscoveryStats();
-  Serial.print("Es ");
-  Serial.println(stats.numEdges);
-  Serial.print("Ns ");
-  Serial.println(stats.numNodes);
-  Serial.print("Done ");
-  Serial.println(stats.discoveryDone);
+  printDiscoveryStats(stats);
+
+//  Serial.println("Validate pathfinding");
+//  for (NodeId_t i = 1; i < 53; i++) {
+//    for (NodeId_t j = 1; j < 53; j++) {
+//      if (i == j) {
+//        continue;
+//      }
+//      LinkedList<NodeId_t> path;
+//      g.getShortestPath(i, j, path);
+//      NodeId_t expected = EMPTY;
+//      if (!path.isEmpty()) {
+//        ListIterator<NodeId_t> iter(path);
+//        iter.next();
+//        expected = iter.next();
+//      }
+//      NodeId_t nextStep = p.getNextStep(i, j);
+//      if (nextStep == EMPTY) {
+//        Serial.print("Path not found from ");
+//        Serial.print(i);
+//        Serial.print(" to ");
+//        Serial.print(j);
+//        Serial.print(". expected ");
+//        Serial.println(expected);
+//      }
+//    }
+//  }
 }
 
 void loop() {
@@ -184,5 +205,5 @@ void printDiscoveryStats(const DiscoveryStats &stats) {
   Serial.print(" num nodes: ");
   Serial.print(stats.numNodes);
   Serial.print(" num edges: ");
-  Serial.println(stats.numEdges, HEX);
+  Serial.println(stats.numEdges);
 }

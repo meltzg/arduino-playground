@@ -320,6 +320,19 @@ public:
 
     while (!queue.isEmpty())
     {
+      Serial.println("Queue");
+      for (ListIterator<T> iter(queue); iter.hasNext();)
+      {
+        Serial.print(iter.next());
+        Serial.print(", ");
+      }
+      Serial.println("\nVisited");
+      for (ListIterator<T> iter(visited); iter.hasNext();)
+      {
+        Serial.print(iter.next());
+        Serial.print(", ");
+      }
+      Serial.println("\n");
       T node = queue.popFront();
       Set<T> adjacent;
       getAdjacent(node, adjacent);
@@ -339,6 +352,16 @@ public:
         }
       }
     }
+
+    Serial.println("wnQueue");
+    for (ListIterator<T> iter(queue); iter.hasNext();)
+    {
+      Serial.print(iter.next());
+      Serial.print(", ");
+    }
+    Serial.println();
+    Serial.println(queue.isEmpty());
+    Serial.println("*******");
 
     return false;
   }

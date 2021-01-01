@@ -148,26 +148,30 @@ void setup() {
   Serial.print("Ns ");
   Serial.println(g.numNodes());
 
-  p.startDiscovery();
-  Set<NodeId_t> neighbors;
-  NodeId_t *neiArr = NULL;
-  NodeId_t currNode = 1;
+  LinkedList<NodeId_t> path;
+  g.getShortestPath(1, 52, path);
+  Serial.println(path.isEmpty());
 
-  do {
-    Serial.println(currNode);
-    g.getAdjacent(currNode, neighbors);
-    delete[] neiArr;
-    neiArr  = new NodeId_t[neighbors.count];
-    int i = 0;
-    for (ListIterator<NodeId_t> iter(neighbors); iter.hasNext(); i++) {
-      neiArr[i] = iter.next();
-    }
-    p.addNode(currNode, neiArr, neighbors.count);
-    currNode = p.getNextNeighborRequest();
-  } while (!p.getDiscoveryStats().discoveryDone && currNode != EMPTY);
-
-  DiscoveryStats stats = p.getDiscoveryStats();
-  printDiscoveryStats(stats);
+//  p.startDiscovery();
+//  Set<NodeId_t> neighbors;
+//  NodeId_t *neiArr = NULL;
+//  NodeId_t currNode = 1;
+//
+//  do {
+//    Serial.println(currNode);
+//    g.getAdjacent(currNode, neighbors);
+//    delete[] neiArr;
+//    neiArr  = new NodeId_t[neighbors.count];
+//    int i = 0;
+//    for (ListIterator<NodeId_t> iter(neighbors); iter.hasNext(); i++) {
+//      neiArr[i] = iter.next();
+//    }
+//    p.addNode(currNode, neiArr, neighbors.count);
+//    currNode = p.getNextNeighborRequest();
+//  } while (!p.getDiscoveryStats().discoveryDone && currNode != EMPTY);
+//
+//  DiscoveryStats stats = p.getDiscoveryStats();
+//  printDiscoveryStats(stats);
 
 //  Serial.println("Validate pathfinding");
 //  for (NodeId_t i = 1; i < 53; i++) {

@@ -206,7 +206,14 @@ void setup() {
       Serial.print("Progress: ");
       Serial.print(++progress);
       Serial.print("/");
-      Serial.println(total);
+      Serial.print(total);
+      Serial.print(" ");
+      Serial.print(i);
+      Serial.print(" to ");
+      Serial.print(j);
+      Serial.print(" via ");
+      Serial.println(nextStep);
+
       if (nextStep == EMPTY) {
         Serial.print("Path not found from ");
         Serial.print(i);

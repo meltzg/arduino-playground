@@ -9,7 +9,7 @@ void setup() {
   Serial.begin(9600);
   Wire.begin();
   Serial.println("Start");
-  Graph<NodeId_t> g;
+  Graph<NodeId_t> g(true, 0, EEPROM.length());
 
   g.addEdge(1, 2);
   g.addEdge(1, 5);
@@ -150,54 +150,65 @@ void setup() {
 
   LinkedList<NodeId_t> path;
   g.getShortestPath(1, 52, path);
-  Serial.println(path.isEmpty());
+  Serial.print("Path: ");
+  for (ListIterator<NodeId_t> iter(path); iter.hasNext();) {
+    Serial.print(iter.next());
+    Serial.print(", ");
+  }
+  Serial.println();
 
-//  p.startDiscovery();
-//  Set<NodeId_t> neighbors;
-//  NodeId_t *neiArr = NULL;
-//  NodeId_t currNode = 1;
-//
-//  do {
-//    Serial.println(currNode);
-//    g.getAdjacent(currNode, neighbors);
-//    delete[] neiArr;
-//    neiArr  = new NodeId_t[neighbors.count];
-//    int i = 0;
-//    for (ListIterator<NodeId_t> iter(neighbors); iter.hasNext(); i++) {
-//      neiArr[i] = iter.next();
-//    }
-//    p.addNode(currNode, neiArr, neighbors.count);
-//    currNode = p.getNextNeighborRequest();
-//  } while (!p.getDiscoveryStats().discoveryDone && currNode != EMPTY);
-//
-//  DiscoveryStats stats = p.getDiscoveryStats();
-//  printDiscoveryStats(stats);
+  p.startDiscovery();
+  Set<NodeId_t> neighbors;
+  NodeId_t *neiArr = NULL;
+  NodeId_t currNode = 1;
 
-//  Serial.println("Validate pathfinding");
-//  for (NodeId_t i = 1; i < 53; i++) {
-//    for (NodeId_t j = 1; j < 53; j++) {
-//      if (i == j) {
-//        continue;
-//      }
-//      LinkedList<NodeId_t> path;
-//      g.getShortestPath(i, j, path);
-//      NodeId_t expected = EMPTY;
-//      if (!path.isEmpty()) {
-//        ListIterator<NodeId_t> iter(path);
-//        iter.next();
-//        expected = iter.next();
-//      }
-//      NodeId_t nextStep = p.getNextStep(i, j);
-//      if (nextStep == EMPTY) {
-//        Serial.print("Path not found from ");
-//        Serial.print(i);
-//        Serial.print(" to ");
-//        Serial.print(j);
-//        Serial.print(". expected ");
-//        Serial.println(expected);
-//      }
-//    }
-//  }
+  do {
+    Serial.println(currNode);
+    g.getAdjacent(currNode, neighbors);
+    delete[] neiArr;
+    neiArr  = new NodeId_t[neighbors.count];
+    int i = 0;
+    for (ListIterator<NodeId_t> iter(neighbors); iter.hasNext(); i++) {
+      neiArr[i] = iter.next();
+    }
+    p.addNode(currNode, neiArr, neighbors.count);
+    currNode = p.getNextNeighborRequest();
+  } while (!p.getDiscoveryStats().discoveryDone && currNode != EMPTY);
+
+  DiscoveryStats stats = p.getDiscoveryStats();
+  printDiscoveryStats(stats);
+
+  Serial.print("Next Step: ");
+  Serial.print(p.getNextStep(1, 52));
+  Serial.println();
+
+  //  Serial.println("Validate pathfinding");
+  //  for (NodeId_t i = 1; i < 53; i++) {
+  //    for (NodeId_t j = 1; j < 53; j++) {
+  //      if (i == j) {
+  //        continue;
+  //      }
+  //      LinkedList<NodeId_t> path;
+  //      g.getShortestPath(i, j, path);
+  //      NodeId_t expected = EMPTY;
+  //      if (!path.isEmpty()) {
+  //        ListIterator<NodeId_t> iter(path);
+  //        iter.next();
+  //        expected = iter.next();
+  //      }
+  //      NodeId_t nextStep = p.getNextStep(i, j);
+  //      if (nextStep == EMPTY) {
+  //        Serial.print("Path not found from ");
+  //        Serial.print(i);
+  //        Serial.print(" to ");
+  //        Serial.print(j);
+  //        Serial.print(". expected ");
+  //        Serial.println(expected);
+  //      }
+  //    }
+  //  }
+
+  Serial.println("Done");
 }
 
 void loop() {

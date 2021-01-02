@@ -1,7 +1,9 @@
+#include <Wire.h>
 #include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
-#include "DataStructures.h"
 #include "CommonMessaging.h"
+#include "DataStructures.h"
+#include "PathFinder.h"
 
 #define PRINT_BUF_SIZE 100
 
@@ -47,21 +49,13 @@ NodeId_t neighborIds[6] = { NULL };
 
 NodeId_t NODE_ID;
 
-Graph<NodeId_t> topology(true, 0, EEPROM.length());
-Set<NodeId_t> discoveryVisited;
-LinkedList<NodeId_t> discoveryQueue;
-int outstandingNeighborRequests = 0;
-bool discoveryDone = true;
+PathFinder pathfinder(6);
 
 void setup() {
   NODE_ID = getNodeId();
   Serial.begin(9600);
-  PORT_0.begin(9600);
-  PORT_1.begin(9600);
-  PORT_2.begin(9600);
-  PORT_3.begin(9600);
-  PORT_4.begin(9600);
-  PORT_5.begin(9600);
+  Wire.begin();
+  startPorts();
 
   Serial.println("starting");
 }
@@ -91,6 +85,28 @@ void loop() {
   }
 }
 
+void startPorts() {
+  Serial.println("Starting portd");
+  PORT_0.begin(9600);
+  PORT_1.begin(9600);
+  PORT_2.begin(9600);
+  PORT_3.begin(9600);
+  PORT_4.begin(9600);
+  PORT_5.begin(9600);
+  PORT_A.begin(9600);
+}
+
+void stopPorts() {
+  Serial.println("Stopping portd");
+  PORT_0.end();
+  PORT_1.end();
+  PORT_2.end();
+  PORT_3.end();
+  PORT_4.end();
+  PORT_5.end();
+  PORT_A.end();
+}
+
 void processMessage(Stream * srcPort, const Message &message) {
   char buf[PRINT_BUF_SIZE];
   if (message.sysCommand & ROUTER_GET_ID) {
@@ -106,7 +122,7 @@ void processMessage(Stream * srcPort, const Message &message) {
   }
   if (message.sysCommand & ROUTER_CLEAR_TOPOLOGY) {
     Serial.println("Clear topology");
-    topology.purge();
+    pathfinder.clearTopology();
   }
   if (message.sysCommand & ROUTER_GET_NEIGHBORS) {
     sprintf(buf, "Node Neighbors requested by %hx", message.source);
@@ -137,10 +153,16 @@ void processMessage(Stream * srcPort, const Message &message) {
   }
   if (message.sysCommand & ROUTER_GET_DISCOVERY_STATUS) {
     Serial.println("Get discovery stats");
-    byte discoStats[sizeof(bool) + sizeof(size_t)] = { 0 };
+    byte discoStats[sizeof(bool) + sizeof(size_t) * 2] = { 0 };
+
+    DiscoveryStats stats = pathfinder.getDiscoveryStats();
+    bool discoveryDone = stats.discoveryDone;
+    size_t numNodes = stats.numNodes;
+    size_t numEdges = stats.numEdges;
+
     memcpy(discoStats, &discoveryDone, sizeof(bool));
-    size_t numNodes = topology.numNodes();
     memcpy(discoStats + sizeof(bool), &numNodes, sizeof(size_t));
+    memcpy(discoStats + sizeof(bool) + sizeof(size_t), &numEdges, sizeof(size_t));
     Message response;
     response.source = NODE_ID;
     response.dest = message.source;
@@ -159,10 +181,9 @@ void routeMessage(const Message &message) {
     writeMessage(&Serial, message);
     return;
   }
-  LinkedList<NodeId_t> path;
-  topology.getShortestPath(NODE_ID, message.dest, path);
+  NodeId_t nextStep = pathfinder.getNextStep(NODE_ID, message.dest);
   Serial.print("Path found ");
-  Serial.println(!path.isEmpty());
+  Serial.println(nextStep != EMPTY);
 }
 
 void resetNeighbors() {
@@ -188,103 +209,93 @@ void resetNeighbors() {
 }
 
 void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
-  outstandingNeighborRequests = max(outstandingNeighborRequests - 1, 0);
   if (numNeighbors <= 0) {
     return;
   }
 
   char buf[PRINT_BUF_SIZE];
 
-  // Add edges to local topology graph
-  for (int i = 0; i < numNeighbors; i++) {
-    if (neighbors[i] != EMPTY) {
-      sprintf(buf, "Adding Edge %hx <-> %hx", src, neighbors[i]);
-      Serial.println(buf);
-      topology.addEdge(src, neighbors[i]);
-    }
-  }
+  // Add edges to pathfinder
+  pathfinder.addNode(src, neighbors, numNeighbors);
 
-  // if the queue is empty and we're not waiting for more requests, we're done
-  if (discoveryQueue.isEmpty() && outstandingNeighborRequests <= 0) {
-    Serial.println("Discovery complete");
-    discoveryDone = true;
-  }
-  if (discoveryDone || outstandingNeighborRequests > 0) {
-    // don't continute if discovery is done or we're still waiting to hear back from outstanding requests
+  if (pathfinder.getDiscoveryStats().discoveryDone) {
     return;
   }
 
   Serial.println("Continuing discover");
 
-  // before discovery can continue, we need to distribute the current state of the graph to all nodes
-  for (GraphIterator<NodeId_t> toDistribute(topology, NODE_ID); toDistribute.hasNext();) {
-    NodeId_t distribId = toDistribute.next();
-    sprintf(buf, "creating add node message for %hx: ", distribId);
-    Serial.print(buf);
-    Set<NodeId_t> adj;
-    topology.getAdjacent(distribId, adj);
-    ListIterator<NodeId_t> adjIter(adj);
+  // update all nodes with the new one
+  pathfinder.resetIterator(NODE_ID);
+  Message message;
+  message.source = NODE_ID;
+  message.payloadSize = numNeighbors * sizeof(NodeId_t);
+  message.sysCommand = ROUTER_ADD_NODE;
+  message.body = (byte *) neighbors;
+  for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext()) {
+    if (distribId == NODE_ID || distribId == src) {
+      continue;
+    }
+    message.dest = distribId;
+    routeMessage(message);
+  }
 
-    int numAdj = 1 + adj.count;
-    NodeId_t nodeMessage[numAdj] = { 0 };
-    nodeMessage[0] = distribId;
-    for (int i = 1; adjIter.hasNext(); i++) {
-      nodeMessage[i] = adjIter.next();
-      sprintf(buf, "%hx, ", nodeMessage[i]);
+  if (src != NODE_ID) {
+    // then send entire graph to new node
+    pathfinder.resetIterator(NODE_ID);
+    for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext()) {
+      sprintf(buf, "creating add node message for %hx: ", distribId);
       Serial.print(buf);
-    }
-    Serial.println();
+      Set<NodeId_t> adj;
+      pathfinder.getAdjacent(distribId, adj);
+      ListIterator<NodeId_t> adjIter(adj);
 
-    Message message;
-    message.source = NODE_ID;
-    message.payloadSize = numAdj * sizeof(NodeId_t);
-    message.sysCommand = ROUTER_ADD_NODE;
-    message.body = (byte *) nodeMessage;
-
-    if (distribId == NODE_ID) {
-      // clear destination's topology to ensure it always has the most correct graph
-      // Needed in the case of rediscovery
-      Serial.println("Destination will clear its topology");
-      message.sysCommand |= ROUTER_CLEAR_TOPOLOGY;
-    }
-    for (GraphIterator<NodeId_t> destination(topology, NODE_ID); destination.hasNext();) {
-      NodeId_t destId = destination.next();
-      if (destId == NODE_ID) {
-        continue;
+      int numAdj = 1 + adj.count;
+      NodeId_t nodeMessage[numAdj] = { 0 };
+      nodeMessage[0] = distribId;
+      for (int i = 1; adjIter.hasNext(); i++) {
+        nodeMessage[i] = adjIter.next();
+        sprintf(buf, "%hx, ", nodeMessage[i]);
+        Serial.print(buf);
       }
-      message.dest = destId;
+      Serial.println();
+
+      Message message;
+      message.source = NODE_ID;
+      message.dest = src;
+      message.payloadSize = numAdj * sizeof(NodeId_t);
+      message.sysCommand = ROUTER_ADD_NODE;
+      message.body = (byte *) nodeMessage;
+
+      if (distribId == NODE_ID) {
+        // clear destination's topology to ensure it always has the most correct graph
+        // Needed in the case of rediscovery
+        Serial.println("Destination will clear its topology");
+        message.sysCommand |= ROUTER_CLEAR_TOPOLOGY;
+      }
       routeMessage(message);
     }
   }
 
-  Serial.println("Sending get neighbor requests");
+  NodeId_t next = pathfinder.getNextNeighborRequest();
+  if (next != EMPTY) {
+    Serial.print("Sending get neighbor request: ");
+    Serial.println(next);
 
-  NodeId_t next = discoveryQueue.popFront();
-  Message neighborRequest;
-  neighborRequest.source = NODE_ID;
-  neighborRequest.payloadSize = 0;
-  neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
-  neighborRequest.body = NULL;
-  for (GraphIterator<NodeId_t> iter(topology, NODE_ID); iter.hasNext();) {
-    NodeId_t node = iter.next();
-    if (!discoveryVisited.contains(node)) {
-      discoveryVisited.pushBack(node);
-      discoveryQueue.pushBack(node);
-      routeMessage(neighborRequest);
-      outstandingNeighborRequests++;
-    }
+    Message neighborRequest;
+    neighborRequest.source = NODE_ID;
+    neighborRequest.dest = next;
+    neighborRequest.payloadSize = 0;
+    neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
+    neighborRequest.body = NULL;
+    routeMessage(neighborRequest);
   }
 
-  sprintf(buf, "Total Nodes: %d", topology.numNodes());
+  sprintf(buf, "Total Nodes: %d", pathfinder.getDiscoveryStats().numNodes);
   Serial.println(buf);
 }
 
 void startDiscovery() {
-  topology.purge();
-  discoveryVisited.purge();
-  discoveryQueue.purge();
-  outstandingNeighborRequests = 0;
-  discoveryDone = false;
+  pathfinder.startDiscovery();
 
   resetNeighbors();
   NodeId_t initialNode[7];
@@ -292,9 +303,6 @@ void startDiscovery() {
   for (int i = 0; i < 6; i++) {
     initialNode[i + 1] = neighborIds[i];
   }
-
-  discoveryQueue.pushBack(NODE_ID);
-  discoveryVisited.pushBack(NODE_ID);
 
   updateNeighbors(NODE_ID, neighborIds, 6);
 }
@@ -366,4 +374,23 @@ NodeId_t getNodeId() {
   }
 
   return nodeId;
+}
+
+
+#ifdef __arm__
+// should use uinstd.h to define sbrk but Due causes a conflict
+extern "C" char* sbrk(int incr);
+#else  // __ARM__
+extern char *__brkval;
+#endif  // __arm__
+
+int freeMemory() {
+  char top;
+#ifdef __arm__
+  return &top - reinterpret_cast<char*>(sbrk(0));
+#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+  return &top - __brkval;
+#else  // __arm__
+  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+#endif  // __arm__
 }

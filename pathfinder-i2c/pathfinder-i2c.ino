@@ -83,6 +83,9 @@ void onRequest() {
       writeNextStep(src, dest);
     } else if (command == FINDER_ITERATOR_NEXT) {
       writeIteratorNext();
+    } else if (command == FINDER_GET_ADJACENT) {
+      NodeId_t node = ((NodeId_t *) body)[0];
+      writeAdjacent(node);
     }
     clearMessage();
     Serial.println("***");
@@ -210,6 +213,19 @@ void writeIteratorNext() {
     next = iterator.next();
   }
   Wire.write((byte *)&next, sizeof(NodeId_t));
+}
+
+void writeAdjacent(NodeId_t node) {
+  Set<NodeId_t> adj;
+  topology.getAdjacent(node, adj);
+
+  size_t numNodes = adj.count;
+  Wire.write((byte *)&numNodes, sizeof(size_t));
+  for (ListIterator<NodeId_t> iter(adj); iter.hasNext();) {
+    NodeId_t adjNode = iter.next();
+    Serial.println(adjNode);
+    Wire.write((byte *)&adjNode, sizeof(NodeId_t));
+  }
 }
 
 #ifdef __arm__

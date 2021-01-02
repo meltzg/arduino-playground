@@ -3,7 +3,7 @@
 #include "PathFinder.h"
 #include "DataStructures.h"
 
-PathFinder p;
+PathFinder p(6);
 
 void setup() {
   long startTs = millis();
@@ -182,20 +182,25 @@ void setup() {
   printDiscoveryStats(stats);
 
   Serial.println("Validate iteration");
-  for (int i = 0; i < 3; i++) {
-    Serial.print("Attempt ");
-    Serial.println(i);
-    p.resetIterator(1);
-    for (NodeId_t next = p.getIteratorNext(); next != EMPTY; next = p.getIteratorNext()) {
-      Serial.println(next);
+  p.resetIterator(1);
+  for (NodeId_t next = p.getIteratorNext(); next != EMPTY; next = p.getIteratorNext()) {
+    Set<NodeId_t> adj;
+    p.getAdjacent(next, adj);
+    Serial.print(next);
+    Serial.print(": ");
+    for (ListIterator<NodeId_t> iter(adj); iter.hasNext();) {
+      Serial.print(iter.next());
+      Serial.print(", ");
     }
+    Serial.println();
   }
 
   Serial.println("Validate pathfinding");
   int progress = 0;
   int total = 52 * 51;
   bool error = false;
-  for (NodeId_t i = 1; i < 53; i++) {
+  p.resetIterator(1);
+  for (NodeId_t i = p.getIteratorNext(); i != EMPTY; i = p.getIteratorNext()) {
     NodeId_t nextStep = EMPTY;
     for (NodeId_t j = 1; j < 53; j++) {
       if (i == j) {

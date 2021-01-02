@@ -2,6 +2,7 @@
 #define _PATH_FINDER_H_
 
 #include "CommonMessaging.h"
+#include "DataStructures.h"
 
 #define FINDER_I2C_ADDR 0x01
 
@@ -15,8 +16,10 @@
 #define FINDER_ITERATOR_CLEAR 0x07
 #define FINDER_ITERATOR_NEXT 0x08
 #define FINDER_CLEAR_TOPOLOGY 0x09
+#define FINDER_GET_ADJACENT 0x0A
 
-struct DiscoveryStats {
+struct DiscoveryStats
+{
     const bool discoveryDone;
     const size_t numNodes;
     const size_t numEdges;
@@ -26,7 +29,12 @@ struct DiscoveryStats {
 
 class PathFinder
 {
+private:
+    int maxNeighbors;
+
 public:
+    PathFinder(int maxNeighbors) : maxNeighbors(maxNeighbors) {}
+
     void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNeighbors);
     NodeId_t getNextStep(NodeId_t src, NodeId_t dest);
     void startDiscovery();
@@ -36,6 +44,7 @@ public:
     void clearIterator();
     NodeId_t getIteratorNext();
     void clearTopology();
+    void getAdjacent(NodeId_t node, Set<NodeId_t> &adjacent);
 };
 
-#endif _PATH_FINDER_H_
+#endif // _PATH_FINDER_H_

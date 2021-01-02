@@ -68,4 +68,4 @@ Message readMessage(Stream *srcPort);
 
 void writeMessage(Stream *destPort, const Message &message);
 
-#endif _COMMON_MESSAGING_H_
+#endif // _COMMON_MESSAGING_H_

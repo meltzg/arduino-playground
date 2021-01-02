@@ -81,7 +81,8 @@ void PathFinder::resetIterator(NodeId_t start)
     Wire.endTransmission();
 }
 
-void clearIterator() {
+void clearIterator()
+{
     Wire.beginTransmission(FINDER_I2C_ADDR);
     Wire.write(FINDER_ITERATOR_CLEAR);
     Wire.endTransmission();
@@ -107,4 +108,28 @@ void PathFinder::clearTopology()
     Wire.beginTransmission(FINDER_I2C_ADDR);
     Wire.write(FINDER_CLEAR_TOPOLOGY);
     Wire.endTransmission();
+}
+
+void PathFinder::getAdjacent(NodeId_t node, Set<NodeId_t> &adjacent)
+{
+    Wire.beginTransmission(FINDER_I2C_ADDR);
+    Wire.write(FINDER_GET_ADJACENT);
+    Wire.write((byte *)&node, sizeof(node));
+    Wire.endTransmission();
+
+    Wire.requestFrom(FINDER_I2C_ADDR, sizeof(NodeId_t) * maxNeighbors + sizeof(size_t));
+    while (Wire.available() < sizeof(size_t))
+    {
+    }
+    size_t numNeighbors = 0;
+    Wire.readBytes((byte *)&numNeighbors, sizeof(numNeighbors));
+
+    NodeId_t neighbors[numNeighbors] = {0};
+    Wire.readBytes((byte *)neighbors, sizeof(NodeId_t) * numNeighbors);
+
+    adjacent.purge();
+    for (int i = 0; i < numNeighbors; i++)
+    {
+        adjacent.pushBack(neighbors[i]);
+    }
 }

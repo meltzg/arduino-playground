@@ -81,10 +81,9 @@ void PathFinder::resetIterator(NodeId_t start)
     Wire.endTransmission();
 }
 
-void clearIterator(NodeId_t start) {
+void clearIterator() {
     Wire.beginTransmission(FINDER_I2C_ADDR);
     Wire.write(FINDER_ITERATOR_CLEAR);
-    Wire.write((byte *)&start, sizeof(start));
     Wire.endTransmission();
 }
 

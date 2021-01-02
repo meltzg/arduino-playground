@@ -33,7 +33,7 @@ public:
     DiscoveryStats getDiscoveryStats();
     NodeId_t getNextNeighborRequest();
     void resetIterator(NodeId_t start);
-    void clearIterator(NodeId_t start);
+    void clearIterator();
     NodeId_t getIteratorNext();
     void clearTopology();
 };

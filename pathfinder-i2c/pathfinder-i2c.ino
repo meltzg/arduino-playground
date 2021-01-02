@@ -7,7 +7,7 @@
 Graph<NodeId_t> topology(true, 0, EEPROM.length());
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
-GraphIterator<NodeId_t> *iterator = NULL;
+GraphIterator<NodeId_t> iterator;
 
 bool discoveryDone = true;
 byte *message = NULL;
@@ -43,24 +43,29 @@ void onReceive(int numBytes) {
   byte command = message[0];
   NodeId_t node;
   if (command == FINDER_ADD_NODE) {
-    Serial.println("Add Node");
     node = ((NodeId_t *) body)[0];
     size_t numNodes = ((size_t *) (body + sizeof(node)))[0];
     NodeId_t *neighbors = ((NodeId_t *) (body + sizeof(node) + sizeof(numNodes)));
     addNode(node, neighbors, numNodes);
     processed = true;
   } else if (command == FINDER_START_DISCOVERY) {
-    Serial.println("Start Discovery");
     startDiscovery();
     processed = true;
   } else if (command == FINDER_CLEAR_TOPOLOGY) {
-    Serial.println("Clearing topology");
     clearTopology();
+    processed = true;
+  } else if (command == FINDER_ITERATOR_CLEAR) {
+    iterator.clear();
+    processed = true;
+  } else if (command == FINDER_ITERATOR_RESET) {
+    node = ((NodeId_t *) body)[0];
+    iterator.reset(topology, node);
     processed = true;
   }
 
   if (processed) {
     clearMessage();
+    Serial.println("***");
   }
 }
 
@@ -69,18 +74,18 @@ void onRequest() {
     byte command = message[0];
     byte *body = message + 1;
     if (command == FINDER_GET_DISCOVERY_STATS) {
-      Serial.println("Get stats");
       writeDiscoveryStats();
     } else if (command == FINDER_GET_NEIGHBOR_REQUEST) {
-      Serial.println("Get neighbor request");
       writeNeighborRequest();
     } else if (command == FINDER_GET_NEXT_STEP) {
-      Serial.println("Get next step");
       NodeId_t src = ((NodeId_t *) body)[0];
       NodeId_t dest = ((NodeId_t *) body)[1];
       writeNextStep(src, dest);
+    } else if (command == FINDER_ITERATOR_NEXT) {
+      writeIteratorNext();
     }
     clearMessage();
+    Serial.println("***");
   }
 }
 
@@ -196,6 +201,15 @@ void writeNextStep(NodeId_t src, NodeId_t dest) {
     Serial.println();
   }
   Wire.write((byte *)&nextStep, sizeof(NodeId_t));
+}
+
+void writeIteratorNext() {
+  NodeId_t next = EMPTY;
+
+  if (iterator.hasNext()) {
+    next = iterator.next();
+  }
+  Wire.write((byte *)&next, sizeof(NodeId_t));
 }
 
 #ifdef __arm__

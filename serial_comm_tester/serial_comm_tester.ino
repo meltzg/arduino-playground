@@ -164,6 +164,7 @@ void setup() {
   NodeId_t *neiArr = NULL;
   NodeId_t currNode = 1;
 
+  Serial.println("Test async discovery");
   do {
     Serial.println(currNode);
     g.getAdjacent(currNode, neighbors);
@@ -180,9 +181,15 @@ void setup() {
   DiscoveryStats stats = p.getDiscoveryStats();
   printDiscoveryStats(stats);
 
-  Serial.print("Next Step: ");
-  Serial.print(p.getNextStep(1, 52));
-  Serial.println();
+  Serial.println("Validate iteration");
+  for (int i = 0; i < 3; i++) {
+    Serial.print("Attempt ");
+    Serial.println(i);
+    p.resetIterator(1);
+    for (NodeId_t next = p.getIteratorNext(); next != EMPTY; next = p.getIteratorNext()) {
+      Serial.println(next);
+    }
+  }
 
   Serial.println("Validate pathfinding");
   int progress = 0;

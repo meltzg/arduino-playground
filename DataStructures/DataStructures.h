@@ -460,6 +460,8 @@ struct GraphIterator
   Set<T> visited;
   LinkedList<T> queue;
 
+  GraphIterator() {}
+
   GraphIterator(const Graph<T> &g, T start) : g(g)
   {
     queue.pushBack(start);
@@ -486,6 +488,20 @@ struct GraphIterator
       }
     }
     return next;
+  }
+
+  void clear()
+  {
+    visited.purge();
+    queue.purge();
+  }
+
+  void reset(const Graph<T> &g, T start)
+  {
+    clear();
+    this->g = g;
+    queue.pushBack(start);
+    visited.pushBack(start);
   }
 };
 

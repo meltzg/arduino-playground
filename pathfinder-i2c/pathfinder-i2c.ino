@@ -190,7 +190,7 @@ void writeNextStep(NodeId_t src, NodeId_t dest) {
       if (i == 1) {
         nextStep = node;
       }
-      Serial.print(node);
+      Serial.print(node, HEX);
       Serial.print(",");
     }
     Serial.println();

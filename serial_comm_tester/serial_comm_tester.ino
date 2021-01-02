@@ -6,9 +6,11 @@
 PathFinder p;
 
 void setup() {
+  long startTs = millis();
   Serial.begin(9600);
   Wire.begin();
-  Serial.println("Start");
+  Serial.print("Start: ");
+  Serial.println(startTs);
   Graph<NodeId_t> g(true, 0, EEPROM.length());
 
   g.addEdge(1, 2);
@@ -182,33 +184,48 @@ void setup() {
   Serial.print(p.getNextStep(1, 52));
   Serial.println();
 
-  //  Serial.println("Validate pathfinding");
-  //  for (NodeId_t i = 1; i < 53; i++) {
-  //    for (NodeId_t j = 1; j < 53; j++) {
-  //      if (i == j) {
-  //        continue;
-  //      }
-  //      LinkedList<NodeId_t> path;
-  //      g.getShortestPath(i, j, path);
-  //      NodeId_t expected = EMPTY;
-  //      if (!path.isEmpty()) {
-  //        ListIterator<NodeId_t> iter(path);
-  //        iter.next();
-  //        expected = iter.next();
-  //      }
-  //      NodeId_t nextStep = p.getNextStep(i, j);
-  //      if (nextStep == EMPTY) {
-  //        Serial.print("Path not found from ");
-  //        Serial.print(i);
-  //        Serial.print(" to ");
-  //        Serial.print(j);
-  //        Serial.print(". expected ");
-  //        Serial.println(expected);
-  //      }
-  //    }
-  //  }
+  Serial.println("Validate pathfinding");
+  int progress = 0;
+  int total = 52 * 51;
+  bool error = false;
+  for (NodeId_t i = 1; i < 53; i++) {
+    NodeId_t nextStep = EMPTY;
+    for (NodeId_t j = 1; j < 53; j++) {
+      if (i == j) {
+        continue;
+      }
+      LinkedList<NodeId_t> path;
+      g.getShortestPath(i, j, path);
+      NodeId_t expected = EMPTY;
+      if (!path.isEmpty()) {
+        ListIterator<NodeId_t> iter(path);
+        iter.next();
+        expected = iter.next();
+      }
+      NodeId_t nextStep = p.getNextStep(i, j);
+      Serial.print("Progress: ");
+      Serial.print(++progress);
+      Serial.print("/");
+      Serial.println(total);
+      if (nextStep == EMPTY) {
+        Serial.print("Path not found from ");
+        Serial.print(i);
+        Serial.print(" to ");
+        Serial.print(j);
+        Serial.print(". expected ");
+        Serial.println(expected);
+        error = true;
+        break;
+      }
+    }
+    if (error) {
+      break;
+    }
+  }
 
-  Serial.println("Done");
+  Serial.println("Done: ");
+  Serial.println(millis() - startTs);
+
 }
 
 void loop() {

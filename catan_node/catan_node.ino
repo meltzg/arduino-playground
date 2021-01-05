@@ -1,21 +1,23 @@
+#include <SoftwareSerial.h>
+#include <CommonMessaging.h>
 #import "components.h"
 
 /*
    Edges         LEDs        Buttons
    1 /\ 2        3 /\ 6     2 /\ 4
-   0 | | 3       0 | | 9    0 | | 6
-   5 \/ 4        11\/ 10    8 \/ 7
+   0 | | 3       0 | | 7    0 | | 5
+   5 \/ 4        9 \/ 8     7 \/ 6
 
    Settlements   LEDs        Buttons
       1              4,5       3
-   0 /\ 2        1,2 /\ 7,8  1 /\ 5
+   0 /\ 2        1,2 /       1 /
      | |
    5 \/ 3
      4
 
     Land         LEDs        Buttons
      /\           /\          /\
-    | X|         |12|        | 9|
+    | X|         |10|        | 8|
      \/           \/          \/
 */
 
@@ -25,7 +27,7 @@
 #define SEGMENT_LEFT A3
 #define SEGMENT_RIGHT A4
 
-#define LED_ARRAY 9
+#define LED_ARRAY 7
 #define BRIGHTNESS_STEP 32
 #define MIN_BRIGHTNESS 5
 
@@ -36,8 +38,8 @@
 
 #define SEED_PIN A5
 
-#define NUM_LEDS 13
-#define NUM_BUTTONS 10
+#define NUM_LEDS 11
+#define NUM_BUTTONS 9
 
 #define PLAYER_SELECT_DELAY 500
 
@@ -45,6 +47,12 @@
 #define NUM_SETTLEMENTS 3
 #define UNOWNED -1
 
+#define NUM_DICE 2
+#define DIE_SIDES 6
+#define MAX_ROLL NUM_DICE * DIE_SIDES
+#define MIN_ROLL NUM_DICE
+
+#define OCEAN 0x3813BE
 #define DESERT 0xB4D28C
 #define BRICK 0x41CB54
 #define SHEEP 0xFCB038
@@ -53,15 +61,15 @@
 #define WHEAT YELLOW
 
 const __int24 PLAYER_COLORS[] = { RED, ORANGE, GREEN, BLUE, PURPLE, WHITE };
-const __int24 LAND_COLORS[] = { DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT };
+const __int24 LAND_COLORS[] = { OCEAN, DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT, OCEAN };
 
-const byte ROAD_LED_POS[] = { 0, 3, 6, 9, 10, 11 };
-const byte ROAD_BTN_POS[] = { 0, 2, 4, 6, 7, 8 };
-const byte SETTLEMENT_LED_POS[][2] = { {1, 2}, {4, 5}, {7, 8} };
-const byte SETTLEMENT_BTN_POS[] = { 1, 3, 5 };
-#define LAND_LED_POS 12
-#define LAND_BTN_POS 9
-#define BRIGHTNESS_BTN 10
+const byte ROAD_LED_POS[] = { 0, 3, 6, 7, 8, 9 };
+const byte ROAD_BTN_POS[] = { 0, 2, 4, 5, 6, 7 };
+const byte SETTLEMENT_LED_POS[][2] = { {1, 2}, {4, 5} };
+const byte SETTLEMENT_BTN_POS[] = { 1, 3 };
+#define LAND_LED_POS 10
+#define LAND_BTN_POS 8
+#define BRIGHTNESS_BTN 9
 
 
 SegmentDisplay tileValue(
@@ -81,13 +89,16 @@ ButtonArray16 interface(
   BTN_CLOCK
 );
 
+SoftwareSerial netPort(8, 9);
+NodeId_t netId = 0;
+
 __int24 borderColors[NUM_LEDS] = { BLACK };
 byte brightness = 64;
 
 short roadOwners[NUM_ROADS];
 short settlementOwners[NUM_SETTLEMENTS];
 bool isCity[NUM_SETTLEMENTS] = { false };
-__int24 landType = WOOD;
+__int24 landType = OCEAN;
 byte rollValue = 0;
 bool hasRobber = false;
 
@@ -96,9 +107,12 @@ bool playerSelectMode = false;
 byte currentPlayer = 0;
 uint16_t previousState = 0;
 
+boolean playStarted = false;
+
 void setup()
 {
   Serial.begin(9600);
+  netPort.begin(9600);
   randomSeed(analogRead(SEED_PIN));
 
   for (int i = 0; i < NUM_ROADS; i++) {
@@ -108,15 +122,7 @@ void setup()
     settlementOwners[i] = UNOWNED;
   }
 
-  rollValue = 7;
-  while (rollValue == 7) {
-    rollValue = random(1, 7) + random(1, 7);
-  }
-  char buf[3] = {0};
-  sprintf(buf, "%02d", rollValue);
-  tileValue.setChars(buf);
-
-  landType = LAND_COLORS[random(0, 6)];
+  setTileValue(rollValue);
   borderColors[LAND_LED_POS] = landType;
 
   OCR0A = 0xAF;
@@ -136,7 +142,7 @@ void loop()
   bool skipRobber = false;
 
   uint16_t state = interface.getState();
-  if (!playerSelectMode && interface.getOnDuration(LAND_BTN_POS) >= PLAYER_SELECT_DELAY) {
+  if (playStarted && !playerSelectMode && interface.getOnDuration(LAND_BTN_POS) >= PLAYER_SELECT_DELAY) {
     playerSelectMode = true;
     updateCurrentPlayer(state);
   } else if (playerSelectMode && interface.getOnDuration(LAND_BTN_POS) == 0) {
@@ -145,7 +151,10 @@ void loop()
     borderColors[LAND_LED_POS] = landType;
   }
   if (state != previousState) {
-    if (!playerSelectMode) {
+    if (!playStarted) {
+      setupGame(state);
+    }
+    else if (!playerSelectMode) {
       updateRoads(state);
       updateSettlements(state);
       if (!skipRobber) {
@@ -224,11 +233,10 @@ void updateRobber(uint16_t newBtnState) {
   if (((previousState >> LAND_BTN_POS) & 1) && ((newBtnState >> LAND_BTN_POS) & 1) == 0) {
     if (hasRobber) {
       hasRobber = false;
-      sprintf(buf, "%02d", rollValue);
-      tileValue.setChars(buf);
+      setTileValue(rollValue);
     } else {
       hasRobber = true;
-      tileValue.setChars("Rb");
+      setTileValue(0xFF);
     }
   }
 }
@@ -252,4 +260,41 @@ void updateCurrentPlayer(uint16_t newBtnState) {
     borderColors[ledPos[1]] = BLACK;
   }
   borderColors[LAND_LED_POS] = PLAYER_COLORS[currentPlayer];
+}
+
+void setupGame(uint16_t newBtnState) {
+  if (((previousState >> LAND_BTN_POS) & 1) == 0 && ((newBtnState >> LAND_BTN_POS) & 1)) {
+    return;
+  }
+  Serial.print("My ID: ");
+  int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
+  Message idRequest;
+  idRequest.source = EMPTY;
+  idRequest.dest = EMPTY;
+  idRequest.payloadSize = 0;
+  idRequest.sysCommand = ROUTER_GET_ID;
+  idRequest.body = NULL;
+
+  if (ackWait(&netPort, maxRetries)) {
+    writeMessage(&netPort, idRequest);
+    netPort.readBytes((byte *) &netId, sizeof(NodeId_t));
+  } else {
+    return;
+  }
+
+  Serial.println(netId, HEX);
+
+  playStarted = true;
+}
+
+void setTileValue(byte val) {
+  if (val < MIN_ROLL) {
+    tileValue.setChars("  ");
+  } else if (val > MAX_ROLL) {
+    tileValue.setChars("Rb");
+  } else {
+    char buf[3] = {0};
+    sprintf(buf, "%02d", val);
+    tileValue.setChars(buf);
+  }
 }

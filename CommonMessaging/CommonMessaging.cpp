@@ -8,7 +8,7 @@ bool ackWait(Stream *port, int maxRetries = -1) {
   for (int i = 0; !connected && (i < maxRetries || maxRetries < 0); i++) {
     port->write(PING_BYTE);
     byte pong = port->read();
-    Serial.println(pong, HEX);
+    Serial.println("ping");
     if (pong == ACK_BYTE) {
       return true;
     }
@@ -43,6 +43,7 @@ Message readMessage(Stream *srcPort) {
 }
 
 void writeMessage(Stream *destPort, const Message &message) {
+  Serial.println("Starting write");
   destPort->write(START_CODE);
   destPort->write((char *) & (message.source), sizeof(message.source));
   destPort->write((char *) & (message.dest), sizeof(message.dest));

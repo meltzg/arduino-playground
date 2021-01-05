@@ -182,8 +182,22 @@ void routeMessage(const Message &message) {
     return;
   }
   NodeId_t nextStep = pathfinder.getNextStep(NODE_ID, message.dest);
+
+  if (nextStep == EMPTY) {
+    return;
+  }
+
   Serial.print("Path found ");
   Serial.println(nextStep != EMPTY);
+
+  for (int i = 0; i < 6; i++) {
+    if (neighborIds[i] == nextStep) {
+      NEIGHBORS[i]->listen();
+      ackWait(NEIGHBORS[i]);
+      writeMessage(NEIGHBORS[i], message);
+      break;
+    }
+  }
 }
 
 void resetNeighbors() {
@@ -205,7 +219,10 @@ void resetNeighbors() {
     } else {
       neighborIds[i] = EMPTY;
     }
+    Serial.print(neighborIds[i], HEX);
+    Serial.print(", ");
   }
+  Serial.println();
 }
 
 void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
@@ -236,6 +253,12 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
       continue;
     }
     message.dest = distribId;
+    if (src == NODE_ID) {
+      // clear destination's topology to ensure it always has the most correct graph
+      // Needed in the case of rediscovery
+      Serial.println("Destination will clear its topology");
+      message.sysCommand |= ROUTER_CLEAR_TOPOLOGY;
+    }
     routeMessage(message);
   }
 
@@ -288,6 +311,8 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
     neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
     neighborRequest.body = NULL;
     routeMessage(neighborRequest);
+  } else {
+    Serial.println("No next neighbor");
   }
 
   sprintf(buf, "Total Nodes: %d", pathfinder.getDiscoveryStats().numNodes);

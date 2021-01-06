@@ -95,7 +95,7 @@ struct LinkedList
 
   bool isEmpty()
   {
-    return back == NULL;
+    return count == 0;
   }
 
   bool contains(T val)

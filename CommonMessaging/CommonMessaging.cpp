@@ -8,7 +8,6 @@ bool ackWait(Stream *port, int maxRetries = -1) {
   for (int i = 0; !connected && (i < maxRetries || maxRetries < 0); i++) {
     port->write(PING_BYTE);
     byte pong = port->read();
-    Serial.println("ping");
     if (pong == ACK_BYTE) {
       return true;
     }

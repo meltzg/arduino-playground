@@ -184,6 +184,7 @@ void routeMessage(const Message &message) {
   NodeId_t nextStep = pathfinder.getNextStep(NODE_ID, message.dest);
 
   if (nextStep == EMPTY) {
+    Serial.println("path not found");
     return;
   }
 
@@ -245,9 +246,15 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
   pathfinder.resetIterator(NODE_ID);
   Message message;
   message.source = NODE_ID;
-  message.payloadSize = numNeighbors * sizeof(NodeId_t);
+  message.payloadSize = (numNeighbors + 1) * sizeof(NodeId_t);
   message.sysCommand = ROUTER_ADD_NODE;
-  message.body = (byte *) neighbors;
+  NodeId_t nodeForward[numNeighbors + 1];
+  nodeForward[0] = src;
+  for (int i = 0; i < numNeighbors; i++) {
+    nodeForward[i + 1] = neighbors[i];
+  }
+  message.body = (byte *) nodeForward;
+
   for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext()) {
     if (distribId == NODE_ID || distribId == src) {
       continue;

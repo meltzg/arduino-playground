@@ -25,6 +25,7 @@ void loop() {
 }
 
 void onReceive(int numBytes) {
+  clearMessage();
   Serial.print("In ");
   while (Wire.available() < numBytes);
   message = new byte[numBytes];
@@ -37,43 +38,27 @@ void onReceive(int numBytes) {
     Serial.print(",");
   }
   Serial.println();
-
-  // Process requests that do not require data return
-  byte *body = message + 1;
-  byte command = message[0];
-  NodeId_t node;
-  if (command == FINDER_ADD_NODE) {
-    node = ((NodeId_t *) body)[0];
-    size_t numNodes = ((size_t *) (body + sizeof(node)))[0];
-    NodeId_t *neighbors = ((NodeId_t *) (body + sizeof(node) + sizeof(numNodes)));
-    addNode(node, neighbors, numNodes);
-    processed = true;
-  } else if (command == FINDER_START_DISCOVERY) {
-    startDiscovery();
-    processed = true;
-  } else if (command == FINDER_CLEAR_TOPOLOGY) {
-    clearTopology();
-    processed = true;
-  } else if (command == FINDER_ITERATOR_CLEAR) {
-    iterator.clear();
-    processed = true;
-  } else if (command == FINDER_ITERATOR_RESET) {
-    node = ((NodeId_t *) body)[0];
-    iterator.reset(topology, node);
-    processed = true;
-  }
-
-  if (processed) {
-    clearMessage();
-    Serial.println("***");
-  }
 }
 
 void onRequest() {
   if (receivedLen) {
     byte command = message[0];
     byte *body = message + 1;
-    if (command == FINDER_GET_DISCOVERY_STATS) {
+    if (command == FINDER_ADD_NODE) {
+      NodeId_t node = ((NodeId_t *) body)[0];
+      size_t numNodes = ((size_t *) (body + sizeof(node)))[0];
+      NodeId_t *neighbors = ((NodeId_t *) (body + sizeof(node) + sizeof(numNodes)));
+      addNode(node, neighbors, numNodes);
+    } else if (command == FINDER_START_DISCOVERY) {
+      startDiscovery();
+    } else if (command == FINDER_CLEAR_TOPOLOGY) {
+      clearTopology();
+    } else if (command == FINDER_ITERATOR_CLEAR) {
+      iterator.clear();
+    } else if (command == FINDER_ITERATOR_RESET) {
+      NodeId_t node = ((NodeId_t *) body)[0];
+      iterator.reset(topology, node);
+    } else if (command == FINDER_GET_DISCOVERY_STATS) {
       writeDiscoveryStats();
     } else if (command == FINDER_GET_NEIGHBOR_REQUEST) {
       writeNeighborRequest();
@@ -87,6 +72,8 @@ void onRequest() {
       NodeId_t node = ((NodeId_t *) body)[0];
       writeAdjacent(node);
     }
+    // to prevent timing issues, clients should always expect 1 byte of data before continuing execution
+    Wire.write(0x00);
     clearMessage();
     Serial.println("***");
   }
@@ -102,9 +89,9 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
   if (node != EMPTY) {
     for (int i = 0; i < numNodes; i++) {
       Serial.print("A ");
-      Serial.print(node);
+      Serial.print(node, HEX);
       Serial.print("->");
-      Serial.println(neighbors[i]);
+      Serial.println(neighbors[i], HEX);
       if (neighbors[i] == EMPTY) {
         continue;
       }
@@ -117,7 +104,7 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
   if (!discoveryDone) {
     discoveryVisited.pushBack(node);
     for (int i = 0; i < numNodes; i++) {
-      if (!discoveryVisited.contains(neighbors[i])) {
+      if (neighbors[i] != EMPTY && !discoveryVisited.contains(neighbors[i])) {
         discoveryQueue.pushBack(neighbors[i]);
         discoveryVisited.pushBack(neighbors[i]);
       }
@@ -141,6 +128,9 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
       }
       Serial.println();
     }
+  } else {
+    Serial.print("To discover: ");
+    Serial.println(discoveryQueue.count);
   }
 }
 
@@ -179,6 +169,8 @@ void writeNeighborRequest() {
 
   Serial.print("req ");
   Serial.println(nextNeighbor, HEX);
+  Serial.print("To discover: ");
+  Serial.println(discoveryQueue.count);
 
   Wire.write((byte *)&nextNeighbor, sizeof(NodeId_t));
 }

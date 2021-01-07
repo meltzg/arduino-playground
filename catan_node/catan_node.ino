@@ -39,12 +39,12 @@
 #define SEED_PIN A5
 
 #define NUM_LEDS 11
-#define NUM_BUTTONS 9
+#define NUM_BUTTONS 10
 
 #define PLAYER_SELECT_DELAY 500
 
 #define NUM_ROADS 6
-#define NUM_SETTLEMENTS 3
+#define NUM_SETTLEMENTS 2
 #define UNOWNED -1
 
 #define NUM_DICE 2
@@ -107,7 +107,7 @@ bool playerSelectMode = false;
 byte currentPlayer = 0;
 uint16_t previousState = 0;
 
-boolean playStarted = false;
+boolean playStarted = true;
 
 void setup()
 {

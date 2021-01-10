@@ -231,18 +231,19 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
     return;
   }
 
+  bool doDistribute = !pathfinder.getDiscoveryStats().discoveryDone;
+
   char buf[PRINT_BUF_SIZE];
 
   // Add edges to pathfinder
   pathfinder.addNode(src, neighbors, numNeighbors);
 
-  if (pathfinder.getDiscoveryStats().discoveryDone) {
+  if (!doDistribute) {
     return;
   }
 
-  Serial.println("Continuing discover");
 
-  // update all nodes with the new one
+  Serial.println("Send new node to existing");
   pathfinder.resetIterator(NODE_ID);
   Message message;
   message.source = NODE_ID;
@@ -270,7 +271,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors) {
   }
 
   if (src != NODE_ID) {
-    // then send entire graph to new node
+    Serial.println("Send entire graph to new node");
     pathfinder.resetIterator(NODE_ID);
     for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext()) {
       sprintf(buf, "creating add node message for %hx: ", distribId);

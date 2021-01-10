@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
 #include <CommonMessaging.h>
-#import "components.h"
+#include "components.h"
 
 /*
    Edges         LEDs        Buttons

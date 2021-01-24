@@ -1,5 +1,5 @@
-#import <Arduino.h>
-#import "components.h"
+#include <Arduino.h>
+#include "components.h"
 
 const __int24 RAINBOW[6] = { RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE };
 

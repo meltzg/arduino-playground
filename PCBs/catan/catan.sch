@@ -69,12 +69,12 @@ F 3 "~" H 3000 1450 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	1500 1300 1800 1300
+	1500 1300 1600 1300
 Wire Wire Line
 	1800 1300 2050 1300
 Connection ~ 1800 1300
 Wire Wire Line
-	1500 1600 1800 1600
+	1500 1600 1650 1600
 Wire Wire Line
 	1800 1600 2350 1600
 Connection ~ 1800 1600
@@ -110,8 +110,6 @@ Wire Wire Line
 Connection ~ 4050 1300
 Wire Wire Line
 	4150 1300 4150 2450
-Wire Wire Line
-	5150 1300 4350 1300
 Connection ~ 4150 1300
 Connection ~ 4050 5450
 Wire Wire Line
@@ -491,8 +489,6 @@ Wire Wire Line
 Wire Wire Line
 	6650 5850 6650 5450
 Wire Wire Line
-	6300 5700 6300 1300
-Wire Wire Line
 	6300 1300 5150 1300
 Connection ~ 5150 1300
 $Comp
@@ -559,7 +555,7 @@ Connection ~ 8100 1600
 Wire Wire Line
 	8700 3850 8700 1300
 Wire Wire Line
-	8700 1300 6300 1300
+	8700 1300 6350 1300
 Connection ~ 6300 1300
 Wire Wire Line
 	8100 6050 8700 6050
@@ -584,8 +580,6 @@ Wire Wire Line
 	8650 4100 8650 5750
 Wire Wire Line
 	8650 5750 8600 5750
-Wire Wire Line
-	3000 1600 4850 1600
 Wire Wire Line
 	7300 2750 7300 1600
 Connection ~ 7300 1600
@@ -1600,20 +1594,6 @@ $EndComp
 Wire Wire Line
 	5450 1950 8650 1950
 Wire Wire Line
-	4350 1300 4350 750 
-Wire Wire Line
-	4350 750  5050 750 
-Connection ~ 4350 1300
-Wire Wire Line
-	4350 1300 4150 1300
-Wire Wire Line
-	4850 1600 4850 1050
-Wire Wire Line
-	4850 1050 5050 1050
-Connection ~ 4850 1600
-Wire Wire Line
-	4850 1600 7300 1600
-Wire Wire Line
 	4650 2750 4650 850 
 Wire Wire Line
 	4650 850  5050 850 
@@ -1661,7 +1641,6 @@ NoConn ~ 4650 4850
 NoConn ~ 4650 4950
 NoConn ~ 4650 5050
 NoConn ~ 8600 5650
-NoConn ~ 6600 3100
 NoConn ~ 6600 3200
 $Comp
 L power:PWR_FLAG #FLG0101
@@ -1687,4 +1666,31 @@ F 3 "~" H 1500 1600 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Connection ~ 1500 1600
+Wire Wire Line
+	4150 1300 5150 1300
+Wire Wire Line
+	3000 1600 7300 1600
+Wire Wire Line
+	1600 1300 1600 750 
+Wire Wire Line
+	1600 750  5050 750 
+Connection ~ 1600 1300
+Wire Wire Line
+	1600 1300 1800 1300
+Wire Wire Line
+	1650 1600 1650 1050
+Wire Wire Line
+	1650 1050 5050 1050
+Connection ~ 1650 1600
+Wire Wire Line
+	1650 1600 1800 1600
+Wire Wire Line
+	6300 5700 6300 1300
+Wire Wire Line
+	6600 3100 6350 3100
+Wire Wire Line
+	6350 3100 6350 1300
+Connection ~ 6350 1300
+Wire Wire Line
+	6350 1300 6300 1300
 $EndSCHEMATC

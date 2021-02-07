@@ -125,11 +125,6 @@ Wire Wire Line
 	4850 4550 4850 4250
 Wire Wire Line
 	4650 4250 4850 4250
-Connection ~ 5250 5450
-Wire Wire Line
-	5250 5450 4050 5450
-Wire Wire Line
-	6050 5450 5250 5450
 Connection ~ 6050 5450
 $Comp
 L Device:Crystal Y1
@@ -213,8 +208,6 @@ F 3 "http://www.apem.com/int/index.php?controller=attachment&id_attachment=1371"
 $EndComp
 Wire Wire Line
 	5250 4550 4850 4550
-Wire Wire Line
-	5250 4650 5250 5450
 $Comp
 L LED:NeoPixel_THT D1
 U 1 1 601711EF
@@ -479,17 +472,6 @@ F 1 "R" V 8784 9450 50  0000 C CNN
 F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 8830 9450 50  0001 C CNN
 F 3 "~" H 8900 9450 50  0001 C CNN
 	1    8900 9450
-	0    -1   1    0   
-$EndComp
-$Comp
-L Switch:SW_MEC_5E SW3
-U 1 1 602B45B5
-P 9250 9650
-F 0 "SW3" V 9204 9898 50  0000 L CNN
-F 1 "SW_MEC_5E" V 9295 9898 50  0000 L CNN
-F 2 "Button_Switch_THT:SW_TH_Tactile_Omron_B3F-10xx" H 9250 9950 50  0001 C CNN
-F 3 "http://www.apem.com/int/index.php?controller=attachment&id_attachment=1371" H 9250 9950 50  0001 C CNN
-	1    9250 9650
 	0    -1   1    0   
 $EndComp
 Wire Wire Line
@@ -1197,7 +1179,6 @@ NoConn ~ 12750 2900
 NoConn ~ 9450 1700
 NoConn ~ 9450 2000
 NoConn ~ 5650 4550
-NoConn ~ 5650 4650
 NoConn ~ 9450 3350
 NoConn ~ 9450 3650
 NoConn ~ 10250 3750
@@ -1344,52 +1325,6 @@ Wire Wire Line
 NoConn ~ 6200 10200
 NoConn ~ 4000 10200
 Wire Wire Line
-	8500 9450 8500 9150
-Wire Wire Line
-	8500 9150 9250 9150
-Wire Wire Line
-	15850 9150 15850 9450
-Wire Wire Line
-	9250 9450 9250 9150
-Connection ~ 9250 9150
-Wire Wire Line
-	9250 9150 10050 9150
-Wire Wire Line
-	10050 9450 10050 9150
-Connection ~ 10050 9150
-Wire Wire Line
-	10050 9150 10900 9150
-Wire Wire Line
-	10900 9450 10900 9150
-Connection ~ 10900 9150
-Wire Wire Line
-	10900 9150 11750 9150
-Wire Wire Line
-	11750 9450 11750 9150
-Connection ~ 11750 9150
-Wire Wire Line
-	11750 9150 12600 9150
-Wire Wire Line
-	12600 9450 12600 9150
-Connection ~ 12600 9150
-Wire Wire Line
-	12600 9150 13350 9150
-Wire Wire Line
-	13350 9450 13350 9150
-Connection ~ 13350 9150
-Wire Wire Line
-	14150 9450 14150 9150
-Wire Wire Line
-	13350 9150 14150 9150
-Connection ~ 14150 9150
-Wire Wire Line
-	14150 9150 15000 9150
-Wire Wire Line
-	15000 9450 15000 9150
-Connection ~ 15000 9150
-Wire Wire Line
-	15000 9150 15850 9150
-Wire Wire Line
 	8000 9450 8000 9900
 Wire Wire Line
 	15350 9900 15350 9450
@@ -1427,34 +1362,20 @@ Wire Wire Line
 	10400 9900 11250 9900
 Wire Wire Line
 	9550 9450 9550 9900
-Connection ~ 9550 9900
 Wire Wire Line
 	9550 9900 10400 9900
 Wire Wire Line
 	8750 9450 8750 9900
-Connection ~ 8750 9900
-Wire Wire Line
-	8750 9900 9550 9900
 NoConn ~ 8400 9850
-NoConn ~ 8500 9850
 NoConn ~ 9150 9850
-NoConn ~ 9250 9850
 NoConn ~ 9950 9850
-NoConn ~ 10050 9850
 NoConn ~ 10800 9850
-NoConn ~ 10900 9850
 NoConn ~ 11650 9850
-NoConn ~ 11750 9850
 NoConn ~ 12500 9850
-NoConn ~ 12600 9850
 NoConn ~ 13250 9850
-NoConn ~ 13350 9850
 NoConn ~ 14050 9850
-NoConn ~ 14150 9850
 NoConn ~ 14900 9850
-NoConn ~ 15000 9850
 NoConn ~ 15750 9850
-NoConn ~ 15850 9850
 Wire Wire Line
 	6200 9200 6200 8900
 Wire Wire Line
@@ -1468,7 +1389,6 @@ Wire Wire Line
 	6300 8850 9150 8850
 Wire Wire Line
 	9150 8850 9150 9450
-Connection ~ 9150 9450
 Wire Wire Line
 	6400 9200 6400 8800
 Wire Wire Line
@@ -1532,12 +1452,9 @@ Wire Wire Line
 Connection ~ 8000 9900
 Connection ~ 7700 10250
 Wire Wire Line
-	8500 9150 7850 9150
-Wire Wire Line
 	7850 9150 7850 10350
 Wire Wire Line
 	7850 10350 5800 10350
-Connection ~ 8500 9150
 Connection ~ 5800 10350
 NoConn ~ 6100 9200
 Wire Wire Line
@@ -1675,4 +1592,107 @@ Wire Wire Line
 	3200 8200 3200 10200
 Wire Wire Line
 	3200 10200 3900 10200
+Wire Wire Line
+	15850 9850 15900 9850
+Wire Wire Line
+	15900 9850 15900 9150
+Wire Wire Line
+	15000 9850 15050 9850
+Wire Wire Line
+	15050 9850 15050 9150
+Connection ~ 15050 9150
+Wire Wire Line
+	15050 9150 15900 9150
+Wire Wire Line
+	7850 9150 8550 9150
+Wire Wire Line
+	14150 9850 14200 9850
+Wire Wire Line
+	14200 9850 14200 9150
+Connection ~ 14200 9150
+Wire Wire Line
+	14200 9150 15050 9150
+Wire Wire Line
+	13350 9850 13400 9850
+Wire Wire Line
+	13400 9850 13400 9150
+Connection ~ 13400 9150
+Wire Wire Line
+	13400 9150 14200 9150
+Wire Wire Line
+	12600 9850 12650 9850
+Wire Wire Line
+	12650 9850 12650 9150
+Connection ~ 12650 9150
+Wire Wire Line
+	12650 9150 13400 9150
+Wire Wire Line
+	11750 9850 11800 9850
+Wire Wire Line
+	11800 9850 11800 9150
+Connection ~ 11800 9150
+Wire Wire Line
+	11800 9150 12650 9150
+Wire Wire Line
+	10900 9850 10950 9850
+Wire Wire Line
+	10950 9850 10950 9150
+Connection ~ 10950 9150
+Wire Wire Line
+	10950 9150 11800 9150
+Wire Wire Line
+	10050 9850 10100 9850
+Wire Wire Line
+	10100 9850 10100 9150
+Connection ~ 10100 9150
+Wire Wire Line
+	10100 9150 10950 9150
+Connection ~ 9550 9900
+Connection ~ 8750 9900
+Wire Wire Line
+	8750 9900 9550 9900
+Connection ~ 9150 9450
+$Comp
+L Switch:SW_MEC_5E SW3
+U 1 1 602B45B5
+P 9250 9650
+F 0 "SW3" V 9204 9898 50  0000 L CNN
+F 1 "SW_MEC_5E" V 9295 9898 50  0000 L CNN
+F 2 "Button_Switch_THT:SW_TH_Tactile_Omron_B3F-10xx" H 9250 9950 50  0001 C CNN
+F 3 "http://www.apem.com/int/index.php?controller=attachment&id_attachment=1371" H 9250 9950 50  0001 C CNN
+	1    9250 9650
+	0    -1   1    0   
+$EndComp
+Wire Wire Line
+	9250 9850 9300 9850
+Wire Wire Line
+	9300 9850 9300 9150
+Connection ~ 9300 9150
+Wire Wire Line
+	9300 9150 10100 9150
+Wire Wire Line
+	8500 9850 8550 9850
+Wire Wire Line
+	8550 9850 8550 9150
+Connection ~ 8550 9150
+Wire Wire Line
+	8550 9150 9300 9150
+NoConn ~ 8500 9450
+NoConn ~ 9250 9450
+NoConn ~ 10050 9450
+NoConn ~ 10900 9450
+NoConn ~ 11750 9450
+NoConn ~ 12600 9450
+NoConn ~ 13350 9450
+NoConn ~ 14150 9450
+NoConn ~ 15000 9450
+NoConn ~ 15850 9450
+Wire Wire Line
+	4050 5450 5650 5450
+NoConn ~ 5250 4650
+Wire Wire Line
+	5650 4650 5650 5450
+Connection ~ 5650 5450
+Wire Wire Line
+	5650 5450 6050 5450
 $EndSCHEMATC

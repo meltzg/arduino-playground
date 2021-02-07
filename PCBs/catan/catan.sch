@@ -468,9 +468,6 @@ Wire Wire Line
 	6600 3300 6600 5450
 Wire Wire Line
 	6050 5450 6600 5450
-Connection ~ 6600 5450
-Wire Wire Line
-	6600 5450 6650 5450
 Wire Wire Line
 	9150 9450 9050 9450
 $Comp
@@ -1163,7 +1160,7 @@ U 1 1 60A25252
 P 5250 850
 F 0 "J1" H 5278 826 50  0000 L CNN
 F 1 "Conn_01x04_Female" H 5278 735 50  0000 L CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 5250 850 50  0001 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 5250 850 50  0001 C CNN
 F 3 "~" H 5250 850 50  0001 C CNN
 	1    5250 850 
 	1    0    0    -1  

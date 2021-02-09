@@ -32,7 +32,6 @@
 #define PING_BYTE byte(0xAA)
 #define ACK_BYTE byte(0xAB)
 #define START_CODE byte(0xAC)
-#define PING_DELAY 1
 #define LISTEN_WAIT 5
 
 // Hardware serial has a special case address

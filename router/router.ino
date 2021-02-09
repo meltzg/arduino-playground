@@ -7,6 +7,8 @@
 
 #define PRINT_BUF_SIZE 100
 
+#define NEIGHBOR_RETRIES 500
+
 /*
    Each node has a SoftwareSerial connection to its neighbor and another to the
    1 /\ 2
@@ -203,7 +205,6 @@ void routeMessage(const Message &message) {
 
 void resetNeighbors() {
   Serial.println("Reset Edges");
-  int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
   Message idRequest;
   idRequest.source = NODE_ID;
   idRequest.dest = EMPTY;
@@ -212,7 +213,7 @@ void resetNeighbors() {
   idRequest.body = NULL;
   for (int i = 0; i < 6; i++) {
     NEIGHBORS[i]->listen();
-    if (ackWait(NEIGHBORS[i], maxRetries)) {
+    if (ackWait(NEIGHBORS[i], NEIGHBOR_RETRIES)) {
       writeMessage(NEIGHBORS[i], idRequest);
       NodeId_t neighbor = EMPTY;
       NEIGHBORS[i]->readBytes((byte *) &neighbor, sizeof(NodeId_t));

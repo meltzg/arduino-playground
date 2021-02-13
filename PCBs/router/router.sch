@@ -14,10 +14,10 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L Regulator_Linear:LM7805_TO220 U?
+L Regulator_Linear:LM7805_TO220 U1
 U 1 1 6013BFC2
 P 2350 1300
-F 0 "U?" V 2304 1404 50  0000 L CNN
+F 0 "U1" V 2304 1404 50  0000 L CNN
 F 1 "LM7805_TO220" V 2395 1404 50  0000 L CNN
 F 2 "Package_TO_SOT_THT:TO-220-3_Vertical" H 2350 1525 50  0001 C CIN
 F 3 "https://www.onsemi.cn/PowerSolutions/document/MC7800-D.PDF" H 2350 1250 50  0001 C CNN
@@ -25,10 +25,10 @@ F 3 "https://www.onsemi.cn/PowerSolutions/document/MC7800-D.PDF" H 2350 1250 50 
 	1    0    0    -1  
 $EndComp
 $Comp
-L power:+9V #PWR0101
+L power:+9V #PWR01
 U 1 1 6013AF2D
 P 1500 1300
-F 0 "#PWR0101" H 1500 1150 50  0001 C CNN
+F 0 "#PWR01" H 1500 1150 50  0001 C CNN
 F 1 "+9V" V 1515 1428 50  0000 L CNN
 F 2 "" H 1500 1300 50  0001 C CNN
 F 3 "" H 1500 1300 50  0001 C CNN
@@ -36,10 +36,10 @@ F 3 "" H 1500 1300 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L power:GND #PWR0102
+L power:GND #PWR02
 U 1 1 6013B7FB
 P 1500 1600
-F 0 "#PWR0102" H 1500 1350 50  0001 C CNN
+F 0 "#PWR02" H 1500 1350 50  0001 C CNN
 F 1 "GND" V 1505 1472 50  0000 R CNN
 F 2 "" H 1500 1600 50  0001 C CNN
 F 3 "" H 1500 1600 50  0001 C CNN
@@ -47,10 +47,10 @@ F 3 "" H 1500 1600 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L Device:CP1 C?
+L Device:CP1 C1
 U 1 1 60144756
 P 1800 1450
-F 0 "C?" H 1915 1496 50  0000 L CNN
+F 0 "C1" H 1915 1496 50  0000 L CNN
 F 1 "CP1" H 1915 1405 50  0000 L CNN
 F 2 "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm" H 1800 1450 50  0001 C CNN
 F 3 "~" H 1800 1450 50  0001 C CNN
@@ -58,10 +58,10 @@ F 3 "~" H 1800 1450 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Device:CP1 C?
+L Device:CP1 C2
 U 1 1 60145EEE
 P 3000 1450
-F 0 "C?" H 3115 1496 50  0000 L CNN
+F 0 "C2" H 3115 1496 50  0000 L CNN
 F 1 "CP1" H 3115 1405 50  0000 L CNN
 F 2 "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm" H 3000 1450 50  0001 C CNN
 F 3 "~" H 3000 1450 50  0001 C CNN
@@ -80,10 +80,10 @@ Wire Wire Line
 	2650 1300 3000 1300
 Connection ~ 2350 1600
 $Comp
-L MCU_Microchip_ATmega:ATmega328P-PU U?
+L MCU_Microchip_ATmega:ATmega328P-PU U2
 U 1 1 601486A6
 P 4050 3950
-F 0 "U?" H 3406 3996 50  0000 R CNN
+F 0 "U2" H 3406 3996 50  0000 R CNN
 F 1 "ATmega328P-PU" H 3406 3905 50  0000 R CNN
 F 2 "Package_DIP:DIP-28_W7.62mm_Socket" H 4050 3950 50  0001 C CIN
 F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/ATmega328_P%20AVR%20MCU%20with%20picoPower%20Technology%20Data%20Sheet%2040001984A.pdf" H 4050 3950 50  0001 C CNN
@@ -121,10 +121,10 @@ Wire Wire Line
 	4650 4250 4850 4250
 Connection ~ 6050 5450
 $Comp
-L Device:Crystal Y?
+L Device:Crystal Y1
 U 1 1 6014DF9B
 P 5500 3400
-F 0 "Y?" V 5454 3531 50  0000 L CNN
+F 0 "Y1" V 5454 3531 50  0000 L CNN
 F 1 "Crystal" V 5545 3531 50  0000 L CNN
 F 2 "SamacSys_Parts:HC_49US__AT49_PTH" H 5500 3400 50  0001 C CNN
 F 3 "~" H 5500 3400 50  0001 C CNN
@@ -140,10 +140,10 @@ Wire Wire Line
 Wire Wire Line
 	5350 3450 5500 3550
 $Comp
-L Device:C_Small C?
+L Device:C_Small C3
 U 1 1 60150E8B
 P 5950 3200
-F 0 "C?" V 5721 3200 50  0000 C CNN
+F 0 "C3" V 5721 3200 50  0000 C CNN
 F 1 "C_Small" V 5812 3200 50  0000 C CNN
 F 2 "SamacSys_Parts:S220K25SL0N63L6R" H 5950 3200 50  0001 C CNN
 F 3 "~" H 5950 3200 50  0001 C CNN
@@ -151,10 +151,10 @@ F 3 "~" H 5950 3200 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L Device:C_Small C?
+L Device:C_Small C4
 U 1 1 60151642
 P 5950 3800
-F 0 "C?" V 5721 3800 50  0000 C CNN
+F 0 "C4" V 5721 3800 50  0000 C CNN
 F 1 "C_Small" V 5812 3800 50  0000 C CNN
 F 2 "SamacSys_Parts:S220K25SL0N63L6R" H 5950 3800 50  0001 C CNN
 F 3 "~" H 5950 3800 50  0001 C CNN
@@ -177,10 +177,10 @@ Wire Wire Line
 	6050 3800 6050 5450
 Connection ~ 6050 3800
 $Comp
-L Device:R R?
+L Device:R R1
 U 1 1 60152F6A
 P 5000 4250
-F 0 "R?" V 4793 4250 50  0000 C CNN
+F 0 "R1" V 4793 4250 50  0000 C CNN
 F 1 "R" V 4884 4250 50  0000 C CNN
 F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 4930 4250 50  0001 C CNN
 F 3 "~" H 5000 4250 50  0001 C CNN
@@ -190,10 +190,10 @@ $EndComp
 Wire Wire Line
 	5150 4250 5150 1300
 $Comp
-L Switch:SW_MEC_5E SW?
+L Switch:SW_MEC_5E SW1
 U 1 1 60155D78
 P 5450 4650
-F 0 "SW?" H 5450 5035 50  0000 C CNN
+F 0 "SW1" H 5450 5035 50  0000 C CNN
 F 1 "SW_MEC_5E" H 5450 4944 50  0000 C CNN
 F 2 "Button_Switch_THT:SW_TH_Tactile_Omron_B3F-10xx" H 5450 4950 50  0001 C CNN
 F 3 "http://www.apem.com/int/index.php?controller=attachment&id_attachment=1371" H 5450 4950 50  0001 C CNN
@@ -220,10 +220,10 @@ Wire Wire Line
 Wire Wire Line
 	6600 2900 6500 2900
 $Comp
-L Device:C_Small C?
+L Device:C_Small C5
 U 1 1 6015BA65
 P 6500 2800
-F 0 "C?" V 6271 2800 50  0000 C CNN
+F 0 "C5" V 6271 2800 50  0000 C CNN
 F 1 "C_Small" V 6362 2800 50  0000 C CNN
 F 2 "SamacSys_Parts:K104K15X7RF53H5" H 6500 2800 50  0001 C CNN
 F 3 "~" H 6500 2800 50  0001 C CNN
@@ -231,10 +231,10 @@ F 3 "~" H 6500 2800 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J10
 U 1 1 6015A1A1
 P 6800 3000
-F 0 "J?" H 6772 2974 50  0000 R CNN
+F 0 "J10" H 6772 2974 50  0000 R CNN
 F 1 "Conn_01x06_Male" H 6772 2883 50  0000 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 6800 3000 50  0001 C CNN
 F 3 "~" H 6800 3000 50  0001 C CNN
@@ -248,10 +248,10 @@ Wire Wire Line
 NoConn ~ 5650 4550
 NoConn ~ 6600 3200
 $Comp
-L power:PWR_FLAG #FLG0101
+L power:PWR_FLAG #FLG01
 U 1 1 61287C82
 P 1500 1300
-F 0 "#FLG0101" H 1500 1375 50  0001 C CNN
+F 0 "#FLG01" H 1500 1375 50  0001 C CNN
 F 1 "PWR_FLAG" H 1500 1473 50  0000 C CNN
 F 2 "" H 1500 1300 50  0001 C CNN
 F 3 "~" H 1500 1300 50  0001 C CNN
@@ -260,10 +260,10 @@ F 3 "~" H 1500 1300 50  0001 C CNN
 $EndComp
 Connection ~ 1500 1300
 $Comp
-L power:PWR_FLAG #FLG0102
+L power:PWR_FLAG #FLG02
 U 1 1 612AF933
 P 1500 1600
-F 0 "#FLG0102" H 1500 1675 50  0001 C CNN
+F 0 "#FLG02" H 1500 1675 50  0001 C CNN
 F 1 "PWR_FLAG" H 1500 1773 50  0000 C CNN
 F 2 "" H 1500 1600 50  0001 C CNN
 F 3 "~" H 1500 1600 50  0001 C CNN
@@ -298,10 +298,10 @@ Wire Wire Line
 Wire Wire Line
 	3000 1300 3450 1300
 $Comp
-L MCU_Microchip_ATmega:ATmega328P-PU U?
+L MCU_Microchip_ATmega:ATmega328P-PU U3
 U 1 1 602149F6
 P 10000 3950
-F 0 "U?" H 9356 3996 50  0000 R CNN
+F 0 "U3" H 9356 3996 50  0000 R CNN
 F 1 "ATmega328P-PU" H 9356 3905 50  0000 R CNN
 F 2 "Package_DIP:DIP-28_W7.62mm_Socket" H 10000 3950 50  0001 C CIN
 F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/ATmega328_P%20AVR%20MCU%20with%20picoPower%20Technology%20Data%20Sheet%2040001984A.pdf" H 10000 3950 50  0001 C CNN
@@ -337,10 +337,10 @@ Wire Wire Line
 	10600 4250 10800 4250
 Connection ~ 12000 5450
 $Comp
-L Device:Crystal Y?
+L Device:Crystal Y2
 U 1 1 60214A12
 P 11450 3400
-F 0 "Y?" V 11404 3531 50  0000 L CNN
+F 0 "Y2" V 11404 3531 50  0000 L CNN
 F 1 "Crystal" V 11495 3531 50  0000 L CNN
 F 2 "SamacSys_Parts:HC_49US__AT49_PTH" H 11450 3400 50  0001 C CNN
 F 3 "~" H 11450 3400 50  0001 C CNN
@@ -356,10 +356,10 @@ Wire Wire Line
 Wire Wire Line
 	11300 3450 11450 3550
 $Comp
-L Device:C_Small C?
+L Device:C_Small C6
 U 1 1 60214A1C
 P 11900 3200
-F 0 "C?" V 11671 3200 50  0000 C CNN
+F 0 "C6" V 11671 3200 50  0000 C CNN
 F 1 "C_Small" V 11762 3200 50  0000 C CNN
 F 2 "SamacSys_Parts:S220K25SL0N63L6R" H 11900 3200 50  0001 C CNN
 F 3 "~" H 11900 3200 50  0001 C CNN
@@ -367,10 +367,10 @@ F 3 "~" H 11900 3200 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L Device:C_Small C?
+L Device:C_Small C7
 U 1 1 60214A22
 P 11900 3800
-F 0 "C?" V 11671 3800 50  0000 C CNN
+F 0 "C7" V 11671 3800 50  0000 C CNN
 F 1 "C_Small" V 11762 3800 50  0000 C CNN
 F 2 "SamacSys_Parts:S220K25SL0N63L6R" H 11900 3800 50  0001 C CNN
 F 3 "~" H 11900 3800 50  0001 C CNN
@@ -393,10 +393,10 @@ Wire Wire Line
 	12000 3800 12000 5450
 Connection ~ 12000 3800
 $Comp
-L Device:R R?
+L Device:R R3
 U 1 1 60214A31
 P 10950 4250
-F 0 "R?" V 10743 4250 50  0000 C CNN
+F 0 "R3" V 10743 4250 50  0000 C CNN
 F 1 "R" V 10834 4250 50  0000 C CNN
 F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 10880 4250 50  0001 C CNN
 F 3 "~" H 10950 4250 50  0001 C CNN
@@ -406,10 +406,10 @@ $EndComp
 Wire Wire Line
 	11100 4250 11100 1300
 $Comp
-L Switch:SW_MEC_5E SW?
+L Switch:SW_MEC_5E SW2
 U 1 1 60214A38
 P 11400 4650
-F 0 "SW?" H 11400 5035 50  0000 C CNN
+F 0 "SW2" H 11400 5035 50  0000 C CNN
 F 1 "SW_MEC_5E" H 11400 4944 50  0000 C CNN
 F 2 "Button_Switch_THT:SW_TH_Tactile_Omron_B3F-10xx" H 11400 4950 50  0001 C CNN
 F 3 "http://www.apem.com/int/index.php?controller=attachment&id_attachment=1371" H 11400 4950 50  0001 C CNN
@@ -434,10 +434,10 @@ Wire Wire Line
 Wire Wire Line
 	12550 2900 12450 2900
 $Comp
-L Device:C_Small C?
+L Device:C_Small C8
 U 1 1 60214A48
 P 12450 2800
-F 0 "C?" V 12221 2800 50  0000 C CNN
+F 0 "C8" V 12221 2800 50  0000 C CNN
 F 1 "C_Small" V 12312 2800 50  0000 C CNN
 F 2 "SamacSys_Parts:K104K15X7RF53H5" H 12450 2800 50  0001 C CNN
 F 3 "~" H 12450 2800 50  0001 C CNN
@@ -445,10 +445,10 @@ F 3 "~" H 12450 2800 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J15
 U 1 1 60214A4E
 P 12750 3000
-F 0 "J?" H 12722 2974 50  0000 R CNN
+F 0 "J15" H 12722 2974 50  0000 R CNN
 F 1 "Conn_01x06_Male" H 12722 2883 50  0000 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 12750 3000 50  0001 C CNN
 F 3 "~" H 12750 3000 50  0001 C CNN
@@ -478,23 +478,23 @@ Wire Wire Line
 Connection ~ 6600 5450
 Connection ~ 10000 5450
 $Comp
-L Device:LED D?
+L Device:LED D1
 U 1 1 60221C04
 P 6650 900
-F 0 "D?" H 6643 645 50  0000 C CNN
+F 0 "D1" H 6643 645 50  0000 C CNN
 F 1 "LED" H 6643 736 50  0000 C CNN
-F 2 "" H 6650 900 50  0001 C CNN
+F 2 "LED_THT:LED_D3.0mm" H 6650 900 50  0001 C CNN
 F 3 "~" H 6650 900 50  0001 C CNN
 	1    6650 900 
 	-1   0    0    1   
 $EndComp
 $Comp
-L Device:R R?
+L Device:R R2
 U 1 1 6022B14D
 P 6350 900
-F 0 "R?" V 6143 900 50  0000 C CNN
+F 0 "R2" V 6143 900 50  0000 C CNN
 F 1 "R" V 6234 900 50  0000 C CNN
-F 2 "" V 6280 900 50  0001 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 6280 900 50  0001 C CNN
 F 3 "~" H 6350 900 50  0001 C CNN
 	1    6350 900 
 	0    1    1    0   
@@ -513,12 +513,12 @@ Wire Wire Line
 Wire Wire Line
 	3300 1600 3000 1600
 $Comp
-L Connector:Conn_01x04_Male J?
+L Connector:Conn_01x04_Male J7
 U 1 1 6023356C
 P 5250 950
-F 0 "J?" H 5222 832 50  0000 R CNN
+F 0 "J7" H 5222 832 50  0000 R CNN
 F 1 "Conn_01x04_Male" H 5222 923 50  0000 R CNN
-F 2 "" H 5250 950 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 5250 950 50  0001 C CNN
 F 3 "~" H 5250 950 50  0001 C CNN
 	1    5250 950 
 	-1   0    0    1   
@@ -572,45 +572,45 @@ Wire Wire Line
 Wire Wire Line
 	11250 4050 10600 4050
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J1
 U 1 1 604A5208
 P 2200 8000
-F 0 "J?" V 2262 8244 50  0000 L CNN
+F 0 "J1" V 2262 8244 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 2353 8244 50  0000 L CNN
-F 2 "" H 2200 8000 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 2200 8000 50  0001 C CNN
 F 3 "~" H 2200 8000 50  0001 C CNN
 	1    2200 8000
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J8
 U 1 1 604B6EBA
 P 6100 8000
-F 0 "J?" V 6162 8244 50  0000 L CNN
+F 0 "J8" V 6162 8244 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 6253 8244 50  0000 L CNN
-F 2 "" H 6100 8000 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 6100 8000 50  0001 C CNN
 F 3 "~" H 6100 8000 50  0001 C CNN
 	1    6100 8000
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J2
 U 1 1 604C2AD5
 P 2200 8350
-F 0 "J?" V 2262 8594 50  0000 L CNN
+F 0 "J2" V 2262 8594 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 2353 8594 50  0000 L CNN
-F 2 "" H 2200 8350 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Horizontal" H 2200 8350 50  0001 C CNN
 F 3 "~" H 2200 8350 50  0001 C CNN
 	1    2200 8350
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Female J?
+L Connector:Conn_01x06_Female J9
 U 1 1 604CA407
 P 6200 8350
-F 0 "J?" V 6046 8598 50  0000 L CNN
+F 0 "J9" V 6046 8598 50  0000 L CNN
 F 1 "Conn_01x06_Female" V 6137 8598 50  0000 L CNN
-F 2 "" H 6200 8350 50  0001 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Horizontal" H 6200 8350 50  0001 C CNN
 F 3 "~" H 6200 8350 50  0001 C CNN
 	1    6200 8350
 	0    1    1    0   
@@ -720,23 +720,23 @@ Wire Wire Line
 Connection ~ 6100 7800
 Connection ~ 6200 7800
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J3
 U 1 1 605A6780
 P 3500 8000
-F 0 "J?" V 3562 8244 50  0000 L CNN
+F 0 "J3" V 3562 8244 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 3653 8244 50  0000 L CNN
-F 2 "" H 3500 8000 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 3500 8000 50  0001 C CNN
 F 3 "~" H 3500 8000 50  0001 C CNN
 	1    3500 8000
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J4
 U 1 1 605A67B4
 P 3500 8350
-F 0 "J?" V 3562 8594 50  0000 L CNN
+F 0 "J4" V 3562 8594 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 3653 8594 50  0000 L CNN
-F 2 "" H 3500 8350 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Horizontal" H 3500 8350 50  0001 C CNN
 F 3 "~" H 3500 8350 50  0001 C CNN
 	1    3500 8350
 	0    -1   -1   0   
@@ -794,23 +794,23 @@ Wire Wire Line
 Connection ~ 3300 8150
 Connection ~ 3800 8150
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J5
 U 1 1 605B6C36
 P 4800 8000
-F 0 "J?" V 4862 8244 50  0000 L CNN
+F 0 "J5" V 4862 8244 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 4953 8244 50  0000 L CNN
-F 2 "" H 4800 8000 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 4800 8000 50  0001 C CNN
 F 3 "~" H 4800 8000 50  0001 C CNN
 	1    4800 8000
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J6
 U 1 1 605B6C6A
 P 4800 8350
-F 0 "J?" V 4862 8594 50  0000 L CNN
+F 0 "J6" V 4862 8594 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 4953 8594 50  0000 L CNN
-F 2 "" H 4800 8350 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Horizontal" H 4800 8350 50  0001 C CNN
 F 3 "~" H 4800 8350 50  0001 C CNN
 	1    4800 8350
 	0    -1   -1   0   
@@ -868,23 +868,23 @@ Wire Wire Line
 Connection ~ 4600 8150
 Connection ~ 5100 8150
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J11
 U 1 1 605CAA18
 P 7450 8000
-F 0 "J?" V 7512 8244 50  0000 L CNN
+F 0 "J11" V 7512 8244 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 7603 8244 50  0000 L CNN
-F 2 "" H 7450 8000 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 7450 8000 50  0001 C CNN
 F 3 "~" H 7450 8000 50  0001 C CNN
 	1    7450 8000
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Female J?
+L Connector:Conn_01x06_Female J12
 U 1 1 605CAA22
 P 7550 8350
-F 0 "J?" V 7396 8598 50  0000 L CNN
+F 0 "J12" V 7396 8598 50  0000 L CNN
 F 1 "Conn_01x06_Female" V 7487 8598 50  0000 L CNN
-F 2 "" H 7550 8350 50  0001 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Horizontal" H 7550 8350 50  0001 C CNN
 F 3 "~" H 7550 8350 50  0001 C CNN
 	1    7550 8350
 	0    1    1    0   
@@ -942,23 +942,23 @@ Wire Wire Line
 Connection ~ 7450 7800
 Connection ~ 7550 7800
 $Comp
-L Connector:Conn_01x06_Male J?
+L Connector:Conn_01x06_Male J13
 U 1 1 605DFCA9
 P 8800 8000
-F 0 "J?" V 8862 8244 50  0000 L CNN
+F 0 "J13" V 8862 8244 50  0000 L CNN
 F 1 "Conn_01x06_Male" V 8953 8244 50  0000 L CNN
-F 2 "" H 8800 8000 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 8800 8000 50  0001 C CNN
 F 3 "~" H 8800 8000 50  0001 C CNN
 	1    8800 8000
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector:Conn_01x06_Female J?
+L Connector:Conn_01x06_Female J14
 U 1 1 605DFCB3
 P 8900 8350
-F 0 "J?" V 8746 8598 50  0000 L CNN
+F 0 "J14" V 8746 8598 50  0000 L CNN
 F 1 "Conn_01x06_Female" V 8837 8598 50  0000 L CNN
-F 2 "" H 8900 8350 50  0001 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Horizontal" H 8900 8350 50  0001 C CNN
 F 3 "~" H 8900 8350 50  0001 C CNN
 	1    8900 8350
 	0    1    1    0   

@@ -224,6 +224,9 @@ void resetNeighbors() {
     Serial.print(neighborIds[i], HEX);
     Serial.print(", ");
   }
+
+  pathfinder.addNode(NODE_ID, neighborIds, 6);
+  
   Serial.println();
 }
 

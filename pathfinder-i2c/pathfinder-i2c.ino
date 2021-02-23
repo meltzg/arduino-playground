@@ -6,6 +6,7 @@
 
 Graph<NodeId_t> topology(true, 0, EEPROM.length());
 Set<NodeId_t> discoveryVisited;
+Set<NodeId_t> isInitialized;
 LinkedList<NodeId_t> discoveryQueue;
 GraphIterator<NodeId_t> iterator;
 
@@ -71,6 +72,12 @@ void onRequest() {
     } else if (command == FINDER_GET_ADJACENT) {
       NodeId_t node = ((NodeId_t *) body)[0];
       writeAdjacent(node);
+    } else if (command == FINDER_GET_INITIALIZED) {
+      NodeId_t node = ((NodeId_t *) body)[0];
+      writeIsInitialized(node);
+    } else if (command == FINDER_SET_INITIALIZED) {
+      NodeId_t node = ((NodeId_t *) body)[0];
+      isInitialized.pushBack(node);
     }
     // to prevent timing issues, clients should always expect 1 byte of data before continuing execution
     Wire.write(0x00);
@@ -115,6 +122,7 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes) {
     Serial.println("Discovery done");
     discoveryDone = true;
     discoveryVisited.purge();
+    isInitialized.purge();
 
     for (GraphIterator<NodeId_t> iter(topology, node); iter.hasNext();) {
       NodeId_t curr = iter.next();
@@ -218,4 +226,9 @@ void writeAdjacent(NodeId_t node) {
     Serial.println(adjNode);
     Wire.write((byte *)&adjNode, sizeof(NodeId_t));
   }
+}
+
+void writeIsInitialized(NodeId_t node) {
+  bool isNodeInitialized = isInitialized.contains(node);
+  Wire.write((byte *)&isNodeInitialized, sizeof(bool));
 }

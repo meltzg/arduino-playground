@@ -17,6 +17,8 @@
 #define FINDER_ITERATOR_NEXT 0x08
 #define FINDER_CLEAR_TOPOLOGY 0x09
 #define FINDER_GET_ADJACENT 0x0A
+#define FINDER_GET_INITIALIZED 0x0B
+#define FINDER_SET_INITIALIZED 0x0C
 
 struct DiscoveryStats
 {
@@ -45,6 +47,8 @@ public:
     NodeId_t getIteratorNext();
     void clearTopology();
     void getAdjacent(NodeId_t node, Set<NodeId_t> &adjacent);
+    bool getInitialized(NodeId_t node);
+    void setInitialized(NodeId_t node);
 };
 
 #endif // _PATH_FINDER_H_

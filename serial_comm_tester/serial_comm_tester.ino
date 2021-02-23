@@ -174,6 +174,11 @@ void setup() {
     for (ListIterator<NodeId_t> iter(neighbors); iter.hasNext(); i++) {
       neiArr[i] = iter.next();
     }
+    Serial.print("Init ");
+    Serial.println(p.getInitialized(currNode));
+    p.setInitialized(currNode);
+    Serial.print("Init ");
+    Serial.println(p.getInitialized(currNode));
     p.addNode(currNode, neiArr, neighbors.count);
     currNode = p.getNextNeighborRequest();
   } while (!p.getDiscoveryStats().discoveryDone && currNode != EMPTY);

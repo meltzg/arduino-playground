@@ -101,6 +101,11 @@ void clearIterator()
     Wire.beginTransmission(FINDER_I2C_ADDR);
     Wire.write(FINDER_ITERATOR_CLEAR);
     Wire.endTransmission();
+
+    Wire.requestFrom(FINDER_I2C_ADDR, 1);
+    while (Wire.available() < 1)
+    {
+    }
 }
 
 NodeId_t PathFinder::getIteratorNext()
@@ -151,5 +156,36 @@ void PathFinder::getAdjacent(NodeId_t node, Set<NodeId_t> &adjacent)
     for (int i = 0; i < numNeighbors; i++)
     {
         adjacent.pushBack(neighbors[i]);
+    }
+}
+
+bool PathFinder::getInitialized(NodeId_t node)
+{
+    Wire.beginTransmission(FINDER_I2C_ADDR);
+    Wire.write(FINDER_GET_INITIALIZED);
+    Wire.write((byte *)&node, sizeof(node));
+    Wire.endTransmission();
+
+    Wire.requestFrom(FINDER_I2C_ADDR, sizeof(bool));
+    while (Wire.available() < sizeof(bool))
+    {
+    }
+
+    bool isInitialized;
+    Wire.readBytes((byte *)&isInitialized, sizeof(isInitialized));
+
+    return isInitialized;
+}
+
+void PathFinder::setInitialized(NodeId_t node)
+{
+    Wire.beginTransmission(FINDER_I2C_ADDR);
+    Wire.write(FINDER_SET_INITIALIZED);
+    Wire.write((byte *)&node, sizeof(node));
+    Wire.endTransmission();
+
+    Wire.requestFrom(FINDER_I2C_ADDR, 1);
+    while (Wire.available() < 1)
+    {
     }
 }

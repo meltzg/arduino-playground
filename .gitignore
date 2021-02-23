@@ -66,3 +66,5 @@ fp-info-cache
 *.csv
 
 gerber/
+
+*.log

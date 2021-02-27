@@ -267,7 +267,7 @@ void setupGame(uint16_t newBtnState) {
     return;
   }
   Serial.print("My ID: ");
-  int maxRetries = 2 * (LISTEN_WAIT * 8 / PING_DELAY);
+  int maxRetries = 100;
   Message idRequest;
   idRequest.source = EMPTY;
   idRequest.dest = EMPTY;

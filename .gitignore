@@ -69,3 +69,6 @@ gerber/
 
 *.log
 *.zip
+
+*.hex
+*.elf

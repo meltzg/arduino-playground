@@ -51,7 +51,8 @@ typedef uint16_t NodeId_t;
 typedef uint16_t MessageSize_t;
 typedef uint8_t SysCommand_t;
 
-struct Message {
+struct Message
+{
   NodeId_t source;
   NodeId_t dest;
   MessageSize_t payloadSize;

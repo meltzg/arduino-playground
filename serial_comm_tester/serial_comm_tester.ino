@@ -5,7 +5,8 @@
 
 PathFinder p(6);
 
-void setup() {
+void setup()
+{
   long startTs = millis();
   Serial.begin(9600);
   Wire.begin();
@@ -153,7 +154,8 @@ void setup() {
   LinkedList<NodeId_t> path;
   g.getShortestPath(1, 52, path);
   Serial.print("Path: ");
-  for (ListIterator<NodeId_t> iter(path); iter.hasNext();) {
+  for (ListIterator<NodeId_t> iter(path); iter.hasNext();)
+  {
     Serial.print(iter.next());
     Serial.print(", ");
   }
@@ -165,13 +167,15 @@ void setup() {
   NodeId_t currNode = 1;
 
   Serial.println("Test async discovery");
-  do {
+  do
+  {
     Serial.println(currNode);
     g.getAdjacent(currNode, neighbors);
     delete[] neiArr;
-    neiArr  = new NodeId_t[neighbors.count];
+    neiArr = new NodeId_t[neighbors.count];
     int i = 0;
-    for (ListIterator<NodeId_t> iter(neighbors); iter.hasNext(); i++) {
+    for (ListIterator<NodeId_t> iter(neighbors); iter.hasNext(); i++)
+    {
       neiArr[i] = iter.next();
     }
     Serial.print("Init ");
@@ -188,12 +192,14 @@ void setup() {
 
   Serial.println("Validate iteration");
   p.resetIterator(1);
-  for (NodeId_t next = p.getIteratorNext(); next != EMPTY; next = p.getIteratorNext()) {
+  for (NodeId_t next = p.getIteratorNext(); next != EMPTY; next = p.getIteratorNext())
+  {
     Set<NodeId_t> adj;
     p.getAdjacent(next, adj);
     Serial.print(next);
     Serial.print(": ");
-    for (ListIterator<NodeId_t> iter(adj); iter.hasNext();) {
+    for (ListIterator<NodeId_t> iter(adj); iter.hasNext();)
+    {
       Serial.print(iter.next());
       Serial.print(", ");
     }
@@ -205,16 +211,20 @@ void setup() {
   int total = 52 * 51;
   bool error = false;
   p.resetIterator(1);
-  for (NodeId_t i = p.getIteratorNext(); i != EMPTY; i = p.getIteratorNext()) {
+  for (NodeId_t i = p.getIteratorNext(); i != EMPTY; i = p.getIteratorNext())
+  {
     NodeId_t nextStep = EMPTY;
-    for (NodeId_t j = 1; j < 53; j++) {
-      if (i == j) {
+    for (NodeId_t j = 1; j < 53; j++)
+    {
+      if (i == j)
+      {
         continue;
       }
       LinkedList<NodeId_t> path;
       g.getShortestPath(i, j, path);
       NodeId_t expected = EMPTY;
-      if (!path.isEmpty()) {
+      if (!path.isEmpty())
+      {
         ListIterator<NodeId_t> iter(path);
         iter.next();
         expected = iter.next();
@@ -231,7 +241,8 @@ void setup() {
       Serial.print(" via ");
       Serial.println(nextStep);
 
-      if (nextStep == EMPTY) {
+      if (nextStep == EMPTY)
+      {
         Serial.print("Path not found from ");
         Serial.print(i);
         Serial.print(" to ");
@@ -242,20 +253,22 @@ void setup() {
         break;
       }
     }
-    if (error) {
+    if (error)
+    {
       break;
     }
   }
 
   Serial.println("Done: ");
   Serial.println(millis() - startTs);
-
 }
 
-void loop() {
+void loop()
+{
 }
 
-void printDiscoveryStats(const DiscoveryStats &stats) {
+void printDiscoveryStats(const DiscoveryStats &stats)
+{
   Serial.print("discovery done: ");
   Serial.print(stats.discoveryDone);
   Serial.print(" num nodes: ");

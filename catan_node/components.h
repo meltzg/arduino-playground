@@ -17,68 +17,70 @@
 #define BLACK 0x00
 #define WHITE 0xFFFFFF
 
-class Component {
-  protected:
-    unsigned long previousMillis = 0;
+class Component
+{
+protected:
+  unsigned long previousMillis = 0;
 
-  public:
-    virtual void render(unsigned long currentMillis);
+public:
+  virtual void render(unsigned long currentMillis);
 };
 
 class SegmentDisplay : public Component
 {
-  private:
-    const int latchPin;
-    const int clockPin;
-    const int dataPin;
-    const int leftCommonPin;
-    const int rightCommonPin;
+private:
+  const int latchPin;
+  const int clockPin;
+  const int dataPin;
+  const int leftCommonPin;
+  const int rightCommonPin;
 
-    char chars[2] = {0};
-    bool showLeft = true;
+  char chars[2] = {0};
+  bool showLeft = true;
 
-    void registerWrite(uint16_t toWrite);
+  void registerWrite(uint16_t toWrite);
 
-  public:
-    SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin);
+public:
+  SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin);
 
-    void setChars(char *chars);
-    void render(unsigned long currentMillis);
+  void setChars(char *chars);
+  void render(unsigned long currentMillis);
 };
 
 class LEDStatusDisplay : public Component
 {
-  private:
-    const int dataPin;
-    const int numLeds;
-    Adafruit_NeoPixel pixels;
+private:
+  const int dataPin;
+  const int numLeds;
+  Adafruit_NeoPixel pixels;
 
-    __int24 *grbs = NULL;
-    byte brightness = 50;
+  __int24 *grbs = NULL;
+  byte brightness = 50;
 
-  public:
-    LEDStatusDisplay(int dataPin, int numLeds);
+public:
+  LEDStatusDisplay(int dataPin, int numLeds);
 
-    void render(unsigned long currentMillis);
-    void setState(__int24 *grbs, byte brightness);
+  void render(unsigned long currentMillis);
+  void setState(__int24 *grbs, byte brightness);
 };
 
-class ButtonArray16 : Component {
-  private:
-    const int loadPin;
-    const int clockEnablePin;
-    const int dataPin;
-    const int clockPin;
+class ButtonArray16 : Component
+{
+private:
+  const int loadPin;
+  const int clockEnablePin;
+  const int dataPin;
+  const int clockPin;
 
-    uint16_t state = 0;
-    uint16_t onDuration[16] = { 0 };
+  uint16_t state = 0;
+  uint16_t onDuration[16] = {0};
 
-  public:
-    ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin);
+public:
+  ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin);
 
-    void render(unsigned long currentMillis);
-    uint16_t getState() { return state; }
-    uint16_t getOnDuration(int pos) { return onDuration[pos]; }
+  void render(unsigned long currentMillis);
+  uint16_t getState() { return state; }
+  uint16_t getOnDuration(int pos) { return onDuration[pos]; }
 };
 
 #endif // _COMPONENTS_H_

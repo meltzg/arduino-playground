@@ -4,6 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 
 #define DIGIT_SWITCH_DELAY 5
+#define SEGMENT_SCROLL_DELAY 250
 #define BTN_POLL_DELAY 50
 #define PULSE_WIDTH_USEC 5
 #define LED_UPDATE_DELAY 100
@@ -34,14 +35,17 @@ private:
   const int dataPin;
   const int leftCommonPin;
   const int rightCommonPin;
+  const int scrollDelay;
 
-  char chars[2] = {0};
+  char *chars = NULL;
   bool showLeft = true;
+  int displayOffset = 0;
+  unsigned long scrollPreviousMillis = 0;
 
   void registerWrite(uint16_t toWrite);
 
 public:
-  SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin);
+  SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay);
 
   void setChars(char *chars);
   void render(unsigned long currentMillis);

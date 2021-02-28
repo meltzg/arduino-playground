@@ -600,7 +600,7 @@ const uint16_t getCharacter(char character)
   return charCode;
 }
 
-SegmentDisplay::SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin) : latchPin(latchPin), clockPin(clockPin), dataPin(dataPin), leftCommonPin(leftCommonPin), rightCommonPin(rightCommonPin)
+SegmentDisplay::SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay) : latchPin(latchPin), clockPin(clockPin), dataPin(dataPin), leftCommonPin(leftCommonPin), rightCommonPin(rightCommonPin), scrollDelay(scrollDelay)
 {
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
@@ -624,8 +624,8 @@ void SegmentDisplay::registerWrite(uint16_t toWrite)
 
 void SegmentDisplay::setChars(char *chars)
 {
-  this->chars[0] = chars[0];
-  this->chars[1] = chars[1];
+  this->displayOffset = 0;
+  this->chars = chars;
 }
 
 void SegmentDisplay::render(unsigned long currentMillis)
@@ -634,18 +634,35 @@ void SegmentDisplay::render(unsigned long currentMillis)
   {
     showLeft = !showLeft;
     previousMillis = currentMillis;
+    char left = ' ', right = ' ';
+    if (chars != NULL && strlen(chars) > 0)
+    {
+      if (strlen(chars) > 2 && currentMillis - scrollPreviousMillis >= scrollDelay)
+      {
+        scrollPreviousMillis = currentMillis;
+        displayOffset = ++displayOffset % strlen(chars);
+        Serial.print(displayOffset, HEX);
+      }
+
+      left = chars[displayOffset];
+
+      if (strlen(chars) > 1)
+      {
+        right = chars[(displayOffset + 1) % strlen(chars)];
+      }
+    }
 
     // Assume common anode. to turn just left on, right must be high, left must be low
     if (showLeft)
     {
       digitalWrite(rightCommonPin, SEG_OFF);
-      registerWrite(getCharacter(chars[0]));
+      registerWrite(getCharacter(left));
       digitalWrite(leftCommonPin, SEG_ON);
     }
     else
     {
       digitalWrite(leftCommonPin, SEG_OFF);
-      registerWrite(getCharacter(chars[1]));
+      registerWrite(getCharacter(right));
       digitalWrite(rightCommonPin, SEG_ON);
     }
   }

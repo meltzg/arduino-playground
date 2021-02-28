@@ -76,7 +76,8 @@ SegmentDisplay tileValue(
     SEGMENT_CLOCK,
     SEGMENT_DATA,
     SEGMENT_LEFT,
-    SEGMENT_RIGHT);
+    SEGMENT_RIGHT,
+    300);
 
 LEDStatusDisplay tileStateDisplay(LED_ARRAY, NUM_LEDS);
 
@@ -340,7 +341,7 @@ void setTileValue(byte val)
   }
   else if (val > MAX_ROLL)
   {
-    tileValue.setChars("Rb");
+    tileValue.setChars("Robber");
   }
   else
   {

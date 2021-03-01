@@ -766,17 +766,17 @@ F 3 "~" H 5250 850 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9850 2850 9150 2850
+	9850 2850 9300 2850
 Wire Wire Line
 	9150 2850 9150 1300
 Wire Wire Line
-	9150 1200 9850 1200
+	9150 1200 9400 1200
 Wire Wire Line
-	9850 4150 9050 4150
+	9850 4150 9450 4150
 Wire Wire Line
 	9050 4150 9050 2500
 Wire Wire Line
-	9050 2500 9850 2500
+	9050 2500 9450 2500
 Connection ~ 9150 1300
 Wire Wire Line
 	9150 1300 9150 1200
@@ -793,11 +793,7 @@ Wire Wire Line
 	4700 2850 4700 950 
 Wire Wire Line
 	4700 950  5050 950 
-NoConn ~ 9450 1700
-NoConn ~ 9450 2000
 NoConn ~ 5650 4550
-NoConn ~ 9450 3350
-NoConn ~ 9450 3650
 NoConn ~ 10250 3950
 NoConn ~ 13600 7750
 NoConn ~ 4650 4150
@@ -1735,4 +1731,28 @@ Wire Wire Line
 	10400 1500 10400 1050
 Wire Wire Line
 	10250 1500 10400 1500
+Wire Wire Line
+	9450 2000 9450 2500
+Connection ~ 9450 2500
+Wire Wire Line
+	9450 2500 9850 2500
+Wire Wire Line
+	9450 3650 9450 4150
+Connection ~ 9450 4150
+Wire Wire Line
+	9450 4150 9050 4150
+Wire Wire Line
+	9450 1700 9400 1700
+Wire Wire Line
+	9400 1700 9400 1200
+Connection ~ 9400 1200
+Wire Wire Line
+	9400 1200 9850 1200
+Wire Wire Line
+	9450 3350 9300 3350
+Wire Wire Line
+	9300 3350 9300 2850
+Connection ~ 9300 2850
+Wire Wire Line
+	9300 2850 9150 2850
 $EndSCHEMATC

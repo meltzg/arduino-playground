@@ -1281,4 +1281,37 @@ Connection ~ 8600 8150
 Connection ~ 8800 8150
 Connection ~ 8900 8150
 Connection ~ 9100 8150
+$Comp
+L Mechanical:MountingHole H1
+U 1 1 6054FFE1
+P 1300 2650
+F 0 "H1" H 1400 2696 50  0000 L CNN
+F 1 "MountingHole" H 1400 2605 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3.2mm_M3" H 1300 2650 50  0001 C CNN
+F 3 "~" H 1300 2650 50  0001 C CNN
+	1    1300 2650
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H2
+U 1 1 605508DE
+P 1300 3150
+F 0 "H2" H 1400 3196 50  0000 L CNN
+F 1 "MountingHole" H 1400 3105 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3.2mm_M3" H 1300 3150 50  0001 C CNN
+F 3 "~" H 1300 3150 50  0001 C CNN
+	1    1300 3150
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H3
+U 1 1 60550AD6
+P 1300 3800
+F 0 "H3" H 1400 3846 50  0000 L CNN
+F 1 "MountingHole" H 1400 3755 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3.2mm_M3" H 1300 3800 50  0001 C CNN
+F 3 "~" H 1300 3800 50  0001 C CNN
+	1    1300 3800
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

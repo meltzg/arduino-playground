@@ -1755,4 +1755,37 @@ Wire Wire Line
 Connection ~ 9300 2850
 Wire Wire Line
 	9300 2850 9150 2850
+$Comp
+L Mechanical:MountingHole H1
+U 1 1 6051E1EA
+P 1400 2800
+F 0 "H1" H 1500 2846 50  0000 L CNN
+F 1 "MountingHole" H 1500 2755 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3.2mm_M3" H 1400 2800 50  0001 C CNN
+F 3 "~" H 1400 2800 50  0001 C CNN
+	1    1400 2800
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H2
+U 1 1 6051EDE7
+P 1400 3250
+F 0 "H2" H 1500 3296 50  0000 L CNN
+F 1 "MountingHole" H 1500 3205 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3.2mm_M3" H 1400 3250 50  0001 C CNN
+F 3 "~" H 1400 3250 50  0001 C CNN
+	1    1400 3250
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H3
+U 1 1 6051EF6F
+P 1400 3800
+F 0 "H3" H 1500 3846 50  0000 L CNN
+F 1 "MountingHole" H 1500 3755 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3.2mm_M3" H 1400 3800 50  0001 C CNN
+F 3 "~" H 1400 3800 50  0001 C CNN
+	1    1400 3800
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

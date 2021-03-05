@@ -604,17 +604,6 @@ F 3 "~" H 2200 8350 50  0001 C CNN
 	1    2200 8350
 	0    -1   -1   0   
 $EndComp
-$Comp
-L Connector:Conn_01x06_Female J9
-U 1 1 604CA407
-P 6200 8350
-F 0 "J9" V 6046 8598 50  0000 L CNN
-F 1 "Conn_01x06_Female" V 6137 8598 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Horizontal" H 6200 8350 50  0001 C CNN
-F 3 "~" H 6200 8350 50  0001 C CNN
-	1    6200 8350
-	0    1    1    0   
-$EndComp
 Wire Wire Line
 	2000 8150 2050 8150
 Wire Wire Line
@@ -709,8 +698,6 @@ Wire Wire Line
 	5900 8100 6400 8100
 Wire Wire Line
 	6400 8100 6400 8150
-Connection ~ 5900 8150
-Connection ~ 6400 8150
 Wire Wire Line
 	6100 7800 6100 7750
 Wire Wire Line
@@ -878,17 +865,6 @@ F 3 "~" H 7450 8000 50  0001 C CNN
 	1    7450 8000
 	0    -1   -1   0   
 $EndComp
-$Comp
-L Connector:Conn_01x06_Female J12
-U 1 1 605CAA22
-P 7550 8350
-F 0 "J12" V 7396 8598 50  0000 L CNN
-F 1 "Conn_01x06_Female" V 7487 8598 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Horizontal" H 7550 8350 50  0001 C CNN
-F 3 "~" H 7550 8350 50  0001 C CNN
-	1    7550 8350
-	0    1    1    0   
-$EndComp
 Wire Wire Line
 	7250 8150 7300 8150
 Wire Wire Line
@@ -931,8 +907,6 @@ Wire Wire Line
 	7250 8100 7750 8100
 Wire Wire Line
 	7750 8100 7750 8150
-Connection ~ 7250 8150
-Connection ~ 7750 8150
 Wire Wire Line
 	7450 7800 7450 7750
 Wire Wire Line
@@ -951,17 +925,6 @@ F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 8800 8000 50 
 F 3 "~" H 8800 8000 50  0001 C CNN
 	1    8800 8000
 	0    -1   -1   0   
-$EndComp
-$Comp
-L Connector:Conn_01x06_Female J14
-U 1 1 605DFCB3
-P 8900 8350
-F 0 "J14" V 8746 8598 50  0000 L CNN
-F 1 "Conn_01x06_Female" V 8837 8598 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Horizontal" H 8900 8350 50  0001 C CNN
-F 3 "~" H 8900 8350 50  0001 C CNN
-	1    8900 8350
-	0    1    1    0   
 $EndComp
 Wire Wire Line
 	8600 8150 8650 8150
@@ -1005,8 +968,6 @@ Wire Wire Line
 	8600 8100 9100 8100
 Wire Wire Line
 	9100 8100 9100 8150
-Connection ~ 8600 8150
-Connection ~ 9100 8150
 Wire Wire Line
 	8800 7800 8800 7750
 Wire Wire Line
@@ -1086,23 +1047,18 @@ Wire Wire Line
 Wire Wire Line
 	6100 8050 6100 8150
 Connection ~ 4900 8150
-Connection ~ 6100 8150
 Wire Wire Line
 	6200 8150 6200 8050
 Wire Wire Line
 	6200 8050 7450 8050
 Wire Wire Line
 	7450 8050 7450 8150
-Connection ~ 6200 8150
-Connection ~ 7450 8150
 Wire Wire Line
 	7550 8150 7550 8050
 Wire Wire Line
 	7550 8050 8800 8050
 Wire Wire Line
 	8800 8050 8800 8150
-Connection ~ 7550 8150
-Connection ~ 8800 8150
 Wire Wire Line
 	8900 8150 8900 8050
 Wire Wire Line
@@ -1117,7 +1073,6 @@ Wire Wire Line
 	1900 8050 2200 8050
 Wire Wire Line
 	2200 8050 2200 8150
-Connection ~ 8900 8150
 Connection ~ 2200 8150
 Wire Wire Line
 	2000 1300 2000 7700
@@ -1281,4 +1236,49 @@ Wire Wire Line
 Wire Wire Line
 	8700 7200 8700 7800
 Connection ~ 8700 7800
+$Comp
+L Connector:Conn_01x06_Male J9
+U 1 1 604668E3
+P 6100 8350
+F 0 "J9" V 6162 8594 50  0000 L CNN
+F 1 "Conn_01x06_Male" V 6253 8594 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Horizontal" H 6100 8350 50  0001 C CNN
+F 3 "~" H 6100 8350 50  0001 C CNN
+	1    6100 8350
+	0    -1   -1   0   
+$EndComp
+Connection ~ 5900 8150
+Connection ~ 6100 8150
+Connection ~ 6200 8150
+Connection ~ 6400 8150
+$Comp
+L Connector:Conn_01x06_Male J12
+U 1 1 60467525
+P 7450 8350
+F 0 "J12" V 7512 8594 50  0000 L CNN
+F 1 "Conn_01x06_Male" V 7603 8594 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Horizontal" H 7450 8350 50  0001 C CNN
+F 3 "~" H 7450 8350 50  0001 C CNN
+	1    7450 8350
+	0    -1   -1   0   
+$EndComp
+Connection ~ 7250 8150
+Connection ~ 7450 8150
+Connection ~ 7550 8150
+Connection ~ 7750 8150
+$Comp
+L Connector:Conn_01x06_Male J14
+U 1 1 604683D9
+P 8800 8350
+F 0 "J14" V 8862 8594 50  0000 L CNN
+F 1 "Conn_01x06_Male" V 8953 8594 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Horizontal" H 8800 8350 50  0001 C CNN
+F 3 "~" H 8800 8350 50  0001 C CNN
+	1    8800 8350
+	0    -1   -1   0   
+$EndComp
+Connection ~ 8600 8150
+Connection ~ 8800 8150
+Connection ~ 8900 8150
+Connection ~ 9100 8150
 $EndSCHEMATC

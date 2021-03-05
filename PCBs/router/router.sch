@@ -515,13 +515,13 @@ Wire Wire Line
 $Comp
 L Connector:Conn_01x04_Male J7
 U 1 1 6023356C
-P 5250 950
-F 0 "J7" H 5222 832 50  0000 R CNN
-F 1 "Conn_01x04_Male" H 5222 923 50  0000 R CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 5250 950 50  0001 C CNN
-F 3 "~" H 5250 950 50  0001 C CNN
-	1    5250 950 
-	-1   0    0    1   
+P 5250 850
+F 0 "J7" H 5222 732 50  0000 R CNN
+F 1 "Conn_01x04_Male" H 5222 823 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 5250 850 50  0001 C CNN
+F 3 "~" H 5250 850 50  0001 C CNN
+	1    5250 850 
+	-1   0    0    -1  
 $EndComp
 Wire Wire Line
 	5050 850  4950 850 

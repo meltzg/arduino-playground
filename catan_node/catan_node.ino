@@ -309,7 +309,6 @@ void setupGame(uint16_t newBtnState)
   {
     return;
   }
-  Serial.print("My ID: ");
   int maxRetries = 100;
   Message idRequest;
   idRequest.source = EMPTY;
@@ -325,9 +324,11 @@ void setupGame(uint16_t newBtnState)
   }
   else
   {
+    Serial.println("Failure");
     return;
   }
 
+  Serial.print("My ID: ");
   Serial.println(netId, HEX);
 
   playStarted = true;

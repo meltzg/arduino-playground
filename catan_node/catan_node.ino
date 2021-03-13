@@ -105,7 +105,7 @@ bool playerSelectMode = false;
 byte currentPlayer = 0;
 uint16_t previousState = 0;
 
-boolean playStarted = true;
+boolean playStarted = false;
 
 void setup()
 {

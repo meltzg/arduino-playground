@@ -18,6 +18,8 @@
 #define BLACK 0x00
 #define WHITE 0xFFFFFF
 
+const __int24 RAINBOW[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE};
+
 class Component
 {
 protected:

@@ -12,8 +12,6 @@
 #define SEG_OFF HIGH
 #endif
 
-const __int24 RAINBOW[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE};
-
 const uint16_t getCharacter(char character)
 {
   uint16_t charCode = 0;

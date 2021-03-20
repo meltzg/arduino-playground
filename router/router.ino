@@ -202,6 +202,12 @@ void processMessage(Stream *srcPort, const Message &message)
     response.body = discoStats;
     routeMessage(response);
   }
+  if (message.sysCommand & ROUTER_SYS_COMMAND)
+  {
+    // return without sending message to actor
+    return;
+  }
+  routeMessage(message);
 }
 
 void routeMessage(const Message &message)
@@ -214,7 +220,7 @@ void routeMessage(const Message &message)
     writeMessage(&Serial, message);
     return;
   }
-  NodeId_t nextStep = pathfinder.getNextStep(NODE_ID, message.dest);
+  NodeId_t nextStep = message.dest == NODE_ID ? NODE_ID : pathfinder.getNextStep(NODE_ID, message.dest);
 
   if (nextStep == EMPTY)
   {
@@ -225,14 +231,23 @@ void routeMessage(const Message &message)
   Serial.print("Path found ");
   Serial.println(nextStep != EMPTY);
 
-  for (int i = 0; i < 6; i++)
+  if (nextStep == NODE_ID)
   {
-    if (neighborIds[i] == nextStep)
+    PORT_A.listen();
+    ackWait(&PORT_A);
+    writeMessage(&PORT_A, message);
+  }
+  else
+  {
+    for (int i = 0; i < 6; i++)
     {
-      NEIGHBORS[i]->listen();
-      ackWait(NEIGHBORS[i]);
-      writeMessage(NEIGHBORS[i], message);
-      break;
+      if (neighborIds[i] == nextStep)
+      {
+        NEIGHBORS[i]->listen();
+        ackWait(NEIGHBORS[i]);
+        writeMessage(NEIGHBORS[i], message);
+        break;
+      }
     }
   }
 }

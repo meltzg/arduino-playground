@@ -75,9 +75,9 @@ void loop()
     message.body = NULL;
   }
 
-  for (int i = 0; i < 7; i++)
+  for (int i = 0; i < 6; i++)
   {
-    SoftwareSerial *port = ALL_PORTS[i];
+    SoftwareSerial *port = NEIGHBORS[i];
     port->listen();
     if (hasIncoming(port))
     {
@@ -89,6 +89,19 @@ void loop()
       delete[] message.body;
       message.body = NULL;
     }
+  }
+
+  PORT_A.listen();
+  if (hasIncoming(&PORT_A))
+  {
+    Serial.println("from user");
+    Message message = readMessage(&PORT_A);
+    message.source = NODE_ID;
+    Serial.write((char *)message.body, message.payloadSize);
+    Serial.println();
+    processMessage(&PORT_A, message);
+    delete[] message.body;
+    message.body = NULL;
   }
 }
 

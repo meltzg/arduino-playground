@@ -25,6 +25,8 @@
 #define BTN_NEIGHBORS 1
 #define BTN_DISCOVER 10
 
+const byte NEIGHBOR_LED_POS[] = {0, 3, 6, 7, 8, 9};
+
 SegmentDisplay disp(
     SEGMENT_LATCH,
     SEGMENT_CLOCK,
@@ -45,6 +47,7 @@ SoftwareSerial netPort(8, 9);
 
 __int24 ledColors[NUM_LEDS] = {BLACK};
 uint16_t previousState = 0;
+NodeId_t myId = 0;
 
 void setup()
 {
@@ -96,12 +99,12 @@ void handleIdRequest()
     idRequest.payloadSize = 0;
     idRequest.sysCommand = ROUTER_GET_ID;
     idRequest.body = NULL;
-    NodeId_t id = 0;
+    myId = 0;
 
     if (ackWait(&netPort, maxRetries))
     {
         writeMessage(&netPort, idRequest);
-        netPort.readBytes((byte *)&id, sizeof(NodeId_t));
+        netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
     }
     else
     {
@@ -110,13 +113,61 @@ void handleIdRequest()
         return;
     }
 
-    char message[15] = { 0 };
-    sprintf(message, "My ID: %04X ", id);
+    char message[15] = {0};
+    sprintf(message, "My ID: %04X ", myId);
     disp.setChars(message);
 
     Serial.println(message);
 }
 
-void handleNeighborRequest() {}
+void handleNeighborRequest()
+{
+    int maxRetries = 100;
+    Message neighborRequest;
+    neighborRequest.source = myId;
+    neighborRequest.dest = myId;
+    neighborRequest.payloadSize = 0;
+    neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
+    neighborRequest.body = NULL;
+
+    if (ackWait(&netPort, maxRetries))
+    {
+        writeMessage(&netPort, neighborRequest);
+        while (!hasIncoming(&netPort))
+        {
+        }
+        Message response = readMessage(&netPort);
+        char displayMessage[60] = {0};
+        sprintf(
+            displayMessage,
+            "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
+            ((NodeId_t *)(response.body))[1],
+            ((NodeId_t *)(response.body))[2],
+            ((NodeId_t *)(response.body))[3],
+            ((NodeId_t *)(response.body))[4],
+            ((NodeId_t *)(response.body))[5],
+            ((NodeId_t *)(response.body))[6]);
+
+        disp.setChars(displayMessage);
+        Serial.println(displayMessage);
+        for (int i = 0; i < 6; i++)
+        {
+            if (((NodeId_t *)(response.body))[i + 1] == EMPTY)
+            {
+                ledColors[NEIGHBOR_LED_POS[i]] == RED;
+            }
+            else
+            {
+                ledColors[NEIGHBOR_LED_POS[i]] == GREEN;
+            }
+        }
+    }
+    else
+    {
+        disp.setChars("Failure ");
+        Serial.println("Failure");
+        return;
+    }
+}
 
 void handleDiscoveryRequest() {}

@@ -15,7 +15,9 @@ class Router(object):
     def __init__(self, conn: serial.Serial):
         self._conn = conn
 
-    def send_message(self, dest: bytes, command: int, payload: bytes):
+    def send_message(self, dest: bytes, command: int, payload: bytes, ignore_actor: bool = True):
+        if ignore_actor:
+            command |= 0x40
         message = (
             START_CODE
             + HARD_PORT

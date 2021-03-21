@@ -639,7 +639,6 @@ void SegmentDisplay::render(unsigned long currentMillis)
       {
         scrollPreviousMillis = currentMillis;
         displayOffset = ++displayOffset % strlen(chars);
-        Serial.print(displayOffset, HEX);
       }
 
       left = chars[displayOffset];

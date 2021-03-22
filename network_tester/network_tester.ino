@@ -49,9 +49,7 @@ __int24 ledColors[NUM_LEDS] = {BLACK};
 uint16_t previousState = 0;
 NodeId_t myId = 0;
 
-volatile bool pauseRender = false;
-
-char *displayMessage = NULL;
+char displayMessage[100] = { 0 };
 
 void setup()
 {
@@ -70,57 +68,29 @@ void loop()
     disp.render(currentMillis);
     btns.render(currentMillis);
     leds.render(currentMillis);
-    if (hasIncoming(&netPort))
+
+    uint16_t state = btns.getState();
+    if (state != previousState)
     {
-        Serial.println("hasIncoming");
-        pauseRender = true;
-        Message incoming = readMessage(&netPort);
-        Serial.println((char *)incoming.body);
-
-        disp.setChars(NULL);
-        delete[] displayMessage;
-        displayMessage = new char[incoming.payloadSize + 1];
-        displayMessage[incoming.payloadSize] = '\0';
-        strncpy(displayMessage, incoming.body, incoming.payloadSize);
-
-        disp.setChars(displayMessage);
-        if (ackWait(&netPort, 1000))
+        if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
         {
-            NodeId_t tmp = incoming.source;
-            incoming.source = incoming.dest;
-            incoming.dest = tmp;
-            writeMessage(&netPort, incoming);
+            handleIdRequest();
         }
-        else
+        else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
         {
-            Serial.println("Failure");
+            handleNeighborRequest();
         }
-        delete[] incoming.body;
-        incoming.body = NULL;
+        else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
+        {
+            handleDiscoveryRequest();
+        }
+        previousState = state;
     }
-    pauseRender = false;
-    // uint16_t state = btns.getState();
-    // if (state != previousState)
-    // {
-    //     if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
-    //     {
-    //         handleIdRequest();
-    //     }
-    //     else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
-    //     {
-    //         handleNeighborRequest();
-    //     }
-    //     else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
-    //     {
-    //         handleDiscoveryRequest();
-    //     }
-    //     previousState = state;
-    // }
 }
 
 void handleIdRequest()
 {
-    int maxRetries = 100;
+    int maxRetries = 1000;
     Message idRequest;
     idRequest.source = EMPTY;
     idRequest.dest = EMPTY;
@@ -141,16 +111,15 @@ void handleIdRequest()
         return;
     }
 
-    char message[15] = {0};
-    sprintf(message, "My ID: %04X ", myId);
-    disp.setChars(message);
+    sprintf(displayMessage, "My ID: %04X ", myId);
+    disp.setChars(displayMessage);
 
-    Serial.println(message);
+    Serial.println(displayMessage);
 }
 
 void handleNeighborRequest()
 {
-    int maxRetries = 100;
+    int maxRetries = 1000;
     Message neighborRequest;
     neighborRequest.source = myId;
     neighborRequest.dest = myId;
@@ -165,7 +134,6 @@ void handleNeighborRequest()
         {
         }
         Message response = readMessage(&netPort);
-        char displayMessage[60] = {0};
         sprintf(
             displayMessage,
             "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
@@ -182,13 +150,14 @@ void handleNeighborRequest()
         {
             if (((NodeId_t *)(response.body))[i + 1] == EMPTY)
             {
-                ledColors[NEIGHBOR_LED_POS[i]] == RED;
+                ledColors[NEIGHBOR_LED_POS[i]] = RED;
             }
             else
             {
-                ledColors[NEIGHBOR_LED_POS[i]] == GREEN;
+                ledColors[NEIGHBOR_LED_POS[i]] = GREEN;
             }
         }
+        leds.setState(ledColors, BRIGHTNESS);
     }
     else
     {

@@ -1,4 +1,4 @@
-#include <SoftwareSerial.h>
+#include <AltSoftSerial.h>
 #include <CommonMessaging.h>
 #include <Components.h>
 
@@ -43,51 +43,79 @@ ButtonArray16 btns(
     BTN_DATA,
     BTN_CLOCK);
 
-SoftwareSerial netPort(8, 9);
+AltSoftSerial netPort;
 
 __int24 ledColors[NUM_LEDS] = {BLACK};
 uint16_t previousState = 0;
 NodeId_t myId = 0;
+
+volatile bool pauseRender = false;
+
+char *displayMessage = NULL;
 
 void setup()
 {
     Serial.begin(9600);
     netPort.begin(9600);
 
-    disp.setChars("  ");
-    leds.setState(ledColors, BRIGHTNESS);
+    Serial.println("Start");
 
-    OCR0A = 0xAF;
-    TIMSK0 |= _BV(OCIE0A);
+    disp.setChars("Start ");
+    leds.setState(ledColors, BRIGHTNESS);
 }
 
-SIGNAL(TIMER0_COMPA_vect)
+void loop()
 {
     unsigned long currentMillis = millis();
     disp.render(currentMillis);
     btns.render(currentMillis);
     leds.render(currentMillis);
-}
-
-void loop()
-{
-    uint16_t state = btns.getState();
-    if (state != previousState)
+    if (hasIncoming(&netPort))
     {
-        if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
+        Serial.println("hasIncoming");
+        pauseRender = true;
+        Message incoming = readMessage(&netPort);
+        Serial.println((char *)incoming.body);
+
+        disp.setChars(NULL);
+        delete[] displayMessage;
+        displayMessage = new char[incoming.payloadSize + 1];
+        displayMessage[incoming.payloadSize] = '\0';
+        strncpy(displayMessage, incoming.body, incoming.payloadSize);
+
+        disp.setChars(displayMessage);
+        if (ackWait(&netPort, 1000))
         {
-            handleIdRequest();
+            NodeId_t tmp = incoming.source;
+            incoming.source = incoming.dest;
+            incoming.dest = tmp;
+            writeMessage(&netPort, incoming);
         }
-        else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
+        else
         {
-            handleNeighborRequest();
+            Serial.println("Failure");
         }
-        else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
-        {
-            handleDiscoveryRequest();
-        }
-        previousState = state;
+        delete[] incoming.body;
+        incoming.body = NULL;
     }
+    pauseRender = false;
+    // uint16_t state = btns.getState();
+    // if (state != previousState)
+    // {
+    //     if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
+    //     {
+    //         handleIdRequest();
+    //     }
+    //     else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
+    //     {
+    //         handleNeighborRequest();
+    //     }
+    //     else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
+    //     {
+    //         handleDiscoveryRequest();
+    //     }
+    //     previousState = state;
+    // }
 }
 
 void handleIdRequest()

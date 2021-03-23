@@ -25,7 +25,8 @@
 #define BTN_NEIGHBORS 1
 #define BTN_DISCOVER 10
 
-const byte NEIGHBOR_LED_POS[] = {0, 3, 6, 7, 8, 9};
+const byte EDGE_LED_POS[] = {0, 3, 6, 7, 8, 9};
+const byte EDGE_BTN_POS[] = {0, 2, 4, 5, 6, 7};
 
 SegmentDisplay disp(
     SEGMENT_LATCH,
@@ -49,7 +50,8 @@ __int24 ledColors[NUM_LEDS] = {BLACK};
 uint16_t previousState = 0;
 NodeId_t myId = 0;
 
-char displayMessage[100] = { 0 };
+char displayMessage[100] = {0};
+NodeId_t neighborIds[6] = {NULL};
 
 void setup()
 {
@@ -60,6 +62,11 @@ void setup()
 
     disp.setChars("Start ");
     leds.setState(ledColors, BRIGHTNESS);
+
+    for (int i = 0; i < 6; i++)
+    {
+        neighborIds[i] = EMPTY;
+    }
 }
 
 void loop()
@@ -78,11 +85,22 @@ void loop()
         }
         else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
         {
-            handleNeighborRequest();
+            handleNeighborRequest(myId);
         }
         else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
         {
             handleDiscoveryRequest();
+        }
+        else
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((state >> EDGE_BTN_POS[i]) & 1) == 0 && neighborIds[i] != EMPTY)
+                {
+                    handleNeighborRequest(neighborIds[i]);
+                    break;
+                }
+            }
         }
         previousState = state;
     }
@@ -117,12 +135,12 @@ void handleIdRequest()
     Serial.println(displayMessage);
 }
 
-void handleNeighborRequest()
+void handleNeighborRequest(NodeId_t destination)
 {
     int maxRetries = 1000;
     Message neighborRequest;
     neighborRequest.source = myId;
-    neighborRequest.dest = myId;
+    neighborRequest.dest = destination;
     neighborRequest.payloadSize = 0;
     neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
     neighborRequest.body = NULL;
@@ -148,13 +166,18 @@ void handleNeighborRequest()
         Serial.println(displayMessage);
         for (int i = 0; i < 6; i++)
         {
-            if (((NodeId_t *)(response.body))[i + 1] == EMPTY)
+            NodeId_t id = ((NodeId_t *)(response.body))[i + 1];
+            if (id == EMPTY)
             {
-                ledColors[NEIGHBOR_LED_POS[i]] = RED;
+                ledColors[EDGE_LED_POS[i]] = RED;
             }
             else
             {
-                ledColors[NEIGHBOR_LED_POS[i]] = GREEN;
+                ledColors[EDGE_LED_POS[i]] = GREEN;
+            }
+            if (destination == myId)
+            {
+                neighborIds[i] = id;
             }
         }
         leds.setState(ledColors, BRIGHTNESS);

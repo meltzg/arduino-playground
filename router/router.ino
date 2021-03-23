@@ -168,6 +168,7 @@ void processMessage(Stream *srcPort, const Message &message)
     response.sysCommand = ROUTER_ADD_NODE;
     response.body = (byte *)nodeMessage;
     routeMessage(response);
+    return;
   }
   if (message.sysCommand & ROUTER_ADD_NODE)
   {
@@ -201,6 +202,7 @@ void processMessage(Stream *srcPort, const Message &message)
     response.sysCommand = 0;
     response.body = discoStats;
     routeMessage(response);
+    return;
   }
   if (message.sysCommand & ROUTER_SYS_COMMAND)
   {

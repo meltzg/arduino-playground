@@ -76,6 +76,15 @@ void loop()
     btns.render(currentMillis);
     leds.render(currentMillis);
 
+    if (hasIncoming(&netPort))
+    {
+        Serial.println("recieving message");
+        Message message = readMessage(&netPort);
+        processMessage(&netPort, message);
+        delete[] message.body;
+        message.body = NULL;
+    }
+
     uint16_t state = btns.getState();
     if (state != previousState)
     {
@@ -104,6 +113,47 @@ void loop()
         }
         previousState = state;
     }
+}
+
+void processMessage(Stream *srcPort, const Message &message)
+{
+    if (message.sysCommand & ROUTER_ADD_NODE)
+    {
+        handleNodeResponse(message);
+    }
+}
+
+void handleNodeResponse(Message message)
+{
+    sprintf(
+        displayMessage,
+        "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
+        ((NodeId_t *)(message.body))[1],
+        ((NodeId_t *)(message.body))[2],
+        ((NodeId_t *)(message.body))[3],
+        ((NodeId_t *)(message.body))[4],
+        ((NodeId_t *)(message.body))[5],
+        ((NodeId_t *)(message.body))[6]);
+
+    disp.setChars(displayMessage);
+    Serial.println(displayMessage);
+    for (int i = 0; i < 6; i++)
+    {
+        NodeId_t id = ((NodeId_t *)(message.body))[i + 1];
+        if (id == EMPTY)
+        {
+            ledColors[EDGE_LED_POS[i]] = RED;
+        }
+        else
+        {
+            ledColors[EDGE_LED_POS[i]] = GREEN;
+        }
+        if (message.source == myId)
+        {
+            neighborIds[i] = id;
+        }
+    }
+    leds.setState(ledColors, BRIGHTNESS);
 }
 
 void handleIdRequest()
@@ -148,45 +198,11 @@ void handleNeighborRequest(NodeId_t destination)
     if (ackWait(&netPort, maxRetries))
     {
         writeMessage(&netPort, neighborRequest);
-        while (!hasIncoming(&netPort))
-        {
-        }
-        Message response = readMessage(&netPort);
-        sprintf(
-            displayMessage,
-            "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
-            ((NodeId_t *)(response.body))[1],
-            ((NodeId_t *)(response.body))[2],
-            ((NodeId_t *)(response.body))[3],
-            ((NodeId_t *)(response.body))[4],
-            ((NodeId_t *)(response.body))[5],
-            ((NodeId_t *)(response.body))[6]);
-
-        disp.setChars(displayMessage);
-        Serial.println(displayMessage);
-        for (int i = 0; i < 6; i++)
-        {
-            NodeId_t id = ((NodeId_t *)(response.body))[i + 1];
-            if (id == EMPTY)
-            {
-                ledColors[EDGE_LED_POS[i]] = RED;
-            }
-            else
-            {
-                ledColors[EDGE_LED_POS[i]] = GREEN;
-            }
-            if (destination == myId)
-            {
-                neighborIds[i] = id;
-            }
-        }
-        leds.setState(ledColors, BRIGHTNESS);
     }
     else
     {
         disp.setChars("Failure ");
         Serial.println("Failure");
-        return;
     }
 }
 

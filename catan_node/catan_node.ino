@@ -110,7 +110,7 @@ boolean playStarted = false;
 void setup()
 {
   Serial.begin(9600);
-  netPort.begin(9600);
+  netPort.begin(SOFT_BAUD);
   randomSeed(analogRead(SEED_PIN));
 
   for (int i = 0; i < NUM_ROADS; i++)

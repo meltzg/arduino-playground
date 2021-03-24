@@ -1,4 +1,4 @@
-#include <AltSoftSerial.h>
+#include <SoftwareSerial.h>
 #include <CommonMessaging.h>
 #include <Components.h>
 
@@ -44,7 +44,7 @@ ButtonArray16 btns(
     BTN_DATA,
     BTN_CLOCK);
 
-AltSoftSerial netPort;
+SoftwareSerial netPort(8, 9);
 
 __int24 ledColors[NUM_LEDS] = {BLACK};
 uint16_t previousState = 0;
@@ -56,7 +56,7 @@ NodeId_t neighborIds[6] = {NULL};
 void setup()
 {
     Serial.begin(9600);
-    netPort.begin(9600);
+    netPort.begin(SOFT_BAUD);
 
     Serial.println("Start");
 

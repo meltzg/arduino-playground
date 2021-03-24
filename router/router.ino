@@ -108,13 +108,13 @@ void loop()
 void startPorts()
 {
   Serial.println("Starting portd");
-  PORT_0.begin(9600);
-  PORT_1.begin(9600);
-  PORT_2.begin(9600);
-  PORT_3.begin(9600);
-  PORT_4.begin(9600);
-  PORT_5.begin(9600);
-  PORT_A.begin(9600);
+  PORT_0.begin(SOFT_BAUD);
+  PORT_1.begin(SOFT_BAUD);
+  PORT_2.begin(SOFT_BAUD);
+  PORT_3.begin(SOFT_BAUD);
+  PORT_4.begin(SOFT_BAUD);
+  PORT_5.begin(SOFT_BAUD);
+  PORT_A.begin(SOFT_BAUD);
 }
 
 void stopPorts()

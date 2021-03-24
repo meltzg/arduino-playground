@@ -29,6 +29,8 @@
      Specifies network commands to perform
 */
 
+#define SOFT_BAUD 9600
+
 #define PING_BYTE byte(0xAA)
 #define ACK_BYTE byte(0xAB)
 #define START_CODE byte(0xAC)

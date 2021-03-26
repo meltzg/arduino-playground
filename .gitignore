@@ -72,3 +72,5 @@ gerber/
 
 *.hex
 *.elf
+
+*.stl

@@ -38,16 +38,17 @@ private:
   const int leftCommonPin;
   const int rightCommonPin;
   const int scrollDelay;
+  const bool renderChars;
 
   char *chars = NULL;
   bool showLeft = true;
   int displayOffset = 0;
   unsigned long scrollPreviousMillis = 0;
 
-  void registerWrite(uint16_t toWrite);
-
 public:
-  SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay);
+  SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay, bool renderChars=true);
+
+  void registerWrite(uint16_t toWrite);
 
   void setChars(char *chars);
   void render(unsigned long currentMillis);

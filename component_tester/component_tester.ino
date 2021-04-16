@@ -21,7 +21,8 @@ SegmentDisplay disp(
     SEGMENT_DATA,
     SEGMENT_LEFT,
     SEGMENT_RIGHT,
-    500);
+    500,
+    false);
 
 LEDStatusDisplay leds(LED_ARRAY, NUM_LEDS);
 
@@ -35,7 +36,6 @@ int colorOffset = 0;
 
 void setup() {
   Serial.begin(9600);
-  disp.setChars("Hello World! ");
 
   __int24 ledColors[NUM_LEDS] = {BLACK};
   leds.setState(ledColors, 50);
@@ -64,5 +64,6 @@ void loop() {
   }
   colorOffset++;
   leds.setState(ledColors, 50);
-  delay(100);
+  disp.registerWrite(~(1 << (colorOffset % 16)));
+  delay(500);
 }

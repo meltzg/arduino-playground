@@ -598,13 +598,19 @@ const uint16_t getCharacter(char character)
   return charCode;
 }
 
-SegmentDisplay::SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay) : latchPin(latchPin), clockPin(clockPin), dataPin(dataPin), leftCommonPin(leftCommonPin), rightCommonPin(rightCommonPin), scrollDelay(scrollDelay)
+SegmentDisplay::SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay, bool renderChars) : latchPin(latchPin), clockPin(clockPin), dataPin(dataPin), leftCommonPin(leftCommonPin), rightCommonPin(rightCommonPin), scrollDelay(scrollDelay), renderChars(renderChars)
 {
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
   pinMode(leftCommonPin, OUTPUT);
   pinMode(rightCommonPin, OUTPUT);
+
+  if (!renderChars)
+  {
+    digitalWrite(leftCommonPin, SEG_ON);
+    digitalWrite(rightCommonPin, SEG_ON);
+  }
 }
 
 void SegmentDisplay::registerWrite(uint16_t toWrite)
@@ -650,17 +656,20 @@ void SegmentDisplay::render(unsigned long currentMillis)
     }
 
     // Assume common anode. to turn just left on, right must be high, left must be low
-    if (showLeft)
+    if (renderChars)
     {
-      digitalWrite(rightCommonPin, SEG_OFF);
-      registerWrite(getCharacter(left));
-      digitalWrite(leftCommonPin, SEG_ON);
-    }
-    else
-    {
-      digitalWrite(leftCommonPin, SEG_OFF);
-      registerWrite(getCharacter(right));
-      digitalWrite(rightCommonPin, SEG_ON);
+      if (showLeft)
+      {
+        digitalWrite(rightCommonPin, SEG_OFF);
+        registerWrite(getCharacter(left));
+        digitalWrite(leftCommonPin, SEG_ON);
+      }
+      else
+      {
+        digitalWrite(leftCommonPin, SEG_OFF);
+        registerWrite(getCharacter(right));
+        digitalWrite(rightCommonPin, SEG_ON);
+      }
     }
   }
 }

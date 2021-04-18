@@ -15,6 +15,12 @@
 #define BTN_DATA 12
 #define BTN_CLOCK 13
 
+#define MODE_COMPONENT_TEST 0
+#define MODE_NETWORK_TEST 1
+
+byte mode = MODE_COMPONENT_TEST;
+unsigned long previousMillis = 0;
+
 SegmentDisplay disp(
     SEGMENT_LATCH,
     SEGMENT_CLOCK,
@@ -32,38 +38,52 @@ ButtonArray16 btns(
     BTN_DATA,
     BTN_CLOCK);
 
-int colorOffset = 0;
-
-void setup() {
+void setup()
+{
   Serial.begin(9600);
 
   __int24 ledColors[NUM_LEDS] = {BLACK};
   leds.setState(ledColors, 50);
-
-  OCR0A = 0xAF;
-  TIMSK0 |= _BV(OCIE0A);
 }
 
-SIGNAL(TIMER0_COMPA_vect)
+void loop()
 {
   unsigned long currentMillis = millis();
   disp.render(currentMillis);
   leds.render(currentMillis);
   btns.render(currentMillis);
+
+  switch (mode)
+  {
+  case MODE_COMPONENT_TEST:
+    processComponentTest(currentMillis);
+    break;
+  
+  default:
+    break;
+  }
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-  uint16_t btnState = btns.getState();
-  __int24 ledColors[NUM_LEDS] = {BLACK};
-  for (int i = 0; i < NUM_LEDS; i++) {
-    if (((1 << i) & btnState) > 0) {
-      continue;
+void processComponentTest(long currentMillis)
+{
+  static int colorOffset = 0;
+
+  if (currentMillis - previousMillis > 500)
+  {
+    uint16_t btnState = btns.getState();
+    __int24 ledColors[NUM_LEDS] = {BLACK};
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
+      if (((1 << i) & btnState) > 0)
+      {
+        continue;
+      }
+      ledColors[i] = RAINBOW[(i + colorOffset) % 6];
     }
-    ledColors[i] = RAINBOW[(i + colorOffset) % 6];
+    colorOffset++;
+    leds.setState(ledColors, 50);
+    disp.registerWrite(~(1 << (colorOffset % 16)));
+
+    previousMillis = currentMillis;
   }
-  colorOffset++;
-  leds.setState(ledColors, 50);
-  disp.registerWrite(~(1 << (colorOffset % 16)));
-  delay(500);
 }

@@ -38,7 +38,7 @@ private:
   const int leftCommonPin;
   const int rightCommonPin;
   const int scrollDelay;
-  const bool renderChars;
+  bool renderChars;
 
   char *chars = NULL;
   bool showLeft = true;
@@ -49,8 +49,8 @@ public:
   SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay, bool renderChars=true);
 
   void registerWrite(uint16_t toWrite);
-
   void setChars(char *chars);
+  void setRenderChars(bool renderChars) { this->renderChars = renderChars; }
   void render(unsigned long currentMillis);
 };
 

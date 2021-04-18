@@ -27,9 +27,3 @@ compile-component-tester:
 
 upload-component-tester: compile-component-tester
 	arduino-cli upload -p /dev/ttyUSB0 -b arduino:avr:uno component_tester/ -v
-
-compile-network-tester:
-	arduino-cli compile -b arduino:avr:uno network_tester/ -v
-
-upload-network-tester: compile-network-tester
-	arduino-cli upload -p /dev/ttyUSB0 -b arduino:avr:uno network_tester/ -v

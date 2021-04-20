@@ -50,7 +50,7 @@ public:
 
   void registerWrite(uint16_t toWrite);
   void setChars(char *chars);
-  void setRenderChars(bool renderChars) { this->renderChars = renderChars; }
+  void setRenderChars(bool renderChars);
   void render(unsigned long currentMillis);
 };
 

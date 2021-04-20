@@ -20,6 +20,7 @@
 #define BTN_CLOCK 13
 
 // Mode definitions
+#define NUM_MODES 2
 #define MODE_COMPONENT_TEST 0
 #define MODE_NETWORK_TEST 1
 
@@ -89,12 +90,18 @@ void loop()
   if (((previousState >> BTN_CENTER) & 1) && ((btnState >> BTN_CENTER) & 1) == 0)
   {
     mode++;
+    mode %= NUM_MODES;
     modeChange = true;
+    Serial.println(mode);
   }
 
   switch (mode)
   {
   case MODE_COMPONENT_TEST:
+    if (modeChange)
+    {
+      disp.setRenderChars(false);
+    }
     processComponentTest(currentMillis, btnState);
     break;
   case MODE_NETWORK_TEST:

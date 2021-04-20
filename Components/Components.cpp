@@ -632,6 +632,13 @@ void SegmentDisplay::setChars(char *chars)
   this->chars = chars;
 }
 
+void SegmentDisplay::setRenderChars(bool renderChars)
+{
+  this->renderChars = renderChars;
+  digitalWrite(leftCommonPin, SEG_ON);
+  digitalWrite(rightCommonPin, SEG_ON);
+}
+
 void SegmentDisplay::render(unsigned long currentMillis)
 {
   if (currentMillis - previousMillis >= DIGIT_SWITCH_DELAY)

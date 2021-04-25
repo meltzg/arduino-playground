@@ -1,6 +1,4 @@
-#include <SoftwareSerial.h>
-#include <CommonMessaging.h>
-#include <Components.h>
+#include "modes.h"
 
 // Hardware config
 #define SEGMENT_LATCH A0
@@ -35,14 +33,6 @@
 const byte EDGE_LED_POS[] = {0, 3, 6, 7, 8, 9};
 const byte EDGE_BTN_POS[] = {0, 2, 4, 5, 6, 7};
 
-// State information
-byte mode = MODE_COMPONENT_TEST;
-unsigned long previousMillis = 0;
-uint16_t previousState = 0;
-NodeId_t myId = EMPTY;
-NodeId_t neighborIds[6];
-char displayMessage[100] = {0};
-
 // Component setup
 SegmentDisplay disp(
     SEGMENT_LATCH,
@@ -63,13 +53,24 @@ ButtonArray16 btns(
 
 SoftwareSerial netPort(8, 9);
 
+// State information
+Mode *mode = new ComponentTestMode(disp, leds, btns, netPort);
+byte modeIdx = MODE_COMPONENT_TEST;
+unsigned long previousMillis = 0;
+uint16_t previousState = 0;
+NodeId_t myId = EMPTY;
+NodeId_t neighborIds[6];
+char displayMessage[100] = {0};
+
+
 void setup()
 {
   Serial.begin(9600);
   netPort.begin(SOFT_BAUD);
 
   __int24 ledColors[NUM_LEDS] = {BLACK};
-  leds.setState(ledColors, 50);
+  leds.setState(ledColors);
+  leds.setBrightness(BRIGHTNESS);
 
   for (int i = 0; i < 6; i++)
   {
@@ -89,20 +90,15 @@ void loop()
 
   if (((previousState >> BTN_CENTER) & 1) && ((btnState >> BTN_CENTER) & 1) == 0)
   {
-    mode++;
-    mode %= NUM_MODES;
+    modeIdx++;
+    modeIdx %= NUM_MODES;
     modeChange = true;
-    Serial.println(mode);
   }
 
-  switch (mode)
+  switch (modeIdx)
   {
   case MODE_COMPONENT_TEST:
-    if (modeChange)
-    {
-      disp.setRenderChars(false);
-    }
-    processComponentTest(currentMillis, btnState);
+    mode->process(currentMillis);
     break;
   case MODE_NETWORK_TEST:
     if (modeChange)
@@ -113,7 +109,7 @@ void loop()
       {
         ledColors[i] = BLACK;
       }
-      leds.setState(ledColors, BRIGHTNESS);
+      leds.setState(ledColors);
       disp.setChars("Start ");
     }
     processNetworkTest(currentMillis, btnState);
@@ -123,29 +119,6 @@ void loop()
   }
 
   previousState = btnState;
-}
-
-void processComponentTest(long currentMillis, uint16_t btnState)
-{
-  static int colorOffset = 0;
-
-  if (currentMillis - previousMillis > 500)
-  {
-    __int24 ledColors[NUM_LEDS] = {BLACK};
-    for (int i = 0; i < NUM_LEDS; i++)
-    {
-      if (((1 << i) & btnState) > 0)
-      {
-        continue;
-      }
-      ledColors[i] = RAINBOW[(i + colorOffset) % 6];
-    }
-    colorOffset++;
-    leds.setState(ledColors, BRIGHTNESS);
-    disp.registerWrite(~(1 << (colorOffset % 16)));
-
-    previousMillis = currentMillis;
-  }
 }
 
 void processNetworkTest(long currentMillis, uint16_t btnState)
@@ -226,7 +199,7 @@ void handleNodeResponse(Message message)
       neighborIds[i] = id;
     }
   }
-  leds.setState(ledColors, BRIGHTNESS);
+  leds.setState(ledColors);
 }
 
 void handleIdRequest()

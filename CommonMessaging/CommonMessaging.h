@@ -1,6 +1,8 @@
 #ifndef _COMMON_MESSAGING_H_
 #define _COMMON_MESSAGING_H_
 
+#include <Arduino.h>
+
 /*
    Protocol
    --------

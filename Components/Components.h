@@ -61,14 +61,16 @@ private:
   const int numLeds;
   Adafruit_NeoPixel pixels;
 
-  __int24 *grbs = NULL;
+  __int24 *colors = NULL;
   byte brightness = 50;
 
 public:
   LEDStatusDisplay(int dataPin, int numLeds);
 
   void render(unsigned long currentMillis);
-  void setState(__int24 *grbs, byte brightness);
+  void setState(const __int24 *grbs);
+  void setBrightness(byte brightness) { this->brightness = brightness; }
+  int getNumLeds() { return numLeds; }
 };
 
 class ButtonArray16 : Component

@@ -27,30 +27,30 @@
 class Mode
 {
 protected:
-  const SegmentDisplay &disp;
-  const LEDStatusDisplay &leds;
-  const ButtonArray16 &btns;
-  const SoftwareSerial &netPort;
+    const SegmentDisplay &disp;
+    const LEDStatusDisplay &leds;
+    const ButtonArray16 &btns;
+    const SoftwareSerial &netPort;
 
-  unsigned long previousMillis = 0;
-  uint16_t previousState = 0;
+    unsigned long previousMillis = 0;
+    uint16_t previousState = 0;
 
-  virtual void init() {}
+    virtual void init() {}
 
 public:
-  Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort) { init(); }
-  virtual void process(unsigned long currentMillis) = 0;
+    Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort) { init(); }
+    virtual void process(unsigned long currentMillis) = 0;
 };
 
 class ComponentTestMode : public Mode
 {
 protected:
-  virtual void init();
+    virtual void init();
 
 public:
-  using Mode::Mode;
+    using Mode::Mode;
 
-  virtual void process(unsigned long currentMillis);
+    virtual void process(unsigned long currentMillis);
 };
 
 #endif // _MODES_H_

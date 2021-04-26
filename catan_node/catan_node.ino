@@ -109,245 +109,245 @@ boolean playStarted = true;
 
 void setup()
 {
-  Serial.begin(9600);
-  netPort.begin(SOFT_BAUD);
-  randomSeed(analogRead(SEED_PIN));
+    Serial.begin(9600);
+    netPort.begin(SOFT_BAUD);
+    randomSeed(analogRead(SEED_PIN));
 
-  for (int i = 0; i < NUM_ROADS; i++)
-  {
-    roadOwners[i] = UNOWNED;
-  }
-  for (int i = 0; i < NUM_SETTLEMENTS; i++)
-  {
-    settlementOwners[i] = UNOWNED;
-  }
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        roadOwners[i] = UNOWNED;
+    }
+    for (int i = 0; i < NUM_SETTLEMENTS; i++)
+    {
+        settlementOwners[i] = UNOWNED;
+    }
 
-  setTileValue(rollValue);
-  borderColors[LAND_LED_POS] = landType;
+    setTileValue(rollValue);
+    borderColors[LAND_LED_POS] = landType;
 
-  OCR0A = 0xAF;
-  TIMSK0 |= _BV(OCIE0A);
+    OCR0A = 0xAF;
+    TIMSK0 |= _BV(OCIE0A);
 }
 
 SIGNAL(TIMER0_COMPA_vect)
 {
-  unsigned long currentMillis = millis();
-  tileValue.render(currentMillis);
-  tileStateDisplay.render(currentMillis);
-  interface.render(currentMillis);
+    unsigned long currentMillis = millis();
+    tileValue.render(currentMillis);
+    tileStateDisplay.render(currentMillis);
+    interface.render(currentMillis);
 }
 
 void loop()
 {
-  bool skipRobber = false;
+    bool skipRobber = false;
 
-  uint16_t state = interface.getState();
-  if (playStarted && !playerSelectMode && interface.getOnDuration(LAND_BTN_POS) >= PLAYER_SELECT_DELAY)
-  {
-    playerSelectMode = true;
-    updateCurrentPlayer(state);
-  }
-  else if (playerSelectMode && interface.getOnDuration(LAND_BTN_POS) == 0)
-  {
-    playerSelectMode = false;
-    skipRobber = true;
-    borderColors[LAND_LED_POS] = landType;
-  }
-  if (state != previousState)
-  {
-    if (!playStarted)
+    uint16_t state = interface.getState();
+    if (playStarted && !playerSelectMode && interface.getOnDuration(LAND_BTN_POS) >= PLAYER_SELECT_DELAY)
     {
-      setupGame(state);
+        playerSelectMode = true;
+        updateCurrentPlayer(state);
     }
-    else if (!playerSelectMode)
+    else if (playerSelectMode && interface.getOnDuration(LAND_BTN_POS) == 0)
     {
-      updateRoads(state);
-      updateSettlements(state);
-      if (!skipRobber)
-      {
-        updateRobber(state);
-      }
+        playerSelectMode = false;
+        skipRobber = true;
+        borderColors[LAND_LED_POS] = landType;
     }
-    else
+    if (state != previousState)
     {
-      updateCurrentPlayer(state);
-    }
+        if (!playStarted)
+        {
+            setupGame(state);
+        }
+        else if (!playerSelectMode)
+        {
+            updateRoads(state);
+            updateSettlements(state);
+            if (!skipRobber)
+            {
+                updateRobber(state);
+            }
+        }
+        else
+        {
+            updateCurrentPlayer(state);
+        }
 
-    if (((previousState >> BRIGHTNESS_BTN) & 1) && ((state >> BRIGHTNESS_BTN) & 1) == 0)
-    {
-      brightness += BRIGHTNESS_STEP;
+        if (((previousState >> BRIGHTNESS_BTN) & 1) && ((state >> BRIGHTNESS_BTN) & 1) == 0)
+        {
+            brightness += BRIGHTNESS_STEP;
+        }
     }
-  }
-  tileStateDisplay.setState(borderColors, max(brightness, MIN_BRIGHTNESS));
-  previousState = state;
+    tileStateDisplay.setState(borderColors, max(brightness, MIN_BRIGHTNESS));
+    previousState = state;
 }
 
 void updateRoads(uint16_t newBtnState)
 {
-  for (int i = 0; i < NUM_ROADS; i++)
-  {
-    byte ledPos = ROAD_LED_POS[i];
-    byte btnPos = ROAD_BTN_POS[i];
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        byte ledPos = ROAD_LED_POS[i];
+        byte btnPos = ROAD_BTN_POS[i];
 
-    if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0)
-    {
-      if (roadOwners[i] == UNOWNED)
-      {
-        roadOwners[i] = currentPlayer;
-      }
-      else if (roadOwners[i] == currentPlayer)
-      {
-        roadOwners[i] = UNOWNED;
-      }
-    }
+        if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0)
+        {
+            if (roadOwners[i] == UNOWNED)
+            {
+                roadOwners[i] = currentPlayer;
+            }
+            else if (roadOwners[i] == currentPlayer)
+            {
+                roadOwners[i] = UNOWNED;
+            }
+        }
 
-    if (roadOwners[i] == UNOWNED)
-    {
-      borderColors[ledPos] = BLACK;
+        if (roadOwners[i] == UNOWNED)
+        {
+            borderColors[ledPos] = BLACK;
+        }
+        else
+        {
+            borderColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
+        }
     }
-    else
-    {
-      borderColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
-    }
-  }
 }
 
 void updateSettlements(uint16_t newBtnState)
 {
-  for (int i = 0; i < NUM_SETTLEMENTS; i++)
-  {
-    byte *ledPos = SETTLEMENT_LED_POS[i];
-    byte btnPos = SETTLEMENT_BTN_POS[i];
-
-    if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0)
+    for (int i = 0; i < NUM_SETTLEMENTS; i++)
     {
-      if (settlementOwners[i] == UNOWNED)
-      {
-        settlementOwners[i] = currentPlayer;
-      }
-      else if (settlementOwners[i] == currentPlayer)
-      {
-        if (!isCity[i])
+        byte *ledPos = SETTLEMENT_LED_POS[i];
+        byte btnPos = SETTLEMENT_BTN_POS[i];
+
+        if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0)
         {
-          isCity[i] = true;
+            if (settlementOwners[i] == UNOWNED)
+            {
+                settlementOwners[i] = currentPlayer;
+            }
+            else if (settlementOwners[i] == currentPlayer)
+            {
+                if (!isCity[i])
+                {
+                    isCity[i] = true;
+                }
+                else
+                {
+                    isCity[i] = false;
+                    settlementOwners[i] = UNOWNED;
+                }
+            }
+        }
+
+        if (settlementOwners[i] == UNOWNED)
+        {
+            borderColors[ledPos[0]] = BLACK;
+            borderColors[ledPos[1]] = BLACK;
         }
         else
         {
-          isCity[i] = false;
-          settlementOwners[i] = UNOWNED;
+            borderColors[ledPos[0]] = PLAYER_COLORS[settlementOwners[i]];
+            if (isCity[i])
+            {
+                borderColors[ledPos[1]] = PLAYER_COLORS[settlementOwners[i]];
+            }
         }
-      }
-    }
 
-    if (settlementOwners[i] == UNOWNED)
-    {
-      borderColors[ledPos[0]] = BLACK;
-      borderColors[ledPos[1]] = BLACK;
+        char buf[50] = {0};
+        sprintf(buf, "Settlement %d owner: %d", i, settlementOwners[i]);
+        Serial.println(buf);
     }
-    else
-    {
-      borderColors[ledPos[0]] = PLAYER_COLORS[settlementOwners[i]];
-      if (isCity[i])
-      {
-        borderColors[ledPos[1]] = PLAYER_COLORS[settlementOwners[i]];
-      }
-    }
-
-    char buf[50] = {0};
-    sprintf(buf, "Settlement %d owner: %d", i, settlementOwners[i]);
-    Serial.println(buf);
-  }
 }
 
 void updateRobber(uint16_t newBtnState)
 {
-  char buf[3] = {0};
-  if (((previousState >> LAND_BTN_POS) & 1) && ((newBtnState >> LAND_BTN_POS) & 1) == 0)
-  {
-    if (hasRobber)
+    char buf[3] = {0};
+    if (((previousState >> LAND_BTN_POS) & 1) && ((newBtnState >> LAND_BTN_POS) & 1) == 0)
     {
-      hasRobber = false;
-      setTileValue(rollValue);
+        if (hasRobber)
+        {
+            hasRobber = false;
+            setTileValue(rollValue);
+        }
+        else
+        {
+            hasRobber = true;
+            setTileValue(0xFF);
+        }
     }
-    else
-    {
-      hasRobber = true;
-      setTileValue(0xFF);
-    }
-  }
 }
 
 void updateCurrentPlayer(uint16_t newBtnState)
 {
-  for (int i = 0; i < NUM_ROADS; i++)
-  {
-    byte btnPos = ROAD_BTN_POS[i];
-
-    if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0)
+    for (int i = 0; i < NUM_ROADS; i++)
     {
-      currentPlayer = i;
-      break;
+        byte btnPos = ROAD_BTN_POS[i];
+
+        if (((previousState >> btnPos) & 1) && ((newBtnState >> btnPos) & 1) == 0)
+        {
+            currentPlayer = i;
+            break;
+        }
     }
-  }
-  for (int i = 0; i < NUM_ROADS; i++)
-  {
-    byte ledPos = ROAD_LED_POS[i];
-    borderColors[ledPos] = PLAYER_COLORS[i];
-  }
-  for (int i = 0; i < NUM_SETTLEMENTS; i++)
-  {
-    byte *ledPos = SETTLEMENT_LED_POS[i];
-    borderColors[ledPos[0]] = BLACK;
-    borderColors[ledPos[1]] = BLACK;
-  }
-  borderColors[LAND_LED_POS] = PLAYER_COLORS[currentPlayer];
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        byte ledPos = ROAD_LED_POS[i];
+        borderColors[ledPos] = PLAYER_COLORS[i];
+    }
+    for (int i = 0; i < NUM_SETTLEMENTS; i++)
+    {
+        byte *ledPos = SETTLEMENT_LED_POS[i];
+        borderColors[ledPos[0]] = BLACK;
+        borderColors[ledPos[1]] = BLACK;
+    }
+    borderColors[LAND_LED_POS] = PLAYER_COLORS[currentPlayer];
 }
 
 void setupGame(uint16_t newBtnState)
 {
-  if (((previousState >> LAND_BTN_POS) & 1) == 0 && ((newBtnState >> LAND_BTN_POS) & 1))
-  {
-    return;
-  }
-  int maxRetries = 100;
-  Message idRequest;
-  idRequest.source = EMPTY;
-  idRequest.dest = EMPTY;
-  idRequest.payloadSize = 0;
-  idRequest.sysCommand = ROUTER_GET_ID;
-  idRequest.body = NULL;
+    if (((previousState >> LAND_BTN_POS) & 1) == 0 && ((newBtnState >> LAND_BTN_POS) & 1))
+    {
+        return;
+    }
+    int maxRetries = 100;
+    Message idRequest;
+    idRequest.source = EMPTY;
+    idRequest.dest = EMPTY;
+    idRequest.payloadSize = 0;
+    idRequest.sysCommand = ROUTER_GET_ID;
+    idRequest.body = NULL;
 
-  if (ackWait(&netPort, maxRetries))
-  {
-    writeMessage(&netPort, idRequest);
-    netPort.readBytes((byte *)&netId, sizeof(NodeId_t));
-  }
-  else
-  {
-    Serial.println("Failure");
-    return;
-  }
+    if (ackWait(&netPort, maxRetries))
+    {
+        writeMessage(&netPort, idRequest);
+        netPort.readBytes((byte *)&netId, sizeof(NodeId_t));
+    }
+    else
+    {
+        Serial.println("Failure");
+        return;
+    }
 
-  Serial.print("My ID: ");
-  Serial.println(netId, HEX);
+    Serial.print("My ID: ");
+    Serial.println(netId, HEX);
 
-  playStarted = true;
+    playStarted = true;
 }
 
 void setTileValue(byte val)
 {
-  if (val < MIN_ROLL)
-  {
-    tileValue.setChars("  ");
-  }
-  else if (val > MAX_ROLL)
-  {
-    tileValue.setChars("Robber");
-  }
-  else
-  {
-    char buf[3] = {0};
-    sprintf(buf, "%02d", val);
-    tileValue.setChars(buf);
-  }
+    if (val < MIN_ROLL)
+    {
+        tileValue.setChars("  ");
+    }
+    else if (val > MAX_ROLL)
+    {
+        tileValue.setChars("Robber");
+    }
+    else
+    {
+        char buf[3] = {0};
+        sprintf(buf, "%02d", val);
+        tileValue.setChars(buf);
+    }
 }

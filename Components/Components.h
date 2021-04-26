@@ -18,76 +18,76 @@
 #define BLACK 0x00
 #define WHITE 0xFFFFFF
 
+#define BRIGHTNESS 50
+
 const __int24 RAINBOW[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE};
 
 class Component
 {
 protected:
-  unsigned long previousMillis = 0;
+    unsigned long previousMillis = 0;
 
 public:
-  virtual void render(unsigned long currentMillis);
+    virtual void render(unsigned long currentMillis);
 };
 
 class SegmentDisplay : public Component
 {
 private:
-  const int latchPin;
-  const int clockPin;
-  const int dataPin;
-  const int leftCommonPin;
-  const int rightCommonPin;
-  const int scrollDelay;
-  bool renderChars;
+    const int latchPin;
+    const int clockPin;
+    const int dataPin;
+    const int leftCommonPin;
+    const int rightCommonPin;
+    const int scrollDelay;
+    bool renderChars;
 
-  char *chars = NULL;
-  bool showLeft = true;
-  int displayOffset = 0;
-  unsigned long scrollPreviousMillis = 0;
+    char *chars = NULL;
+    bool showLeft = true;
+    int displayOffset = 0;
+    unsigned long scrollPreviousMillis = 0;
 
 public:
-  SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay, bool renderChars=true);
+    SegmentDisplay(int latchPin, int clockPin, int dataPin, int leftCommonPin, int rightCommonPin, int scrollDelay, bool renderChars = true);
 
-  void registerWrite(uint16_t toWrite);
-  void setChars(char *chars);
-  void setRenderChars(bool renderChars);
-  void render(unsigned long currentMillis);
+    void registerWrite(uint16_t toWrite);
+    void setChars(char *chars);
+    void setRenderChars(bool renderChars);
+    void render(unsigned long currentMillis);
 };
 
 class LEDStatusDisplay : public Component
 {
 private:
-  const int dataPin;
-  const int numLeds;
-  Adafruit_NeoPixel pixels;
-
-  __int24 *grbs = NULL;
-  byte brightness = 50;
+    const int dataPin;
+    const int numLeds;
+    Adafruit_NeoPixel pixels;
 
 public:
-  LEDStatusDisplay(int dataPin, int numLeds);
+    LEDStatusDisplay(int dataPin, int numLeds);
 
-  void render(unsigned long currentMillis);
-  void setState(__int24 *grbs, byte brightness);
+    void render(unsigned long currentMillis){};
+    void setState(const __int24 *grbs);
+    int getNumLeds() { return numLeds; }
 };
 
 class ButtonArray16 : Component
 {
 private:
-  const int loadPin;
-  const int clockEnablePin;
-  const int dataPin;
-  const int clockPin;
+    const int loadPin;
+    const int clockEnablePin;
+    const int dataPin;
+    const int clockPin;
 
-  uint16_t state = 0;
-  uint16_t onDuration[16] = {0};
+    uint16_t state = 0;
+    uint16_t onDuration[16] = {0};
 
 public:
-  ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin);
+    ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin);
 
-  void render(unsigned long currentMillis);
-  uint16_t getState() { return state; }
-  uint16_t getOnDuration(int pos) { return onDuration[pos]; }
+    void render(unsigned long currentMillis);
+    uint16_t getState() { return state; }
+    uint16_t getOnDuration(int pos) { return onDuration[pos]; }
 };
 
 #endif // _COMPONENTS_H_

@@ -9,7 +9,6 @@
 
 #define LED_ARRAY 7
 #define NUM_LEDS 11
-#define BRIGHTNESS 50
 
 #define NUM_BUTTONS 10
 #define BTN_LOAD 10
@@ -54,7 +53,7 @@ ButtonArray16 btns(
 SoftwareSerial netPort(8, 9);
 
 // State information
-Mode *mode = new ComponentTestMode(disp, leds, btns, netPort);
+ComponentTestMode mode = ComponentTestMode(disp, leds, btns, netPort);
 byte modeIdx = MODE_COMPONENT_TEST;
 unsigned long previousMillis = 0;
 uint16_t previousState = 0;
@@ -70,7 +69,6 @@ void setup()
 
   __int24 ledColors[NUM_LEDS] = {BLACK};
   leds.setState(ledColors);
-  leds.setBrightness(BRIGHTNESS);
 
   for (int i = 0; i < 6; i++)
   {
@@ -98,7 +96,7 @@ void loop()
   switch (modeIdx)
   {
   case MODE_COMPONENT_TEST:
-    mode->process(currentMillis);
+    mode.process(currentMillis);
     break;
   case MODE_NETWORK_TEST:
     if (modeChange)

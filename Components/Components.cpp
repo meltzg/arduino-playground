@@ -686,26 +686,12 @@ LEDStatusDisplay::LEDStatusDisplay(int dataPin, int numLeds) : dataPin(dataPin),
   pixels = Adafruit_NeoPixel(numLeds, dataPin, NEO_GRB + NEO_KHZ800);
 
   pixels.begin();
-
-  colors = new __int24[numLeds];
-  for (int i = 0; i < numLeds; i++)
-  {
-    colors[i] = RED;
-  }
-}
-
-void LEDStatusDisplay::render(unsigned long currentMillis)
-{
-    if (currentMillis - previousMillis >= LED_UPDATE_DELAY)
-    {
-        previousMillis = currentMillis;
-    }
 }
 
 void LEDStatusDisplay::setState(const __int24 *grbs)
 {
     pixels.clear();
-    pixels.setBrightness(brightness);
+    pixels.setBrightness(BRIGHTNESS);
     for (int i = 0; i < numLeds; i++)
     {
         pixels.setPixelColor(i, grbs[i]);

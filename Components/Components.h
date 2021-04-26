@@ -18,6 +18,8 @@
 #define BLACK 0x00
 #define WHITE 0xFFFFFF
 
+#define BRIGHTNESS 50
+
 const __int24 RAINBOW[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE};
 
 class Component
@@ -61,15 +63,11 @@ private:
   const int numLeds;
   Adafruit_NeoPixel pixels;
 
-  __int24 *colors = NULL;
-  byte brightness = 50;
-
 public:
   LEDStatusDisplay(int dataPin, int numLeds);
 
-  void render(unsigned long currentMillis);
+  void render(unsigned long currentMillis) {};
   void setState(const __int24 *grbs);
-  void setBrightness(byte brightness) { this->brightness = brightness; }
   int getNumLeds() { return numLeds; }
 };
 

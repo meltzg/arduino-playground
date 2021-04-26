@@ -696,35 +696,21 @@ LEDStatusDisplay::LEDStatusDisplay(int dataPin, int numLeds) : dataPin(dataPin),
 
 void LEDStatusDisplay::render(unsigned long currentMillis)
 {
-  if (currentMillis - previousMillis >= LED_UPDATE_DELAY)
-  {
-    previousMillis = currentMillis;
-    pixels.clear();
-    pixels.setBrightness(brightness);
-    for (int i = 0; i < numLeds; i++)
+    if (currentMillis - previousMillis >= LED_UPDATE_DELAY)
     {
-      pixels.setPixelColor(i, colors[i]);
+        previousMillis = currentMillis;
     }
-    pixels.show();
-  }
 }
 
 void LEDStatusDisplay::setState(const __int24 *grbs)
 {
-  char buff[20];
-  Serial.println("before");
-  for (int i = 0; i < numLeds; i++)
-  {
-    sprintf(buff, "%06X", colors[i]);
-    Serial.println(buff);
-  }
-  memcpy(colors, grbs, sizeof(__int24) * this->numLeds);
-  Serial.println("after");
-  for (int i = 0; i < numLeds; i++)
-  {
-    sprintf(buff, "%06X", colors[i]);
-    Serial.println(buff);
-  }
+    pixels.clear();
+    pixels.setBrightness(brightness);
+    for (int i = 0; i < numLeds; i++)
+    {
+        pixels.setPixelColor(i, grbs[i]);
+    }
+    pixels.show();
 }
 
 ButtonArray16::ButtonArray16(int loadPin, int clockEnablePin, int dataPin, int clockPin) : loadPin(loadPin), clockEnablePin(clockEnablePin), dataPin(dataPin), clockPin(clockPin)

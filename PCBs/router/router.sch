@@ -494,7 +494,7 @@ U 1 1 6022B14D
 P 6350 900
 F 0 "R2" V 6143 900 50  0000 C CNN
 F 1 "R" V 6234 900 50  0000 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 6280 900 50  0001 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal" V 6280 900 50  0001 C CNN
 F 3 "~" H 6350 900 50  0001 C CNN
 	1    6350 900 
 	0    1    1    0   

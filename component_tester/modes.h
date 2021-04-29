@@ -31,6 +31,10 @@
 #define BTN_DISCOVER 10
 
 // Catan
+#define LED_LAND 10
+#define BTN_LAND 9
+#define SEED_PIN A5
+
 #define PLAYER_SELECT_DELAY 500
 
 #define NUM_ROADS 6
@@ -115,6 +119,23 @@ private:
 
     NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
+    __int24 *borderColors = NULL;
+    short roadOwners[NUM_ROADS];
+    short settlementOwners[NUM_SETTLEMENTS];
+    bool isCity[NUM_SETTLEMENTS] = {false};
+    __int24 landType = BLACK;
+    byte rollValue = 0;
+    bool hasRobber = false;
+    bool playerSelectMode = false;
+    byte currentPlayer = 3;
+    boolean playStarted = false;
+
+    void updateRoads(uint16_t state);
+    void updateSettlements(uint16_t state);
+    void updateRobber(uint16_t state);
+    void updateCurrentPlayer(uint16_t state);
+    void setupGame();
+    void setTileValue(byte val);
 };
 
 #endif // _MODES_H_

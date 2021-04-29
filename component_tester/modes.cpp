@@ -188,3 +188,146 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
 
 const __int24 CatanMode::PLAYER_COLORS[6] = {RED, ORANGE, GREEN, BLUE, PURPLE, WHITE};
 const __int24 CatanMode::LAND_COLORS[8] = {OCEAN, DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT, OCEAN};
+
+void CatanMode::init()
+{
+    randomSeed(analogRead(SEED_PIN));
+    disp.setRenderChars(true);
+    if (!playStarted)
+    {
+        if (borderColors == NULL)
+        {
+            borderColors = new __int24[leds.getNumLeds()];
+        }
+        for (int i = 0; i < leds.getNumLeds(); i++)
+        {
+            borderColors[i] = BLACK;
+        }
+        leds.setState(borderColors);
+        disp.setChars("Catan ");
+        for (int i = 0; i < 6; i++)
+        {
+            neighborIds[i] = EMPTY;
+        }
+
+        for (int i = 0; i < NUM_ROADS; i++)
+        {
+            roadOwners[i] = UNOWNED;
+        }
+        for (int i = 0; i < NUM_SETTLEMENTS; i++)
+        {
+            settlementOwners[i] = UNOWNED;
+        }
+    }
+}
+
+void CatanMode::process(unsigned long currentMillis)
+{
+    bool skipRobber = false;
+    uint16_t state = btns.getState();
+
+    if (playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
+    {
+        playerSelectMode = true;
+        updateCurrentPlayer(state);
+    }
+    else if (playerSelectMode && btns.getOnDuration(BTN_LAND) == 0)
+    {
+        playerSelectMode = false;
+        skipRobber = true;
+        borderColors[LED_LAND] = landType;
+    }
+    if (state != previousState)
+    {
+        if (!playStarted)
+        {
+            setupGame();
+        }
+        else if (!playerSelectMode)
+        {
+            updateRoads(state);
+            updateSettlements(state);
+            if (!skipRobber)
+            {
+                updateRobber(state);
+            }
+        }
+        else
+        {
+            updateCurrentPlayer(state);
+        }
+    }
+    leds.setState(borderColors);
+    previousState = state;
+}
+
+void CatanMode::updateRoads(uint16_t state)
+{
+    Serial.println("update roads");
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        byte ledPos = EDGE_LED_POS[i];
+        byte btnPos = EDGE_BTN_POS[i];
+
+        if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
+        {
+            if (roadOwners[i] == UNOWNED)
+            {
+                roadOwners[i] = currentPlayer;
+            }
+            else if (roadOwners[i] == currentPlayer)
+            {
+                roadOwners[i] = UNOWNED;
+            }
+        }
+        char message[10] = { 0 };
+        sprintf(message, "led %d: ", ledPos);
+        Serial.print(message);
+        
+        if (roadOwners[i] == UNOWNED)
+        {
+            Serial.println("unowned");
+            borderColors[ledPos] = BLACK;
+        }
+        else
+        {
+            Serial.println((int) PLAYER_COLORS[roadOwners[i]], HEX);
+            borderColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
+        }
+    }
+    leds.setState(borderColors);
+}
+
+void CatanMode::updateSettlements(uint16_t state) {}
+
+void CatanMode::updateRobber(uint16_t state) {}
+
+void CatanMode::updateCurrentPlayer(uint16_t state) {}
+
+void CatanMode::setupGame() {
+    int maxRetries = 100;
+    Message idRequest;
+    idRequest.source = EMPTY;
+    idRequest.dest = EMPTY;
+    idRequest.payloadSize = 0;
+    idRequest.sysCommand = ROUTER_GET_ID;
+    idRequest.body = NULL;
+
+    if (ackWait(&netPort, maxRetries))
+    {
+        writeMessage(&netPort, idRequest);
+        netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
+    }
+    else
+    {
+        Serial.println("Failure");
+        return;
+    }
+
+    Serial.print("My ID: ");
+    Serial.println(myId, HEX);
+
+    playStarted = true;
+}
+
+void CatanMode::setTileValue(byte val) {}

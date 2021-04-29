@@ -17,9 +17,10 @@
 #define BTN_CLOCK 13
 
 // Mode definitions
-#define NUM_MODES 2
+#define NUM_MODES 3
 #define MODE_COMPONENT_TEST 0
 #define MODE_NETWORK_TEST 1
+#define MODE_CATAN 2
 
 #define BTN_CENTER 8
 
@@ -46,6 +47,7 @@ SoftwareSerial netPort(8, 9);
 // Modes
 ComponentTestMode componentTest(disp, leds, btns, netPort);
 NetworkTestMode networkTest(disp, leds, btns, netPort);
+CatanMode catan(disp, leds, btns, netPort);
 
 // State information
 Mode *mode = NULL;
@@ -86,6 +88,8 @@ void loop()
         case MODE_NETWORK_TEST:
             mode = &networkTest;
             break;
+        case MODE_CATAN:
+            mode = &catan;
         default:
             break;
         }

@@ -1,5 +1,10 @@
 #include "modes.h"
 
+const byte Mode::EDGE_LED_POS[6] = {0, 3, 6, 7, 8, 9};
+const byte Mode::EDGE_BTN_POS[6] = {0, 2, 4, 5, 6, 7};
+const byte Mode::CORNER_LED_POS[2][2] = {{1, 2}, {4, 5}};
+const byte Mode::CORNER_BTN_POS[2] = {1, 3};
+
 void ComponentTestMode::init()
 {
     disp.setRenderChars(false);
@@ -180,3 +185,6 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
         Serial.println("Failure");
     }
 }
+
+const __int24 CatanMode::PLAYER_COLORS[6] = {RED, ORANGE, GREEN, BLUE, PURPLE, WHITE};
+const __int24 CatanMode::LAND_COLORS[8] = {OCEAN, DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT, OCEAN};

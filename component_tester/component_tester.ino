@@ -97,7 +97,7 @@ void loop()
         mode->init();
     }
 
-    mode->process(currentMillis);
+    mode->process(currentMillis, btnState);
 
     previousState = btnState;
 }

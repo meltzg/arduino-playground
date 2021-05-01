@@ -10,10 +10,8 @@ void ComponentTestMode::init()
     disp.setRenderChars(false);
 }
 
-void ComponentTestMode::process(unsigned long currentMillis)
+void ComponentTestMode::process(unsigned long currentMillis, uint16_t state)
 {
-    uint16_t btnState = btns.getState();
-
     static int colorOffset = 0;
 
     if (currentMillis - previousMillis > 500)
@@ -21,7 +19,7 @@ void ComponentTestMode::process(unsigned long currentMillis)
         __int24 ledColors[leds.getNumLeds()] = {BLACK};
         for (int i = 0; i < leds.getNumLeds(); i++)
         {
-            if (((1 << i) & btnState) > 0)
+            if (((1 << i) & state) > 0)
             {
                 continue;
             }
@@ -51,7 +49,7 @@ void NetworkTestMode::init()
     }
 }
 
-void NetworkTestMode::process(unsigned long currentMillis)
+void NetworkTestMode::process(unsigned long currentMillis, uint16_t state)
 {
     if (hasIncoming(&netPort))
     {
@@ -62,19 +60,17 @@ void NetworkTestMode::process(unsigned long currentMillis)
         message.body = NULL;
     }
 
-    uint16_t btnState = btns.getState();
-
-    if (btnState != previousState)
+    if (state != previousState)
     {
-        if (((previousState >> BTN_ID) & 1) && ((btnState >> BTN_ID) & 1) == 0)
+        if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
         {
             handleIdRequest();
         }
-        else if (((previousState >> BTN_NEIGHBORS) & 1) && ((btnState >> BTN_NEIGHBORS) & 1) == 0)
+        else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
         {
             handleNeighborRequest(myId);
         }
-        else if (((previousState >> BTN_DISCOVER) & 1) && ((btnState >> BTN_DISCOVER) & 1) == 0)
+        else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
         {
             handleDiscoveryRequest();
         }
@@ -82,7 +78,7 @@ void NetworkTestMode::process(unsigned long currentMillis)
         {
             for (int i = 0; i < 6; i++)
             {
-                if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((btnState >> EDGE_BTN_POS[i]) & 1) == 0 && neighborIds[i] != EMPTY)
+                if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((state >> EDGE_BTN_POS[i]) & 1) == 0 && neighborIds[i] != EMPTY)
                 {
                     handleNeighborRequest(neighborIds[i]);
                     break;
@@ -90,7 +86,7 @@ void NetworkTestMode::process(unsigned long currentMillis)
             }
         }
 
-        previousState = btnState;
+        previousState = state;
     }
 }
 
@@ -195,15 +191,6 @@ void CatanMode::init()
     disp.setRenderChars(true);
     if (!playStarted)
     {
-        if (borderColors == NULL)
-        {
-            borderColors = new __int24[leds.getNumLeds()];
-        }
-        for (int i = 0; i < leds.getNumLeds(); i++)
-        {
-            borderColors[i] = BLACK;
-        }
-        leds.setState(borderColors);
         disp.setChars("Catan ");
         for (int i = 0; i < 6; i++)
         {
@@ -221,44 +208,47 @@ void CatanMode::init()
     }
 }
 
-void CatanMode::process(unsigned long currentMillis)
+void CatanMode::process(unsigned long currentMillis, uint16_t state)
 {
-    bool skipRobber = false;
-    uint16_t state = btns.getState();
+    if (currentMillis - previousMillis > 75)
+    {
+        bool skipRobber = false;
 
-    if (playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
-    {
-        playerSelectMode = true;
-        updateCurrentPlayer(state);
-    }
-    else if (playerSelectMode && btns.getOnDuration(BTN_LAND) == 0)
-    {
-        playerSelectMode = false;
-        skipRobber = true;
-        borderColors[LED_LAND] = landType;
-    }
-    if (state != previousState)
-    {
-        if (!playStarted)
+        if (playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
         {
-            setupGame();
-        }
-        else if (!playerSelectMode)
-        {
-            updateRoads(state);
-            updateSettlements(state);
-            if (!skipRobber)
-            {
-                updateRobber(state);
-            }
-        }
-        else
-        {
+            playerSelectMode = true;
             updateCurrentPlayer(state);
         }
+        else if (playerSelectMode && btns.getOnDuration(BTN_LAND) == 0)
+        {
+            playerSelectMode = false;
+            skipRobber = true;
+        }
+        if (state != previousState)
+        {
+            if (!playStarted)
+            {
+                setupGame();
+            }
+            else if (!playerSelectMode)
+            {
+                updateRoads(state);
+                updateSettlements(state);
+                if (!skipRobber)
+                {
+                    updateRobber(state);
+                }
+            }
+            else
+            {
+                updateCurrentPlayer(state);
+            }
+        }
+
+        renderState();
+        previousState = state;
+        previousMillis = currentMillis;
     }
-    leds.setState(borderColors);
-    previousState = state;
 }
 
 void CatanMode::updateRoads(uint16_t state)
@@ -266,7 +256,6 @@ void CatanMode::updateRoads(uint16_t state)
     Serial.println("update roads");
     for (int i = 0; i < NUM_ROADS; i++)
     {
-        byte ledPos = EDGE_LED_POS[i];
         byte btnPos = EDGE_BTN_POS[i];
 
         if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
@@ -280,22 +269,7 @@ void CatanMode::updateRoads(uint16_t state)
                 roadOwners[i] = UNOWNED;
             }
         }
-        char message[10] = { 0 };
-        sprintf(message, "led %d: ", ledPos);
-        Serial.print(message);
-        
-        if (roadOwners[i] == UNOWNED)
-        {
-            Serial.println("unowned");
-            borderColors[ledPos] = BLACK;
-        }
-        else
-        {
-            Serial.println((int) PLAYER_COLORS[roadOwners[i]], HEX);
-            borderColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
-        }
     }
-    leds.setState(borderColors);
 }
 
 void CatanMode::updateSettlements(uint16_t state) {}
@@ -304,7 +278,30 @@ void CatanMode::updateRobber(uint16_t state) {}
 
 void CatanMode::updateCurrentPlayer(uint16_t state) {}
 
-void CatanMode::setupGame() {
+void CatanMode::renderState()
+{
+    __int24 ledColors[leds.getNumLeds()] = {BLACK};
+
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        byte ledPos = EDGE_LED_POS[i];
+
+        if (roadOwners[i] == UNOWNED)
+        {
+            Serial.println("unowned");
+            ledColors[ledPos] = BLACK;
+        }
+        else
+        {
+            Serial.println((int)PLAYER_COLORS[roadOwners[i]], HEX);
+            ledColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
+        }
+    }
+    leds.setState(ledColors);
+}
+
+void CatanMode::setupGame()
+{
     int maxRetries = 100;
     Message idRequest;
     idRequest.source = EMPTY;

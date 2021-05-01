@@ -73,7 +73,7 @@ protected:
 public:
     Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort) { init(); }
     virtual void init() {}
-    virtual void process(unsigned long currentMillis){};
+    virtual void process(unsigned long currentMillis, uint16_t state){};
 };
 
 class ComponentTestMode : public Mode
@@ -82,7 +82,7 @@ public:
     using Mode::Mode;
 
     virtual void init();
-    virtual void process(unsigned long currentMillis);
+    virtual void process(unsigned long currentMillis, uint16_t state);
 };
 
 class NetworkTestMode : public Mode
@@ -91,7 +91,7 @@ public:
     using Mode::Mode;
 
     virtual void init();
-    virtual void process(unsigned long currentMillis);
+    virtual void process(unsigned long currentMillis, uint16_t state);
 
 private:
     NodeId_t myId = EMPTY;
@@ -111,7 +111,7 @@ public:
     using Mode::Mode;
 
     virtual void init();
-    virtual void process(unsigned long currentMillis);
+    virtual void process(unsigned long currentMillis, uint16_t state);
 
 private:
     static const __int24 PLAYER_COLORS[6];
@@ -119,7 +119,6 @@ private:
 
     NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
-    __int24 *borderColors = NULL;
     short roadOwners[NUM_ROADS];
     short settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
@@ -127,13 +126,14 @@ private:
     byte rollValue = 0;
     bool hasRobber = false;
     bool playerSelectMode = false;
-    byte currentPlayer = 3;
+    byte currentPlayer = 0;
     boolean playStarted = false;
 
     void updateRoads(uint16_t state);
     void updateSettlements(uint16_t state);
     void updateRobber(uint16_t state);
     void updateCurrentPlayer(uint16_t state);
+    void renderState();
     void setupGame();
     void setTileValue(byte val);
 };

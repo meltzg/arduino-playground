@@ -270,7 +270,33 @@ void CatanMode::updateRoads(uint16_t state)
     }
 }
 
-void CatanMode::updateSettlements(uint16_t state) {}
+void CatanMode::updateSettlements(uint16_t state)
+{
+    for (int i = 0; i < NUM_SETTLEMENTS; i++)
+    {
+        byte btnPos = CORNER_BTN_POS[i];
+
+        if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
+        {
+            if (settlementOwners[i] == UNOWNED)
+            {
+                settlementOwners[i] = currentPlayer;
+            }
+            else if (settlementOwners[i] == currentPlayer)
+            {
+                if (!isCity[i])
+                {
+                    isCity[i] = true;
+                }
+                else
+                {
+                    isCity[i] = false;
+                    settlementOwners[i] = UNOWNED;
+                }
+            }
+        }
+    }
+}
 
 void CatanMode::updateRobber(uint16_t state) {}
 
@@ -293,6 +319,25 @@ void CatanMode::renderState()
             ledColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
         }
     }
+    for (int i = 0; i < NUM_SETTLEMENTS; i++)
+    {
+        byte *ledPos = CORNER_LED_POS[i];
+
+        if (settlementOwners[i] == UNOWNED)
+        {
+            ledColors[ledPos[0]] = BLACK;
+            ledColors[ledPos[1]] = BLACK;
+        }
+        else
+        {
+            ledColors[ledPos[0]] = PLAYER_COLORS[settlementOwners[i]];
+            if (isCity[i])
+            {
+                ledColors[ledPos[1]] = PLAYER_COLORS[settlementOwners[i]];
+            }
+        }
+    }
+
     leds.setState(ledColors);
 }
 

@@ -56,6 +56,11 @@
 
 class Mode
 {
+public:
+    Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort) { init(); }
+    virtual void init() {}
+    virtual void process(unsigned long currentMillis, uint16_t state){};
+
 protected:
     static const byte EDGE_LED_POS[6];
     static const byte EDGE_BTN_POS[6];
@@ -69,11 +74,6 @@ protected:
 
     unsigned long previousMillis = 0;
     uint16_t previousState = 0;
-
-public:
-    Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort) { init(); }
-    virtual void init() {}
-    virtual void process(unsigned long currentMillis, uint16_t state){};
 };
 
 class ComponentTestMode : public Mode
@@ -83,6 +83,9 @@ public:
 
     virtual void init();
     virtual void process(unsigned long currentMillis, uint16_t state);
+
+private:
+    unsigned long previousMillisLeds = 0;
 };
 
 class NetworkTestMode : public Mode

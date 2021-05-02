@@ -13,8 +13,15 @@ void ComponentTestMode::init()
 void ComponentTestMode::process(unsigned long currentMillis, uint16_t state)
 {
     static int colorOffset = 0;
+    static int segmentOffset = 0;
 
     if (currentMillis - previousMillis > 500)
+    {
+        disp.registerWrite(~(1 << (segmentOffset++ % 16)));
+
+        previousMillis = currentMillis;
+    }
+    if (currentMillis - previousMillisLeds > 100)
     {
         __int24 ledColors[leds.getNumLeds()] = {BLACK};
         for (int i = 0; i < leds.getNumLeds(); i++)
@@ -27,9 +34,7 @@ void ComponentTestMode::process(unsigned long currentMillis, uint16_t state)
         }
         colorOffset++;
         leds.setState(ledColors);
-        disp.registerWrite(~(1 << (colorOffset % 16)));
-
-        previousMillis = currentMillis;
+        previousMillisLeds = currentMillis;
     }
 }
 

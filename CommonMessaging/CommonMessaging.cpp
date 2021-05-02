@@ -50,7 +50,7 @@ Message readMessage(Stream *srcPort)
 
 void writeMessage(Stream *destPort, const Message &message)
 {
-    Serial.println("Starting write");
+    Serial.println(F("Starting write"));
     destPort->write(START_CODE);
     destPort->write((char *)&(message.source), sizeof(message.source));
     destPort->write((char *)&(message.dest), sizeof(message.dest));

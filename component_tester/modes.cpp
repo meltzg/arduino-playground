@@ -53,7 +53,7 @@ void NetworkTestMode::process(unsigned long currentMillis, uint16_t state)
 {
     if (hasIncoming(&netPort))
     {
-        Serial.println("recieving message");
+        Serial.println(F("rxmsg"));
         Message message = readMessage(&netPort);
         processMessage(&netPort, message);
         delete[] message.body;
@@ -151,7 +151,6 @@ void NetworkTestMode::handleIdRequest()
     else
     {
         disp.setChars("Failure ");
-        Serial.println("Failure");
         return;
     }
 
@@ -178,7 +177,6 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
     else
     {
         disp.setChars("Failure ");
-        Serial.println("Failure");
     }
 }
 
@@ -253,7 +251,7 @@ void CatanMode::process(unsigned long currentMillis, uint16_t state)
 
 void CatanMode::updateRoads(uint16_t state)
 {
-    Serial.println("update roads");
+    Serial.println(F("road"));
     for (int i = 0; i < NUM_ROADS; i++)
     {
         byte btnPos = EDGE_BTN_POS[i];
@@ -288,12 +286,10 @@ void CatanMode::renderState()
 
         if (roadOwners[i] == UNOWNED)
         {
-            Serial.println("unowned");
             ledColors[ledPos] = BLACK;
         }
         else
         {
-            Serial.println((int)PLAYER_COLORS[roadOwners[i]], HEX);
             ledColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
         }
     }
@@ -317,11 +313,10 @@ void CatanMode::setupGame()
     }
     else
     {
-        Serial.println("Failure");
         return;
     }
 
-    Serial.print("My ID: ");
+    Serial.print(F("ID: "));
     Serial.println(myId, HEX);
 
     playStarted = true;

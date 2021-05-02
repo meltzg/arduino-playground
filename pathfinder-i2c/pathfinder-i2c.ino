@@ -20,7 +20,7 @@ void setup()
     Wire.begin(FINDER_I2C_ADDR);
     Wire.onReceive(onReceive);
     Wire.onRequest(onRequest);
-    Serial.println("Start");
+    Serial.println(F("Start"));
 }
 
 void loop()
@@ -30,7 +30,7 @@ void loop()
 void onReceive(int numBytes)
 {
     clearMessage();
-    Serial.print("In ");
+    Serial.print(F("In "));
     while (Wire.available() < numBytes)
         ;
     message = new byte[numBytes];
@@ -41,7 +41,7 @@ void onReceive(int numBytes)
     for (int i = 0; i < numBytes; i++)
     {
         Serial.print(message[i], HEX);
-        Serial.print(",");
+        Serial.print(F(","));
     }
     Serial.println();
 }
@@ -112,7 +112,7 @@ void onRequest()
         // to prevent timing issues, clients should always expect 1 byte of data before continuing execution
         Wire.write(0x00);
         clearMessage();
-        Serial.println("***");
+        Serial.println(F("***"));
     }
 }
 
@@ -129,9 +129,9 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes)
     {
         for (int i = 0; i < numNodes; i++)
         {
-            Serial.print("A ");
+            Serial.print(F("A "));
             Serial.print(node, HEX);
-            Serial.print("->");
+            Serial.print(F("->"));
             Serial.println(neighbors[i], HEX);
             if (neighbors[i] == EMPTY)
             {
@@ -160,7 +160,7 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes)
 
     if (discoveryQueue.isEmpty())
     {
-        Serial.println("Discovery done");
+        Serial.println(F("Discovery done"));
         discoveryDone = true;
         discoveryVisited.purge();
         isInitialized.purge();
@@ -169,20 +169,20 @@ void addNode(NodeId_t node, NodeId_t *neighbors, size_t numNodes)
         {
             NodeId_t curr = iter.next();
             Serial.print(curr, HEX);
-            Serial.print(": ");
+            Serial.print(F(": "));
             Set<NodeId_t> adj;
             topology.getAdjacent(curr, adj);
             for (ListIterator<NodeId_t> aIter(adj); aIter.hasNext();)
             {
                 Serial.print(aIter.next(), HEX);
-                Serial.print(", ");
+                Serial.print(F(", "));
             }
             Serial.println();
         }
     }
     else
     {
-        Serial.print("To discover: ");
+        Serial.print(F("To discover: "));
         Serial.println(discoveryQueue.count);
     }
 }
@@ -207,9 +207,9 @@ void writeDiscoveryStats()
     numNodes = topology.numNodes();
     numEdges = topology.numEdges();
 
-    Serial.print("Es ");
+    Serial.print(F("Es "));
     Serial.println(numEdges);
-    Serial.print("Ns ");
+    Serial.print(F("Ns "));
     Serial.println(numNodes);
 
     Wire.write((byte *)&discoveryDone, sizeof(bool));
@@ -225,9 +225,9 @@ void writeNeighborRequest()
         nextNeighbor = discoveryQueue.popFront();
     }
 
-    Serial.print("req ");
+    Serial.print(F("req "));
     Serial.println(nextNeighbor, HEX);
-    Serial.print("To discover: ");
+    Serial.print(F("To discover: "));
     Serial.println(discoveryQueue.count);
 
     Wire.write((byte *)&nextNeighbor, sizeof(NodeId_t));
@@ -236,7 +236,7 @@ void writeNeighborRequest()
 void writeNextStep(NodeId_t src, NodeId_t dest)
 {
     Serial.print(src, HEX);
-    Serial.print("->");
+    Serial.print(F("->"));
     Serial.println(dest, HEX);
     LinkedList<NodeId_t> path;
     NodeId_t nextStep = EMPTY;
@@ -253,7 +253,7 @@ void writeNextStep(NodeId_t src, NodeId_t dest)
                 nextStep = node;
             }
             Serial.print(node, HEX);
-            Serial.print(",");
+            Serial.print(F(","));
         }
         Serial.println();
     }

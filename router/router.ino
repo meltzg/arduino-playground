@@ -60,7 +60,7 @@ void setup()
     Wire.begin();
     startPorts();
 
-    Serial.println("starting");
+    Serial.println(F("starting"));
 }
 
 void loop()
@@ -81,7 +81,7 @@ void loop()
         port->listen();
         if (hasIncoming(port))
         {
-            Serial.println("recieving message");
+            Serial.println(F("recieving message"));
             Message message = readMessage(port);
             Serial.write((char *)message.body, message.payloadSize);
             Serial.println();
@@ -94,7 +94,7 @@ void loop()
     PORT_A.listen();
     if (hasIncoming(&PORT_A))
     {
-        Serial.println("from user");
+        Serial.println(F("from user"));
         Message message = readMessage(&PORT_A);
         message.source = NODE_ID;
         Serial.write((char *)message.body, message.payloadSize);
@@ -107,7 +107,7 @@ void loop()
 
 void startPorts()
 {
-    Serial.println("Starting portd");
+    Serial.println(F("Starting portd"));
     PORT_0.begin(SOFT_BAUD);
     PORT_1.begin(SOFT_BAUD);
     PORT_2.begin(SOFT_BAUD);
@@ -119,7 +119,7 @@ void startPorts()
 
 void stopPorts()
 {
-    Serial.println("Stopping portd");
+    Serial.println(F("Stopping portd"));
     PORT_0.end();
     PORT_1.end();
     PORT_2.end();
@@ -147,7 +147,7 @@ void processMessage(Stream *srcPort, const Message &message)
     }
     if (message.sysCommand & ROUTER_CLEAR_TOPOLOGY)
     {
-        Serial.println("Clear topology");
+        Serial.println(F("Clear topology"));
         pathfinder.clearTopology();
     }
     if (message.sysCommand & ROUTER_GET_NEIGHBORS)
@@ -179,12 +179,12 @@ void processMessage(Stream *srcPort, const Message &message)
     }
     if (message.sysCommand & ROUTER_START_DISCOVERY)
     {
-        Serial.println("Start Discovery");
+        Serial.println(F("Start Discovery"));
         startDiscovery();
     }
     if (message.sysCommand & ROUTER_GET_DISCOVERY_STATUS)
     {
-        Serial.println("Get discovery stats");
+        Serial.println(F("Get discovery stats"));
         byte discoStats[sizeof(bool) + sizeof(size_t) * 2] = {0};
 
         DiscoveryStats stats = pathfinder.getDiscoveryStats();
@@ -226,11 +226,11 @@ void routeMessage(const Message &message)
 
     if (nextStep == EMPTY)
     {
-        Serial.println("path not found");
+        Serial.println(F("path not found"));
         return;
     }
 
-    Serial.print("Path found ");
+    Serial.print(F("Path found "));
     Serial.println(nextStep != EMPTY);
 
     if (nextStep == NODE_ID)
@@ -256,7 +256,7 @@ void routeMessage(const Message &message)
 
 void resetNeighbors()
 {
-    Serial.println("Reset Edges");
+    Serial.println(F("Reset Edges"));
     Message idRequest;
     idRequest.source = NODE_ID;
     idRequest.dest = EMPTY;
@@ -278,7 +278,7 @@ void resetNeighbors()
             neighborIds[i] = EMPTY;
         }
         Serial.print(neighborIds[i], HEX);
-        Serial.print(", ");
+        Serial.print(F(", "));
     }
 
     pathfinder.addNode(NODE_ID, neighborIds, 6);
@@ -305,7 +305,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         return;
     }
 
-    Serial.println("Send new node to existing");
+    Serial.println(F("Send new node to existing"));
     pathfinder.resetIterator(NODE_ID);
     Message message;
     message.source = NODE_ID;
@@ -340,7 +340,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         routeMessage(message);
     }
 
-    Serial.println("Send entire graph to new nodes");
+    Serial.println(F("Send entire graph to new nodes"));
     pathfinder.resetIterator(NODE_ID);
     for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext())
     {
@@ -372,7 +372,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         {
             // clear destination's topology to ensure it always has the most correct graph
             // Needed in the case of rediscovery
-            Serial.println("Destination will clear its topology");
+            Serial.println(F("Destination will clear its topology"));
             message.sysCommand |= ROUTER_CLEAR_TOPOLOGY;
         }
         for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext();)
@@ -390,7 +390,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     NodeId_t next = pathfinder.getNextNeighborRequest();
     if (next != EMPTY)
     {
-        Serial.print("Sending get neighbor request: ");
+        Serial.print(F("Sending get neighbor request: "));
         Serial.println(next);
 
         Message neighborRequest;
@@ -403,7 +403,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     }
     else
     {
-        Serial.println("No next neighbor");
+        Serial.println(F("No next neighbor"));
     }
 
     sprintf(buf, "Total Nodes: %d", pathfinder.getDiscoveryStats().numNodes);

@@ -10,7 +10,7 @@ void setup()
     long startTs = millis();
     Serial.begin(9600);
     Wire.begin();
-    Serial.print("Start: ");
+    Serial.print(F("Start: "));
     Serial.println(startTs);
     Graph<NodeId_t> g(true, 0, EEPROM.length());
 
@@ -146,18 +146,18 @@ void setup()
     g.addEdge(50, 51);
     g.addEdge(51, 52);
 
-    Serial.print("Es ");
+    Serial.print(F("Es "));
     Serial.println(g.numEdges());
-    Serial.print("Ns ");
+    Serial.print(F("Ns "));
     Serial.println(g.numNodes());
 
     LinkedList<NodeId_t> path;
     g.getShortestPath(1, 52, path);
-    Serial.print("Path: ");
+    Serial.print(F("Path: "));
     for (ListIterator<NodeId_t> iter(path); iter.hasNext();)
     {
         Serial.print(iter.next());
-        Serial.print(", ");
+        Serial.print(F(", "));
     }
     Serial.println();
 
@@ -166,7 +166,7 @@ void setup()
     NodeId_t *neiArr = NULL;
     NodeId_t currNode = 1;
 
-    Serial.println("Test async discovery");
+    Serial.println(F("Test async discovery"));
     do
     {
         Serial.println(currNode);
@@ -178,10 +178,10 @@ void setup()
         {
             neiArr[i] = iter.next();
         }
-        Serial.print("Init ");
+        Serial.print(F("Init "));
         Serial.println(p.getInitialized(currNode));
         p.setInitialized(currNode);
-        Serial.print("Init ");
+        Serial.print(F("Init "));
         Serial.println(p.getInitialized(currNode));
         p.addNode(currNode, neiArr, neighbors.count);
         currNode = p.getNextNeighborRequest();
@@ -190,23 +190,23 @@ void setup()
     DiscoveryStats stats = p.getDiscoveryStats();
     printDiscoveryStats(stats);
 
-    Serial.println("Validate iteration");
+    Serial.println(F("Validate iteration"));
     p.resetIterator(1);
     for (NodeId_t next = p.getIteratorNext(); next != EMPTY; next = p.getIteratorNext())
     {
         Set<NodeId_t> adj;
         p.getAdjacent(next, adj);
         Serial.print(next);
-        Serial.print(": ");
+        Serial.print(F(": "));
         for (ListIterator<NodeId_t> iter(adj); iter.hasNext();)
         {
             Serial.print(iter.next());
-            Serial.print(", ");
+            Serial.print(F(", "));
         }
         Serial.println();
     }
 
-    Serial.println("Validate pathfinding");
+    Serial.println(F("Validate pathfinding"));
     int progress = 0;
     int total = 52 * 51;
     bool error = false;
@@ -230,24 +230,24 @@ void setup()
                 expected = iter.next();
             }
             NodeId_t nextStep = p.getNextStep(i, j);
-            Serial.print("Progress: ");
+            Serial.print(F("Progress: "));
             Serial.print(++progress);
-            Serial.print("/");
+            Serial.print(F("/"));
             Serial.print(total);
-            Serial.print(" ");
+            Serial.print(F(" "));
             Serial.print(i);
-            Serial.print(" to ");
+            Serial.print(F(" to "));
             Serial.print(j);
-            Serial.print(" via ");
+            Serial.print(F(" via "));
             Serial.println(nextStep);
 
             if (nextStep == EMPTY)
             {
-                Serial.print("Path not found from ");
+                Serial.print(F("Path not found from "));
                 Serial.print(i);
-                Serial.print(" to ");
+                Serial.print(F(" to "));
                 Serial.print(j);
-                Serial.print(". expected ");
+                Serial.print(F(". expected "));
                 Serial.println(expected);
                 error = true;
                 break;
@@ -259,7 +259,7 @@ void setup()
         }
     }
 
-    Serial.println("Done: ");
+    Serial.println(F("Done: "));
     Serial.println(millis() - startTs);
 }
 
@@ -269,10 +269,10 @@ void loop()
 
 void printDiscoveryStats(const DiscoveryStats &stats)
 {
-    Serial.print("discovery done: ");
+    Serial.print(F("discovery done: "));
     Serial.print(stats.discoveryDone);
-    Serial.print(" num nodes: ");
+    Serial.print(F(" num nodes: "));
     Serial.print(stats.numNodes);
-    Serial.print(" num edges: ");
+    Serial.print(F(" num edges: "));
     Serial.println(stats.numEdges);
 }

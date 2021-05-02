@@ -131,6 +131,7 @@ private:
     bool playerSelectMode = false;
     byte currentPlayer = 0;
     boolean playStarted = false;
+    char displayValue[10] = {0};
 
     void updateRoads(uint16_t state);
     void updateSettlements(uint16_t state);

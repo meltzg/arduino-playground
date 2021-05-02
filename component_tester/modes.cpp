@@ -209,6 +209,7 @@ void CatanMode::init()
             settlementOwners[i] = UNOWNED;
         }
     }
+    setTileValue(hasRobber ? 0xFF : rollValue);
 }
 
 void CatanMode::process(unsigned long currentMillis, uint16_t state)
@@ -303,7 +304,22 @@ void CatanMode::updateSettlements(uint16_t state)
     }
 }
 
-void CatanMode::updateRobber(uint16_t state) {}
+void CatanMode::updateRobber(uint16_t state)
+{
+    if (((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0)
+    {
+        if (hasRobber)
+        {
+            hasRobber = false;
+            setTileValue(rollValue);
+        }
+        else
+        {
+            hasRobber = true;
+            setTileValue(0xFF);
+        }
+    }
+}
 
 void CatanMode::updateCurrentPlayer(uint16_t state) {}
 
@@ -369,7 +385,25 @@ void CatanMode::setupGame()
     Serial.print(F("ID: "));
     Serial.println(myId, HEX);
 
+    rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+    setTileValue(rollValue);
+
     playStarted = true;
 }
 
-void CatanMode::setTileValue(byte val) {}
+void CatanMode::setTileValue(byte val)
+{
+    if (val < MIN_ROLL)
+    {
+        sprintf(displayValue, "  ");
+    }
+    else if (val > MAX_ROLL)
+    {
+        sprintf(displayValue, "Robber ");
+    }
+    else
+    {
+        sprintf(displayValue, "%02d", val);
+    }
+    disp.setChars(displayValue);
+}

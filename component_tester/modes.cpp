@@ -321,40 +321,70 @@ void CatanMode::updateRobber(uint16_t state)
     }
 }
 
-void CatanMode::updateCurrentPlayer(uint16_t state) {}
+void CatanMode::updateCurrentPlayer(uint16_t state)
+{
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        byte btnPos = EDGE_BTN_POS[i];
+
+        if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
+        {
+            currentPlayer = i;
+            break;
+        }
+    }
+}
 
 void CatanMode::renderState()
 {
     __int24 ledColors[leds.getNumLeds()] = {BLACK};
 
-    for (int i = 0; i < NUM_ROADS; i++)
+    if (playerSelectMode)
     {
-        byte ledPos = EDGE_LED_POS[i];
-
-        if (roadOwners[i] == UNOWNED)
+        for (int i = 0; i < NUM_ROADS; i++)
         {
-            ledColors[ledPos] = BLACK;
+            byte ledPos = EDGE_LED_POS[i];
+            ledColors[ledPos] = PLAYER_COLORS[i];
         }
-        else
+        for (int i = 0; i < NUM_SETTLEMENTS; i++)
         {
-            ledColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
-        }
-    }
-    for (int i = 0; i < NUM_SETTLEMENTS; i++)
-    {
-        byte *ledPos = CORNER_LED_POS[i];
-
-        if (settlementOwners[i] == UNOWNED)
-        {
+            byte *ledPos = CORNER_LED_POS[i];
             ledColors[ledPos[0]] = BLACK;
             ledColors[ledPos[1]] = BLACK;
         }
-        else
+        ledColors[LED_LAND] = PLAYER_COLORS[currentPlayer];
+    }
+    else
+    {
+        for (int i = 0; i < NUM_ROADS; i++)
         {
-            ledColors[ledPos[0]] = PLAYER_COLORS[settlementOwners[i]];
-            if (isCity[i])
+            byte ledPos = EDGE_LED_POS[i];
+
+            if (roadOwners[i] == UNOWNED)
             {
-                ledColors[ledPos[1]] = PLAYER_COLORS[settlementOwners[i]];
+                ledColors[ledPos] = BLACK;
+            }
+            else
+            {
+                ledColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
+            }
+        }
+        for (int i = 0; i < NUM_SETTLEMENTS; i++)
+        {
+            byte *ledPos = CORNER_LED_POS[i];
+
+            if (settlementOwners[i] == UNOWNED)
+            {
+                ledColors[ledPos[0]] = BLACK;
+                ledColors[ledPos[1]] = BLACK;
+            }
+            else
+            {
+                ledColors[ledPos[0]] = PLAYER_COLORS[settlementOwners[i]];
+                if (isCity[i])
+                {
+                    ledColors[ledPos[1]] = PLAYER_COLORS[settlementOwners[i]];
+                }
             }
         }
     }

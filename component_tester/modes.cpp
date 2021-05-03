@@ -209,7 +209,10 @@ void CatanMode::init()
             settlementOwners[i] = UNOWNED;
         }
     }
-    setTileValue(hasRobber ? 0xFF : rollValue);
+    else
+    {
+        setTileValue(hasRobber ? 0xFF : rollValue);
+    }
 }
 
 void CatanMode::process(unsigned long currentMillis, uint16_t state)

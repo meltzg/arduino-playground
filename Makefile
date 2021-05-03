@@ -21,9 +21,3 @@ compile-pathfinder-tester:
 
 upload-pathfinder-tester: compile-pathfinder-tester
 	arduino-cli upload -p /dev/ttyUSB0 -b arduino:avr:uno pathfinder_tester/ -v
-
-compile-component-tester:
-	arduino-cli compile -b arduino:avr:uno component_tester/ -v
-
-upload-component-tester: compile-component-tester
-	arduino-cli upload -p /dev/ttyUSB0 -b arduino:avr:uno component_tester/ -v

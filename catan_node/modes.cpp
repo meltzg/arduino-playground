@@ -60,7 +60,7 @@ void NetworkTestMode::process(unsigned long currentMillis, uint16_t state)
     {
         Serial.println(F("rxmsg"));
         Message message = readMessage(&netPort);
-        processMessage(&netPort, message);
+        processMessage(message);
         delete[] message.body;
         message.body = NULL;
     }
@@ -95,7 +95,7 @@ void NetworkTestMode::process(unsigned long currentMillis, uint16_t state)
     }
 }
 
-void NetworkTestMode::processMessage(Stream *srcPort, const Message &message)
+void NetworkTestMode::processMessage(const Message &message)
 {
     if (message.sysCommand & ROUTER_ADD_NODE)
     {
@@ -217,7 +217,17 @@ void CatanMode::init()
 
 void CatanMode::process(unsigned long currentMillis, uint16_t state)
 {
-    if (currentMillis - previousMillis > 75)
+    bool hadMessage = false;
+    if (hasIncoming(&netPort))
+    {
+        hadMessage = true;
+        Message message = readMessage(&netPort);
+        processMessage(message);
+        delete[] message.body;
+        message.body = NULL;
+    }
+
+    if (currentMillis - previousMillis > 75 || hadMessage)
     {
         bool skipRobber = false;
 
@@ -231,13 +241,13 @@ void CatanMode::process(unsigned long currentMillis, uint16_t state)
             playerSelectMode = false;
             skipRobber = true;
         }
-        if (state != previousState)
+        if (!playStarted && (hadMessage || ((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0))
         {
-            if (!playStarted)
-            {
-                setupGame();
-            }
-            else if (!playerSelectMode)
+            setupGame();
+        }
+        else if (state != previousState)
+        {
+            if (!playerSelectMode)
             {
                 updateRoads(state);
                 updateSettlements(state);
@@ -260,7 +270,6 @@ void CatanMode::process(unsigned long currentMillis, uint16_t state)
 
 void CatanMode::updateRoads(uint16_t state)
 {
-    Serial.println(F("road"));
     for (int i = 0; i < NUM_ROADS; i++)
     {
         byte btnPos = EDGE_BTN_POS[i];
@@ -397,31 +406,54 @@ void CatanMode::renderState()
 
 void CatanMode::setupGame()
 {
-    int maxRetries = 100;
-    Message idRequest;
-    idRequest.source = EMPTY;
-    idRequest.dest = EMPTY;
-    idRequest.payloadSize = 0;
-    idRequest.sysCommand = ROUTER_GET_ID;
-    idRequest.body = NULL;
-
-    if (ackWait(&netPort, maxRetries))
+    Serial.println(F("setup"));
+    int maxRetries = 1000;
+    if (setupStage == 0)
     {
-        writeMessage(&netPort, idRequest);
-        netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
+        Message idRequest;
+        idRequest.source = EMPTY;
+        idRequest.dest = EMPTY;
+        idRequest.payloadSize = 0;
+        idRequest.sysCommand = ROUTER_GET_ID;
+        idRequest.body = NULL;
+
+        if (ackWait(&netPort, maxRetries))
+        {
+            writeMessage(&netPort, idRequest);
+            netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
+        }
+        else
+        {
+            Serial.println(F("Fail"));
+            return;
+        }
+
+        Serial.print(F("ID: "));
+        Serial.println(myId, HEX);
+
+        Message neighborRequest;
+        neighborRequest.source = myId;
+        neighborRequest.dest = myId;
+        neighborRequest.payloadSize = 0;
+        neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
+        neighborRequest.body = NULL;
+
+        if (ackWait(&netPort, maxRetries))
+        {
+            writeMessage(&netPort, neighborRequest);
+        }
+        else
+        {
+            Serial.println(F("Fail"));
+        }
     }
     else
     {
-        return;
+        rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+        setTileValue(rollValue);
+
+        this->playStarted = true;
     }
-
-    Serial.print(F("ID: "));
-    Serial.println(myId, HEX);
-
-    rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
-    setTileValue(rollValue);
-
-    playStarted = true;
 }
 
 void CatanMode::setTileValue(byte val)
@@ -439,4 +471,26 @@ void CatanMode::setTileValue(byte val)
         sprintf(displayValue, "%02d", val);
     }
     disp.setChars(displayValue);
+}
+
+void CatanMode::processMessage(const Message &message)
+{
+    if (message.sysCommand & ROUTER_ADD_NODE && message.source == myId)
+    {
+        advanceSetupStage(CATAN_SETUP_PHASES);
+        for (int i = 0; i < 6; i++)
+        {
+            NodeId_t id = ((NodeId_t *)(message.body))[i + 1];
+            neighborIds[i] = id;
+            Serial.println(id, HEX);
+        }
+    }
+}
+
+void CatanMode::advanceSetupStage(byte stage)
+{
+    if (setupStage <= stage)
+    {
+        ++setupStage;
+    }
 }

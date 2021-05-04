@@ -35,6 +35,8 @@
 #define BTN_LAND 9
 #define SEED_PIN A5
 
+#define CATAN_SETUP_PHASES 1
+
 #define PLAYER_SELECT_DELAY 500
 
 #define NUM_ROADS 6
@@ -57,7 +59,11 @@
 class Mode
 {
 public:
-    Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort) { init(); }
+    Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort)
+    {
+        Serial.println(F("Construct"));
+        init();
+    }
     virtual void init() {}
     virtual void process(unsigned long currentMillis, uint16_t state){};
 
@@ -101,7 +107,7 @@ private:
     NodeId_t neighborIds[6];
     char displayMessage[100] = {0};
 
-    void processMessage(Stream *srcPort, const Message &message);
+    void processMessage(const Message &message);
     void handleNodeResponse(const Message &message);
     void handleIdRequest();
     void handleNeighborRequest(NodeId_t destination);
@@ -130,7 +136,8 @@ private:
     bool hasRobber = false;
     bool playerSelectMode = false;
     byte currentPlayer = 0;
-    boolean playStarted = false;
+    bool playStarted = false;
+    byte setupStage = 0;
     char displayValue[10] = {0};
 
     void updateRoads(uint16_t state);
@@ -140,6 +147,8 @@ private:
     void renderState();
     void setupGame();
     void setTileValue(byte val);
+    void processMessage(const Message &message);
+    void advanceSetupStage(byte stage);
 };
 
 #endif // _MODES_H_

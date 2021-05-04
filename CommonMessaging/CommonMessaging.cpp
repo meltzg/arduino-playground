@@ -33,6 +33,7 @@ bool hasIncoming(Stream *port)
 
 Message readMessage(Stream *srcPort)
 {
+    Serial.println(F("rxmsg"));
     byte startByte;
     do
     {
@@ -50,7 +51,7 @@ Message readMessage(Stream *srcPort)
 
 void writeMessage(Stream *destPort, const Message &message)
 {
-    Serial.println(F("Starting write"));
+    Serial.println(F("txmsg"));
     destPort->write(START_CODE);
     destPort->write((char *)&(message.source), sizeof(message.source));
     destPort->write((char *)&(message.dest), sizeof(message.dest));

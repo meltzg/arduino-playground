@@ -35,7 +35,7 @@
 #define BTN_LAND 9
 #define SEED_PIN A5
 
-#define CATAN_SETUP_PHASES 1
+#define CATAN_SETUP_NEIGHBORS 1
 
 #define PLAYER_SELECT_DELAY 500
 
@@ -48,13 +48,13 @@
 #define MAX_ROLL NUM_DICE *DIE_SIDES
 #define MIN_ROLL NUM_DICE
 
-#define OCEAN 0x3813BE
-#define DESERT 0xB4D28C
-#define BRICK 0x41CB54
-#define SHEEP 0xFCB038
-#define WOOD 0xAC0313
-#define STONE 0xED3D97
-#define WHEAT YELLOW
+#define OCEAN 0
+#define DESERT 1
+#define BRICK 2
+#define SHEEP 3
+#define WOOD 4
+#define STONE 5
+#define WHEAT 6
 
 class Mode
 {
@@ -131,7 +131,7 @@ private:
     short roadOwners[NUM_ROADS];
     short settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
-    __int24 landType = BLACK;
+    byte landType = -1;
     byte rollValue = 0;
     bool hasRobber = false;
     bool playerSelectMode = false;
@@ -140,6 +140,9 @@ private:
     byte setupStage = 0;
     char displayValue[10] = {0};
 
+    static __int24 getPlayerColoer(byte playerNumber);
+    static __int24 getLandColor(byte landNumber);
+    
     void updateRoads(uint16_t state);
     void updateSettlements(uint16_t state);
     void updateRobber(uint16_t state);

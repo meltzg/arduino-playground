@@ -185,9 +185,6 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
     }
 }
 
-const __int24 CatanMode::PLAYER_COLORS[6] = {RED, ORANGE, GREEN, BLUE, PURPLE, WHITE};
-const __int24 CatanMode::LAND_COLORS[8] = {OCEAN, DESERT, BRICK, SHEEP, WOOD, STONE, WHEAT, OCEAN};
-
 void CatanMode::init()
 {
     randomSeed(analogRead(SEED_PIN));
@@ -318,6 +315,12 @@ void CatanMode::updateSettlements(uint16_t state)
 
 void CatanMode::updateRobber(uint16_t state)
 {
+    if (landType == OCEAN)
+    {
+        hasRobber = false;
+        return;
+    }
+
     if (((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0)
     {
         if (hasRobber)
@@ -356,7 +359,7 @@ void CatanMode::renderState()
         for (int i = 0; i < NUM_ROADS; i++)
         {
             byte ledPos = EDGE_LED_POS[i];
-            ledColors[ledPos] = PLAYER_COLORS[i];
+            ledColors[ledPos] = getPlayerColoer(i);
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
         {
@@ -364,7 +367,7 @@ void CatanMode::renderState()
             ledColors[ledPos[0]] = BLACK;
             ledColors[ledPos[1]] = BLACK;
         }
-        ledColors[LED_LAND] = PLAYER_COLORS[currentPlayer];
+        ledColors[LED_LAND] = getPlayerColoer(currentPlayer);
     }
     else
     {
@@ -378,7 +381,7 @@ void CatanMode::renderState()
             }
             else
             {
-                ledColors[ledPos] = PLAYER_COLORS[roadOwners[i]];
+                ledColors[ledPos] = getPlayerColoer(roadOwners[i]);
             }
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
@@ -392,14 +395,16 @@ void CatanMode::renderState()
             }
             else
             {
-                ledColors[ledPos[0]] = PLAYER_COLORS[settlementOwners[i]];
+                ledColors[ledPos[0]] = getPlayerColoer(settlementOwners[i]);
                 if (isCity[i])
                 {
-                    ledColors[ledPos[1]] = PLAYER_COLORS[settlementOwners[i]];
+                    ledColors[ledPos[1]] = getPlayerColoer(settlementOwners[i]);
                 }
             }
         }
     }
+
+    ledColors[LED_LAND] = getLandColor(landType);
 
     leds.setState(ledColors);
 }
@@ -449,10 +454,35 @@ void CatanMode::setupGame()
     }
     else
     {
-        rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+        int numEmpty = 0;
+        for (int i = 0; i < 6; i++)
+        {
+            if (neighborIds[i] == EMPTY)
+            {
+                numEmpty++;
+            }
+        }
+        if (numEmpty == 0 || numEmpty == 6)
+        {
+            landType = random(DESERT, WHEAT + 1);
+        }
+        else
+        {
+            landType = OCEAN;
+        }
+
+        if (landType == OCEAN || landType == DESERT)
+        {
+            rollValue = 0;
+        }
+        else
+        {
+            rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+        }
+
         setTileValue(rollValue);
 
-        this->playStarted = true;
+        playStarted = true;
     }
 }
 
@@ -477,7 +507,7 @@ void CatanMode::processMessage(const Message &message)
 {
     if (message.sysCommand & ROUTER_ADD_NODE && message.source == myId)
     {
-        advanceSetupStage(CATAN_SETUP_PHASES);
+        advanceSetupStage(CATAN_SETUP_NEIGHBORS);
         for (int i = 0; i < 6; i++)
         {
             NodeId_t id = ((NodeId_t *)(message.body))[i + 1];
@@ -492,5 +522,49 @@ void CatanMode::advanceSetupStage(byte stage)
     if (setupStage <= stage)
     {
         ++setupStage;
+    }
+}
+
+__int24 CatanMode::getPlayerColoer(byte playerNumber)
+{
+    switch (playerNumber)
+    {
+    case 0:
+        return RED;
+    case 1:
+        return ORANGE;
+    case 2:
+        return GREEN;
+    case 3:
+        return BLUE;
+    case 4:
+        return PURPLE;
+    case 5:
+        return WHITE;
+    default:
+        return BLACK;
+    }
+}
+
+__int24 CatanMode::getLandColor(byte landNumber)
+{
+    switch (landNumber)
+    {
+    case OCEAN:
+        return 0x3813BE;
+    case DESERT:
+        return 0xB4D28C;
+    case BRICK:
+        return 0x41CB54;
+    case SHEEP:
+        return 0xFCB038;
+    case WOOD:
+        return 0xAC0313;
+    case STONE:
+        return 0xED3D97;
+    case WHEAT:
+        return YELLOW;
+    default:
+        return BLACK;
     }
 }

@@ -273,13 +273,15 @@ void CatanMode::updateRoads(uint16_t state)
 
         if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
         {
+            Serial.print(F("currentOwner: "));
+            Serial.println(roadOwners[i]);
             if (roadOwners[i] == UNOWNED)
             {
-                roadOwners[i] = currentPlayer;
+                setRoadOwner(i, currentPlayer);
             }
             else if (roadOwners[i] == currentPlayer)
             {
-                roadOwners[i] = UNOWNED;
+                setRoadOwner(i, UNOWNED);
             }
         }
     }
@@ -402,9 +404,8 @@ void CatanMode::renderState()
                 }
             }
         }
+        ledColors[LED_LAND] = getLandColor(landType);
     }
-
-    ledColors[LED_LAND] = getLandColor(landType);
 
     leds.setState(ledColors);
 }
@@ -505,14 +506,28 @@ void CatanMode::setTileValue(byte val)
 
 void CatanMode::processMessage(const Message &message)
 {
-    if (message.sysCommand & ROUTER_ADD_NODE && message.source == myId)
+    if (message.sysCommand)
     {
-        advanceSetupStage(CATAN_SETUP_NEIGHBORS);
+        if (message.sysCommand & ROUTER_ADD_NODE && message.source == myId)
+            advanceSetupStage(CATAN_SETUP_NEIGHBORS);
         for (int i = 0; i < 6; i++)
         {
             NodeId_t id = ((NodeId_t *)(message.body))[i + 1];
             neighborIds[i] = id;
             Serial.println(id, HEX);
+        }
+    }
+    else
+    {
+        CatanMessage *command = (CatanMessage *)message.body;
+        switch (command->command)
+        {
+        case SET_ROAD:
+            setRoadOwner(command->roadNumber, command->playerNumber, false);
+            break;
+        case GET_STATE:
+        default:
+            break;
         }
     }
 }
@@ -566,5 +581,44 @@ __int24 CatanMode::getLandColor(byte landNumber)
         return YELLOW;
     default:
         return BLACK;
+    }
+}
+
+void CatanMode::setRoadOwner(byte roadNumber, byte playerNumber, bool updateNeighbor = true)
+{
+    roadOwners[roadNumber] = playerNumber;
+    Serial.print(F("updateNeighbor: "));
+    Serial.println(updateNeighbor);
+    Serial.print(F("roadNumber: "));
+    Serial.println(roadNumber);
+    Serial.print(F("playerNumber: "));
+    Serial.println(playerNumber);
+    if (updateNeighbor)
+    {
+        CatanMessage command;
+        command.command = SET_ROAD;
+        command.playerNumber = playerNumber;
+        command.roadNumber = (roadNumber + NUM_ROADS / 2) % NUM_ROADS;
+        Message msg;
+        msg.source = myId;
+        msg.dest = neighborIds[roadNumber];
+        msg.body = (byte *)&command;
+        msg.payloadSize = sizeof(CatanMessage);
+
+        Serial.print(F("updateNeighbor: "));
+        Serial.println(updateNeighbor);
+
+        if (msg.dest != EMPTY)
+        {
+            int maxRetries = 1000;
+            if (ackWait(&netPort, maxRetries))
+            {
+                writeMessage(&netPort, msg);
+            }
+            else
+            {
+                Serial.println(F("Fail"));
+            }
+        }
     }
 }

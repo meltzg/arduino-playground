@@ -58,11 +58,11 @@ typedef uint8_t SysCommand_t;
 
 struct Message
 {
-    NodeId_t source;
-    NodeId_t dest;
-    MessageSize_t payloadSize;
-    SysCommand_t sysCommand;
-    byte *body;
+    NodeId_t source = EMPTY;
+    NodeId_t dest = EMPTY;
+    MessageSize_t payloadSize = 0;
+    SysCommand_t sysCommand = 0;
+    byte *body = NULL;
 };
 
 bool ackWait(Stream *port, int maxRetries = -1);

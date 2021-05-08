@@ -41,7 +41,7 @@
 
 #define NUM_ROADS 6
 #define NUM_SETTLEMENTS 2
-#define UNOWNED -1
+#define UNOWNED 0xFF
 
 #define NUM_DICE 2
 #define DIE_SIDES 6
@@ -55,6 +55,9 @@
 #define WOOD 4
 #define STONE 5
 #define WHEAT 6
+
+#define SET_ROAD 0
+#define GET_STATE 1
 
 class Mode
 {
@@ -114,6 +117,13 @@ private:
     void handleDiscoveryRequest() {}
 };
 
+struct CatanMessage
+{
+    byte command;
+    byte roadNumber;
+    byte playerNumber;
+};
+
 class CatanMode : public Mode
 {
 public:
@@ -128,8 +138,8 @@ private:
 
     NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
-    short roadOwners[NUM_ROADS];
-    short settlementOwners[NUM_SETTLEMENTS];
+    byte roadOwners[NUM_ROADS];
+    byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
     byte landType = -1;
     byte rollValue = 0;
@@ -142,7 +152,7 @@ private:
 
     static __int24 getPlayerColoer(byte playerNumber);
     static __int24 getLandColor(byte landNumber);
-    
+
     void updateRoads(uint16_t state);
     void updateSettlements(uint16_t state);
     void updateRobber(uint16_t state);
@@ -152,6 +162,8 @@ private:
     void setTileValue(byte val);
     void processMessage(const Message &message);
     void advanceSetupStage(byte stage);
+
+    void setRoadOwner(byte roadNumber, byte playerNumber, bool updateNeighbor = true);
 };
 
 #endif // _MODES_H_

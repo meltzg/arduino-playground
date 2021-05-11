@@ -119,6 +119,16 @@ private:
     void handleDiscoveryRequest() {}
 };
 
+struct CatanState
+{
+    byte roadOwners[NUM_ROADS];
+    byte settlementOwners[NUM_SETTLEMENTS];
+    bool isCity[NUM_SETTLEMENTS] = {false};
+    byte landType = -1;
+    byte rollValue = 0;
+    bool hasRobber = false;
+};
+
 struct CatanMessage
 {
     byte command;
@@ -141,12 +151,7 @@ private:
 
     NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
-    byte roadOwners[NUM_ROADS];
-    byte settlementOwners[NUM_SETTLEMENTS];
-    bool isCity[NUM_SETTLEMENTS] = {false};
-    byte landType = -1;
-    byte rollValue = 0;
-    bool hasRobber = false;
+    CatanState catanState;
     bool playerSelectMode = false;
     byte currentPlayer = 0;
     bool playStarted = false;

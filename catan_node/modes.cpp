@@ -190,16 +190,16 @@ void CatanMode::init()
 
         for (int i = 0; i < NUM_ROADS; i++)
         {
-            roadOwners[i] = UNOWNED;
+            catanState.roadOwners[i] = UNOWNED;
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
         {
-            settlementOwners[i] = UNOWNED;
+            catanState.settlementOwners[i] = UNOWNED;
         }
     }
     else
     {
-        setTileValue(hasRobber ? 0xFF : rollValue);
+        setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
     }
 }
 
@@ -265,12 +265,12 @@ void CatanMode::updateRoads(uint16_t state)
         if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
         {
             Serial.print(F("currentOwner: "));
-            Serial.println(roadOwners[i]);
-            if (roadOwners[i] == UNOWNED)
+            Serial.println(catanState.roadOwners[i]);
+            if (catanState.roadOwners[i] == UNOWNED)
             {
                 setRoadOwner(i, currentPlayer);
             }
-            else if (roadOwners[i] == currentPlayer)
+            else if (catanState.roadOwners[i] == currentPlayer)
             {
                 setRoadOwner(i, UNOWNED);
             }
@@ -286,20 +286,20 @@ void CatanMode::updateSettlements(uint16_t state)
 
         if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
         {
-            if (settlementOwners[i] == UNOWNED)
+            if (catanState.settlementOwners[i] == UNOWNED)
             {
-                settlementOwners[i] = currentPlayer;
+                catanState.settlementOwners[i] = currentPlayer;
             }
-            else if (settlementOwners[i] == currentPlayer)
+            else if (catanState.settlementOwners[i] == currentPlayer)
             {
-                if (!isCity[i])
+                if (!catanState.isCity[i])
                 {
-                    isCity[i] = true;
+                    catanState.isCity[i] = true;
                 }
                 else
                 {
-                    isCity[i] = false;
-                    settlementOwners[i] = UNOWNED;
+                    catanState.isCity[i] = false;
+                    catanState.settlementOwners[i] = UNOWNED;
                 }
             }
         }
@@ -308,22 +308,22 @@ void CatanMode::updateSettlements(uint16_t state)
 
 void CatanMode::updateRobber(uint16_t state)
 {
-    if (landType == OCEAN)
+    if (catanState.landType == OCEAN)
     {
-        hasRobber = false;
+        catanState.hasRobber = false;
         return;
     }
 
     if (((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0)
     {
-        if (hasRobber)
+        if (catanState.hasRobber)
         {
-            hasRobber = false;
-            setTileValue(rollValue);
+            catanState.hasRobber = false;
+            setTileValue(catanState.rollValue);
         }
         else
         {
-            hasRobber = true;
+            catanState.hasRobber = true;
             setTileValue(0xFF);
         }
     }
@@ -368,34 +368,34 @@ void CatanMode::renderState()
         {
             byte ledPos = EDGE_LED_POS[i];
 
-            if (roadOwners[i] == UNOWNED)
+            if (catanState.roadOwners[i] == UNOWNED)
             {
                 ledColors[ledPos] = BLACK;
             }
             else
             {
-                ledColors[ledPos] = getPlayerColoer(roadOwners[i]);
+                ledColors[ledPos] = getPlayerColoer(catanState.roadOwners[i]);
             }
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
         {
             byte *ledPos = CORNER_LED_POS[i];
 
-            if (settlementOwners[i] == UNOWNED)
+            if (catanState.settlementOwners[i] == UNOWNED)
             {
                 ledColors[ledPos[0]] = BLACK;
                 ledColors[ledPos[1]] = BLACK;
             }
             else
             {
-                ledColors[ledPos[0]] = getPlayerColoer(settlementOwners[i]);
-                if (isCity[i])
+                ledColors[ledPos[0]] = getPlayerColoer(catanState.settlementOwners[i]);
+                if (catanState.isCity[i])
                 {
-                    ledColors[ledPos[1]] = getPlayerColoer(settlementOwners[i]);
+                    ledColors[ledPos[1]] = getPlayerColoer(catanState.settlementOwners[i]);
                 }
             }
         }
-        ledColors[LED_LAND] = getLandColor(landType);
+        ledColors[LED_LAND] = getLandColor(catanState.landType);
     }
 
     leds.setState(ledColors);
@@ -456,23 +456,23 @@ void CatanMode::setupGame()
         }
         if (numEmpty == 0 || numEmpty == 6)
         {
-            landType = random(DESERT, WHEAT + 1);
+            catanState.landType = random(DESERT, WHEAT + 1);
         }
         else
         {
-            landType = OCEAN;
+            catanState.landType = OCEAN;
         }
 
-        if (landType == OCEAN || landType == DESERT)
+        if (catanState.landType == OCEAN || catanState.landType == DESERT)
         {
-            rollValue = 0;
+            catanState.rollValue = 0;
         }
         else
         {
-            rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+            catanState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
         }
 
-        setTileValue(rollValue);
+        setTileValue(catanState.rollValue);
 
         playStarted = true;
     }
@@ -581,7 +581,7 @@ __int24 CatanMode::getLandColor(byte landNumber)
 
 void CatanMode::setRoadOwner(byte roadNumber, byte playerNumber, bool updateNeighbor = true)
 {
-    roadOwners[roadNumber] = playerNumber;
+    catanState.roadOwners[roadNumber] = playerNumber;
     Serial.print(F("updateNeighbor: "));
     Serial.println(updateNeighbor);
     Serial.print(F("roadNumber: "));

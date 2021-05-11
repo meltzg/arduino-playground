@@ -97,7 +97,14 @@ void loop()
         mode->init();
     }
 
-    mode->process(currentMillis, btnState);
+    if (hasIncoming(&netPort))
+    {
+        Message message = readMessage(&netPort);
+        mode->processMessage(message);
+        delete[] message.body;
+        message.body = NULL;
+    }
+    mode->processState(currentMillis, btnState);
 
     previousState = btnState;
 }

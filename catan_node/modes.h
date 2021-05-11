@@ -68,7 +68,8 @@ public:
         init();
     }
     virtual void init() {}
-    virtual void process(unsigned long currentMillis, uint16_t state){};
+    virtual void processState(unsigned long currentMillis, uint16_t state) = 0;
+    virtual void processMessage(const Message &message) = 0;
 
 protected:
     static const byte EDGE_LED_POS[6];
@@ -90,8 +91,9 @@ class ComponentTestMode : public Mode
 public:
     using Mode::Mode;
 
-    virtual void init();
-    virtual void process(unsigned long currentMillis, uint16_t state);
+    void init();
+    void processState(unsigned long currentMillis, uint16_t state);
+    void processMessage(const Message &message) {}
 
 private:
     unsigned long previousMillisLeds = 0;
@@ -102,15 +104,15 @@ class NetworkTestMode : public Mode
 public:
     using Mode::Mode;
 
-    virtual void init();
-    virtual void process(unsigned long currentMillis, uint16_t state);
+    void init();
+    void processState(unsigned long currentMillis, uint16_t state);
+    void processMessage(const Message &message);
 
 private:
     NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
     char displayMessage[100] = {0};
 
-    void processMessage(const Message &message);
     void handleNodeResponse(const Message &message);
     void handleIdRequest();
     void handleNeighborRequest(NodeId_t destination);
@@ -129,8 +131,9 @@ class CatanMode : public Mode
 public:
     using Mode::Mode;
 
-    virtual void init();
-    virtual void process(unsigned long currentMillis, uint16_t state);
+    void init();
+    void processState(unsigned long currentMillis, uint16_t state);
+    void processMessage(const Message &message);
 
 private:
     static const __int24 PLAYER_COLORS[6];
@@ -160,7 +163,6 @@ private:
     void renderState();
     void setupGame();
     void setTileValue(byte val);
-    void processMessage(const Message &message);
     void advanceSetupStage(byte stage);
 
     void setRoadOwner(byte roadNumber, byte playerNumber, bool updateNeighbor = true);

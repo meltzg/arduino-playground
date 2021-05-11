@@ -10,7 +10,7 @@ void ComponentTestMode::init()
     disp.setRenderChars(false);
 }
 
-void ComponentTestMode::process(unsigned long currentMillis, uint16_t state)
+void ComponentTestMode::processState(unsigned long currentMillis, uint16_t state)
 {
     static int colorOffset = 0;
     static int segmentOffset = 0;
@@ -54,17 +54,8 @@ void NetworkTestMode::init()
     }
 }
 
-void NetworkTestMode::process(unsigned long currentMillis, uint16_t state)
+void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
 {
-    if (hasIncoming(&netPort))
-    {
-        Serial.println(F("rxmsg"));
-        Message message = readMessage(&netPort);
-        processMessage(message);
-        delete[] message.body;
-        message.body = NULL;
-    }
-
     if (state != previousState)
     {
         if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
@@ -212,7 +203,7 @@ void CatanMode::init()
     }
 }
 
-void CatanMode::process(unsigned long currentMillis, uint16_t state)
+void CatanMode::processState(unsigned long currentMillis, uint16_t state)
 {
     bool hadMessage = false;
     if (hasIncoming(&netPort))
@@ -224,7 +215,7 @@ void CatanMode::process(unsigned long currentMillis, uint16_t state)
         message.body = NULL;
     }
 
-    if (currentMillis - previousMillis > 75 || hadMessage)
+    if (currentMillis - previousMillis > 75)
     {
         bool skipRobber = false;
 
@@ -238,7 +229,7 @@ void CatanMode::process(unsigned long currentMillis, uint16_t state)
             playerSelectMode = false;
             skipRobber = true;
         }
-        if (!playStarted && (hadMessage || ((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0))
+        if (!playStarted && ((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0)
         {
             setupGame();
         }
@@ -529,6 +520,10 @@ void CatanMode::processMessage(const Message &message)
         default:
             break;
         }
+    }
+    if (!playStarted)
+    {
+        setupGame();
     }
 }
 

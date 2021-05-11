@@ -268,11 +268,11 @@ void CatanMode::updateRoads(uint16_t state)
             Serial.println(catanState.roadOwners[i]);
             if (catanState.roadOwners[i] == UNOWNED)
             {
-                setRoadOwner(i, currentPlayer);
+                setRoadOwner(SetRoadRequest(i, currentPlayer));
             }
             else if (catanState.roadOwners[i] == currentPlayer)
             {
-                setRoadOwner(i, UNOWNED);
+                setRoadOwner(SetRoadRequest(i, UNOWNED));
             }
         }
     }
@@ -514,7 +514,7 @@ void CatanMode::processMessage(const Message &message)
         switch (command->command)
         {
         case SET_ROAD:
-            setRoadOwner(command->roadNumber, command->playerNumber, false);
+            setRoadOwner(*(SetRoadRequest *)command, false);
             break;
         case GET_STATE:
         default:
@@ -579,26 +579,23 @@ __int24 CatanMode::getLandColor(byte landNumber)
     }
 }
 
-void CatanMode::setRoadOwner(byte roadNumber, byte playerNumber, bool updateNeighbor = true)
+void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 {
-    catanState.roadOwners[roadNumber] = playerNumber;
+    catanState.roadOwners[request.roadNumber] = request.playerNumber;
     Serial.print(F("updateNeighbor: "));
     Serial.println(updateNeighbor);
     Serial.print(F("roadNumber: "));
-    Serial.println(roadNumber);
+    Serial.println(request.roadNumber);
     Serial.print(F("playerNumber: "));
-    Serial.println(playerNumber);
+    Serial.println(request.playerNumber);
     if (updateNeighbor)
     {
-        CatanMessage command;
-        command.command = SET_ROAD;
-        command.playerNumber = playerNumber;
-        command.roadNumber = (roadNumber + NUM_ROADS / 2) % NUM_ROADS;
+        SetRoadRequest command((request.roadNumber + NUM_ROADS / 2) % NUM_ROADS, request.playerNumber);
         Message msg;
         msg.source = myId;
-        msg.dest = neighborIds[roadNumber];
+        msg.dest = neighborIds[request.roadNumber];
         msg.body = (byte *)&command;
-        msg.payloadSize = sizeof(CatanMessage);
+        msg.payloadSize = sizeof(SetRoadRequest);
 
         Serial.print(F("updateNeighbor: "));
         Serial.println(updateNeighbor);

@@ -58,6 +58,7 @@
 
 #define SET_ROAD 0
 #define GET_STATE 1
+#define STATE_RESPONSE 2
 
 class Mode
 {
@@ -132,8 +133,14 @@ struct CatanState
 struct CatanMessage
 {
     byte command;
+};
+
+struct SetRoadRequest : public CatanMessage
+{
     byte roadNumber;
     byte playerNumber;
+
+    SetRoadRequest(byte roadNumber, byte playerNumber) : roadNumber(roadNumber), playerNumber(playerNumber) { command = SET_ROAD; }
 };
 
 class CatanMode : public Mode
@@ -170,7 +177,7 @@ private:
     void setTileValue(byte val);
     void advanceSetupStage(byte stage);
 
-    void setRoadOwner(byte roadNumber, byte playerNumber, bool updateNeighbor = true);
+    void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
 };
 
 #endif // _MODES_H_

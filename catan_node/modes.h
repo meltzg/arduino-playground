@@ -24,6 +24,8 @@
      \/           \/          \/
 */
 
+#define MAX_NET_RETRIES 1000
+
 // Mode Specific Defines
 // Netowrk test
 #define BTN_ID 9
@@ -112,7 +114,7 @@ private:
 class CatanLandType
 {
 public:
-    enum Value
+    enum Value : byte
     {
         OCEAN,
         DESERT,
@@ -187,19 +189,42 @@ struct SetRoadRequest : public CatanMessage
     SetRoadRequest(byte roadNumber, byte playerNumber) : roadNumber(roadNumber), playerNumber(playerNumber) { command = SET_ROAD; }
 };
 
+class PlacementValidationInfo
+{
+public:
+    enum Value : byte
+    {
+        ROAD,
+        SETTLEMENT,
+        NONE,
+    };
+
+    PlacementValidationInfo() = default;
+    constexpr PlacementValidationInfo(Value aType) : value(aType) {}
+
+    operator Value() const { return value; }
+    explicit operator bool() = delete;
+
+private:
+    Value value;
+    byte toValidate = 0xFF;
+    byte playerNumber = UNOWNED;
+    bool onLand = false;
+};
+
 struct GetStateRequest : public CatanMessage
 {
-    unsigned long requestId;
+    PlacementValidationInfo placementInfo = PlacementValidationInfo::NONE;
 
-    GetStateRequest(unsigned long requestId) : requestId(requestId) { command = GET_STATE; }
+    GetStateRequest(PlacementValidationInfo placementInfo) : placementInfo(placementInfo) { command = GET_STATE; }
 };
 
 struct StateResponse : public CatanMessage
 {
-    unsigned long requestId;
     CatanState state;
+    PlacementValidationInfo placementInfo = PlacementValidationInfo::NONE;
 
-    StateResponse(unsigned long requestId, CatanState state) : requestId(requestId), state(state) { command = STATE_RESPONSE; }
+    StateResponse(PlacementValidationInfo placementInfo, CatanState state) : placementInfo(placementInfo), state(state) { command = STATE_RESPONSE; }
 };
 
 class CatanMode : public Mode
@@ -236,7 +261,7 @@ private:
     void advanceSetupStage(byte stage);
 
     void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
-    void sendStateRequest(NodeId_t node, unsigned long requestId);
+    void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
 };
 
 #endif // _MODES_H_

@@ -130,7 +130,6 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
 
 void NetworkTestMode::handleIdRequest()
 {
-    int maxRetries = 1000;
     Message idRequest;
     idRequest.source = EMPTY;
     idRequest.dest = EMPTY;
@@ -139,7 +138,7 @@ void NetworkTestMode::handleIdRequest()
     idRequest.body = NULL;
     myId = 0;
 
-    if (ackWait(&netPort, maxRetries))
+    if (ackWait(&netPort, MAX_NET_RETRIES))
     {
         writeMessage(&netPort, idRequest);
         netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
@@ -158,7 +157,6 @@ void NetworkTestMode::handleIdRequest()
 
 void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
 {
-    int maxRetries = 1000;
     Message neighborRequest;
     neighborRequest.source = myId;
     neighborRequest.dest = destination;
@@ -166,7 +164,7 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
     neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
     neighborRequest.body = NULL;
 
-    if (ackWait(&netPort, maxRetries))
+    if (ackWait(&netPort, MAX_NET_RETRIES))
     {
         writeMessage(&netPort, neighborRequest);
     }
@@ -404,7 +402,6 @@ void CatanMode::renderState()
 void CatanMode::setupGame()
 {
     Serial.println(F("setup"));
-    int maxRetries = 1000;
     if (setupStage == 0)
     {
         Message idRequest;
@@ -414,7 +411,7 @@ void CatanMode::setupGame()
         idRequest.sysCommand = ROUTER_GET_ID;
         idRequest.body = NULL;
 
-        if (ackWait(&netPort, maxRetries))
+        if (ackWait(&netPort, MAX_NET_RETRIES))
         {
             writeMessage(&netPort, idRequest);
             netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
@@ -435,7 +432,7 @@ void CatanMode::setupGame()
         neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
         neighborRequest.body = NULL;
 
-        if (ackWait(&netPort, maxRetries))
+        if (ackWait(&netPort, MAX_NET_RETRIES))
         {
             writeMessage(&netPort, neighborRequest);
         }
@@ -579,8 +576,7 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 
         if (msg.dest != EMPTY)
         {
-            int maxRetries = 1000;
-            if (ackWait(&netPort, maxRetries))
+            if (ackWait(&netPort, MAX_NET_RETRIES))
             {
                 writeMessage(&netPort, msg);
             }
@@ -592,12 +588,21 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
     }
 }
 
-void CatanMode::sendStateRequest(NodeId_t node, unsigned long requestId)
+void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo)
 {
-    GetStateRequest request(requestId);
+    GetStateRequest request(placementInfo);
     Message msg;
     msg.source = myId;
     msg.dest = node;
     msg.body = (byte *)&request;
     msg.payloadSize = sizeof(GetStateRequest);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, msg);
+    }
+    else
+    {
+        Serial.println(F("Fail"));
+    }
 }

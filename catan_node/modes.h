@@ -31,6 +31,7 @@
 #define BTN_DISCOVER 10
 
 // Catan
+#define ALL_LAND true
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5
@@ -47,18 +48,6 @@
 #define DIE_SIDES 6
 #define MAX_ROLL NUM_DICE *DIE_SIDES
 #define MIN_ROLL NUM_DICE
-
-#define OCEAN 0
-#define DESERT 1
-#define BRICK 2
-#define SHEEP 3
-#define WOOD 4
-#define STONE 5
-#define WHEAT 6
-
-#define SET_ROAD 0
-#define GET_STATE 1
-#define STATE_RESPONSE 2
 
 class Mode
 {
@@ -120,19 +109,74 @@ private:
     void handleDiscoveryRequest() {}
 };
 
+class CatanLandType
+{
+public:
+    enum Value
+    {
+        OCEAN,
+        DESERT,
+        BRICK,
+        SHEEP,
+        WOOD,
+        STONE,
+        WHEAT,
+        NONE,
+    };
+
+    CatanLandType() = default;
+    constexpr CatanLandType(Value aType) : value(aType) {}
+
+    operator Value() const { return value; }
+    explicit operator bool() = delete;
+
+    __int24 toGRB() const
+    {
+        switch (value)
+        {
+        case OCEAN:
+            return 0x3813BE;
+        case DESERT:
+            return 0xB4D28C;
+        case BRICK:
+            return 0x41CB54;
+        case SHEEP:
+            return 0xFCB038;
+        case WOOD:
+            return 0xAC0313;
+        case STONE:
+            return 0xED3D97;
+        case WHEAT:
+            return YELLOW;
+        default:
+            return BLACK;
+        }
+    }
+
+private:
+    Value value;
+};
+
+enum CatanCommand : byte
+{
+    SET_ROAD,
+    GET_STATE,
+    STATE_RESPONSE
+};
+
 struct CatanState
 {
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
-    byte landType = -1;
+    CatanLandType landType = CatanLandType::NONE;
     byte rollValue = 0;
     bool hasRobber = false;
 };
 
 struct CatanMessage
 {
-    byte command;
+    CatanCommand command;
 };
 
 struct SetRoadRequest : public CatanMessage
@@ -141,6 +185,21 @@ struct SetRoadRequest : public CatanMessage
     byte playerNumber;
 
     SetRoadRequest(byte roadNumber, byte playerNumber) : roadNumber(roadNumber), playerNumber(playerNumber) { command = SET_ROAD; }
+};
+
+struct GetStateRequest : public CatanMessage
+{
+    unsigned long requestId;
+
+    GetStateRequest(unsigned long requestId) : requestId(requestId) { command = GET_STATE; }
+};
+
+struct StateResponse : public CatanMessage
+{
+    unsigned long requestId;
+    CatanState state;
+
+    StateResponse(unsigned long requestId, CatanState state) : requestId(requestId), state(state) { command = STATE_RESPONSE; }
 };
 
 class CatanMode : public Mode
@@ -166,7 +225,6 @@ private:
     char displayValue[10] = {0};
 
     static __int24 getPlayerColoer(byte playerNumber);
-    static __int24 getLandColor(byte landNumber);
 
     void updateRoads(uint16_t state);
     void updateSettlements(uint16_t state);
@@ -178,6 +236,7 @@ private:
     void advanceSetupStage(byte stage);
 
     void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
+    void sendStateRequest(NodeId_t node, unsigned long requestId);
 };
 
 #endif // _MODES_H_

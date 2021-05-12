@@ -308,7 +308,7 @@ void CatanMode::updateSettlements(uint16_t state)
 
 void CatanMode::updateRobber(uint16_t state)
 {
-    if (catanState.landType == OCEAN)
+    if (catanState.landType == CatanLandType::OCEAN)
     {
         catanState.hasRobber = false;
         return;
@@ -395,7 +395,7 @@ void CatanMode::renderState()
                 }
             }
         }
-        ledColors[LED_LAND] = getLandColor(catanState.landType);
+        ledColors[LED_LAND] = catanState.landType.toGRB();
     }
 
     leds.setState(ledColors);
@@ -454,16 +454,16 @@ void CatanMode::setupGame()
                 numEmpty++;
             }
         }
-        if (numEmpty == 0 || numEmpty == 6)
+        if (numEmpty == 0 || numEmpty == 6 || ALL_LAND)
         {
-            catanState.landType = random(DESERT, WHEAT + 1);
+            catanState.landType = CatanLandType(random(CatanLandType::DESERT, CatanLandType::WHEAT + 1));
         }
         else
         {
-            catanState.landType = OCEAN;
+            catanState.landType = CatanLandType::OCEAN;
         }
 
-        if (catanState.landType == OCEAN || catanState.landType == DESERT)
+        if (catanState.landType == CatanLandType::OCEAN || catanState.landType == CatanLandType::DESERT)
         {
             catanState.rollValue = 0;
         }
@@ -556,29 +556,6 @@ __int24 CatanMode::getPlayerColoer(byte playerNumber)
     }
 }
 
-__int24 CatanMode::getLandColor(byte landNumber)
-{
-    switch (landNumber)
-    {
-    case OCEAN:
-        return 0x3813BE;
-    case DESERT:
-        return 0xB4D28C;
-    case BRICK:
-        return 0x41CB54;
-    case SHEEP:
-        return 0xFCB038;
-    case WOOD:
-        return 0xAC0313;
-    case STONE:
-        return 0xED3D97;
-    case WHEAT:
-        return YELLOW;
-    default:
-        return BLACK;
-    }
-}
-
 void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 {
     catanState.roadOwners[request.roadNumber] = request.playerNumber;
@@ -613,4 +590,14 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
             }
         }
     }
+}
+
+void CatanMode::sendStateRequest(NodeId_t node, unsigned long requestId)
+{
+    GetStateRequest request(requestId);
+    Message msg;
+    msg.source = myId;
+    msg.dest = node;
+    msg.body = (byte *)&request;
+    msg.payloadSize = sizeof(GetStateRequest);
 }

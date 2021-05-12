@@ -155,6 +155,29 @@ public:
         }
     }
 
+    const char *toString()
+    {
+        switch (value)
+        {
+        case OCEAN:
+            return "Ocean ";
+        case DESERT:
+            return "Desert ";
+        case BRICK:
+            return "Brick ";
+        case SHEEP:
+            return "Sheep ";
+        case WOOD:
+            return "Wood ";
+        case STONE:
+            return "Stone ";
+        case WHEAT:
+            return "Wheat ";
+        default:
+            return "";
+        }
+    }
+
 private:
     Value value;
 };

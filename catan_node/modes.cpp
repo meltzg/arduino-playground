@@ -220,11 +220,13 @@ void CatanMode::processState(unsigned long currentMillis, uint16_t state)
         if (playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
         {
             playerSelectMode = true;
+            disp.setChars(catanState.landType.toString());
             updateCurrentPlayer(state);
         }
         else if (playerSelectMode && btns.getOnDuration(BTN_LAND) == 0)
         {
             playerSelectMode = false;
+            setTileValue(catanState.rollValue);
             skipRobber = true;
         }
         if (!playStarted && ((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0)

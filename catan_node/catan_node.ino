@@ -73,6 +73,8 @@ void loop()
     leds.render(currentMillis);
     btns.render(currentMillis);
 
+    Serial.println(currentMillis);
+
     uint16_t btnState = btns.getState();
 
     if (((previousState >> BTN_CENTER) & 1) && ((btnState >> BTN_CENTER) & 1) == 0)

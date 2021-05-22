@@ -76,3 +76,4 @@ gerber/
 *.elf
 
 *.stl
+*.FCStd1

@@ -191,6 +191,7 @@ enum CatanCommand : byte
 
 struct CatanState
 {
+    NodeId_t id = EMPTY;
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
@@ -228,11 +229,13 @@ public:
     operator Value() const { return value; }
     explicit operator bool() = delete;
 
+    byte toValidate = 0xFF;      // the road/settlement number being validated
+    byte validateStep = 0;       // how many validation steps have been completed
+    byte playerNumber = UNOWNED; // the player requesting ownership
+    bool onLand = false;         // whether we've seen valid land for the placement
+
 private:
-    Value value;
-    byte toValidate = 0xFF;
-    byte playerNumber = UNOWNED;
-    bool onLand = false;
+    Value value; // type of validation to do
 };
 
 struct GetStateRequest : public CatanMessage
@@ -263,7 +266,6 @@ private:
     static const __int24 PLAYER_COLORS[6];
     static const __int24 LAND_COLORS[8];
 
-    NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
     CatanState catanState;
     bool playerSelectMode = false;
@@ -285,6 +287,11 @@ private:
 
     void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
     void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
+    void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);
+
+    void reconcileStateResponse(StateResponse response);
+    void reconcileSettlementValidation(StateResponse response);
+    void reconcileRoadValidation(StateResponse response);
 };
 
 #endif // _MODES_H_

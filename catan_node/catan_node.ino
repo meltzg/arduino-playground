@@ -51,7 +51,7 @@ CatanMode catan(disp, leds, btns, netPort);
 
 // State information
 Mode *mode = NULL;
-byte modeIdx = MODE_COMPONENT_TEST;
+byte modeIdx = MODE_CATAN;
 unsigned long previousMillis = 0;
 uint16_t previousState = 0;
 
@@ -62,8 +62,7 @@ void setup()
 
     __int24 ledColors[NUM_LEDS] = {BLACK};
     leds.setState(ledColors);
-    mode = &componentTest;
-    mode->init();
+    selectMode(modeIdx);
 }
 
 void loop()
@@ -73,8 +72,6 @@ void loop()
     leds.render(currentMillis);
     btns.render(currentMillis);
 
-    Serial.println(currentMillis);
-
     uint16_t btnState = btns.getState();
 
     if (((previousState >> BTN_CENTER) & 1) && ((btnState >> BTN_CENTER) & 1) == 0)
@@ -82,21 +79,7 @@ void loop()
         modeIdx++;
         modeIdx %= NUM_MODES;
 
-        switch (modeIdx)
-        {
-        case MODE_COMPONENT_TEST:
-            mode = &componentTest;
-            break;
-        case MODE_NETWORK_TEST:
-            mode = &networkTest;
-            break;
-        case MODE_CATAN:
-            mode = &catan;
-        default:
-            break;
-        }
-
-        mode->init();
+        selectMode(modeIdx);
     }
 
     if (hasIncoming(&netPort))
@@ -109,4 +92,23 @@ void loop()
     mode->processState(currentMillis, btnState);
 
     previousState = btnState;
+}
+
+void selectMode(int modeIdx)
+{
+    switch (modeIdx)
+    {
+    case MODE_COMPONENT_TEST:
+        mode = &componentTest;
+        break;
+    case MODE_NETWORK_TEST:
+        mode = &networkTest;
+        break;
+    case MODE_CATAN:
+        mode = &catan;
+    default:
+        break;
+    }
+
+    mode->init();
 }

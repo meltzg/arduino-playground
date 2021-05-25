@@ -288,7 +288,10 @@ void CatanMode::updateSettlements(uint16_t state)
         {
             if (catanState.settlementOwners[i] == UNOWNED)
             {
-                catanState.settlementOwners[i] = currentPlayer;
+                PlacementValidationInfo validation = PlacementValidationInfo::SETTLEMENT;
+                validation.toValidate = i;
+                validation.playerNumber = currentPlayer;
+                reconcileSettlementValidation(StateResponse(validation, catanState));
             }
             else if (catanState.settlementOwners[i] == currentPlayer)
             {
@@ -416,7 +419,7 @@ void CatanMode::setupGame()
         if (ackWait(&netPort, MAX_NET_RETRIES))
         {
             writeMessage(&netPort, idRequest);
-            netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
+            netPort.readBytes((byte *)&catanState.id, sizeof(NodeId_t));
         }
         else
         {
@@ -425,11 +428,11 @@ void CatanMode::setupGame()
         }
 
         Serial.print(F("ID: "));
-        Serial.println(myId, HEX);
+        Serial.println(catanState.id, HEX);
 
         Message neighborRequest;
-        neighborRequest.source = myId;
-        neighborRequest.dest = myId;
+        neighborRequest.source = catanState.id;
+        neighborRequest.dest = catanState.id;
         neighborRequest.payloadSize = 0;
         neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
         neighborRequest.body = NULL;
@@ -498,7 +501,7 @@ void CatanMode::processMessage(const Message &message)
 {
     if (message.sysCommand)
     {
-        if (message.sysCommand & ROUTER_ADD_NODE && message.source == myId)
+        if (message.sysCommand & ROUTER_ADD_NODE && message.source == catanState.id)
             advanceSetupStage(CATAN_SETUP_NEIGHBORS);
         for (int i = 0; i < 6; i++)
         {
@@ -516,6 +519,10 @@ void CatanMode::processMessage(const Message &message)
             setRoadOwner(*(SetRoadRequest *)command, false);
             break;
         case GET_STATE:
+            sendStateResponse(message.source, ((GetStateRequest *)command)->placementInfo);
+            break;
+        case STATE_RESPONSE:
+            reconcileStateResponse(*(StateResponse *)command);
         default:
             break;
         }
@@ -568,7 +575,7 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
     {
         SetRoadRequest command((request.roadNumber + NUM_ROADS / 2) % NUM_ROADS, request.playerNumber);
         Message msg;
-        msg.source = myId;
+        msg.source = catanState.id;
         msg.dest = neighborIds[request.roadNumber];
         msg.body = (byte *)&command;
         msg.payloadSize = sizeof(SetRoadRequest);
@@ -594,7 +601,7 @@ void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placemen
 {
     GetStateRequest request(placementInfo);
     Message msg;
-    msg.source = myId;
+    msg.source = catanState.id;
     msg.dest = node;
     msg.body = (byte *)&request;
     msg.payloadSize = sizeof(GetStateRequest);
@@ -606,5 +613,92 @@ void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placemen
     else
     {
         Serial.println(F("Fail"));
+    }
+}
+
+void CatanMode::sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo)
+{
+    StateResponse response(placementInfo, catanState);
+    Message msg;
+    msg.source = catanState.id;
+    msg.dest = node;
+    msg.body = (byte *)&response;
+    msg.payloadSize = sizeof(StateResponse);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, msg);
+    }
+    else
+    {
+        Serial.println(F("Fail"));
+    }
+}
+
+void CatanMode::reconcileStateResponse(StateResponse response)
+{
+    switch (response.placementInfo)
+    {
+    case PlacementValidationInfo::ROAD:
+        reconcileRoadValidation(response);
+        break;
+    case PlacementValidationInfo::SETTLEMENT:
+        reconcileSettlementValidation(response);
+        break;
+    default:
+        Serial.println(F("No validation required"));
+        break;
+    }
+}
+
+void CatanMode::reconcileSettlementValidation(StateResponse response)
+{
+    if (response.placementInfo.toValidate >= NUM_SETTLEMENTS)
+    {
+        Serial.println(F("Invalid settlement index"));
+    }
+    response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
+    byte neighboringSettlement = (response.placementInfo.toValidate + 1) % NUM_SETTLEMENTS;
+
+    if (response.state.settlementOwners[neighboringSettlement] == UNOWNED)
+    {
+        bool hasNextTile = false;
+        byte nextTileIdx;
+        for (; response.placementInfo.validateStep < 2 && !hasNextTile; response.placementInfo.validateStep++)
+        {
+            nextTileIdx = (response.placementInfo.validateStep + (response.placementInfo.toValidate * 3) + 5) % 6;
+            Serial.print(F("nextTileIdx "));
+            Serial.println(nextTileIdx);
+            Serial.print(F("nextTileId "));
+            Serial.println(neighborIds[nextTileIdx], HEX);
+            if (neighborIds[nextTileIdx] != EMPTY)
+            {
+                hasNextTile = true;
+            }
+        }
+
+        if (hasNextTile)
+        {
+            Serial.println(F("request next tile"));
+            sendStateRequest(neighborIds[nextTileIdx], response.placementInfo);
+        }
+        else
+        {
+            Serial.println(F("Settlement place approved"));
+            catanState.settlementOwners[response.placementInfo.toValidate] = response.placementInfo.playerNumber;
+        }
+    }
+    else
+    {
+        Serial.print(F("Invalid settlment neighbor "));
+        Serial.println(response.state.settlementOwners[neighboringSettlement]);
+    }
+}
+
+void CatanMode::reconcileRoadValidation(StateResponse response)
+{
+    if (response.placementInfo.toValidate >= NUM_ROADS)
+    {
+        Serial.println(F("Invalid road index"));
     }
 }

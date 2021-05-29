@@ -51,6 +51,14 @@
 #define MAX_ROLL NUM_DICE *DIE_SIDES
 #define MIN_ROLL NUM_DICE
 
+// number of tiles based on base game + 6 player expansion
+#define NUM_WOOD_TILES 6
+#define NUM_SHEEP_TILES 6
+#define NUM_WHEAT_TILES 6
+#define NUM_BRICK_TILES 5
+#define NUM_STONE_TILES 5
+#define NUM_DESERT_TILES 2
+
 class Mode
 {
 public:
@@ -177,6 +185,31 @@ public:
             return "";
         }
     }
+
+    byte toWeight()
+    {
+        switch (value)
+        {
+        case OCEAN:
+            return 0;
+        case DESERT:
+            return NUM_DESERT_TILES;
+        case BRICK:
+            return NUM_BRICK_TILES;
+        case SHEEP:
+            return NUM_SHEEP_TILES;
+        case WOOD:
+            return NUM_WOOD_TILES;
+        case STONE:
+            return NUM_STONE_TILES;
+        case WHEAT:
+            return NUM_WHEAT_TILES;
+        default:
+            return 0;
+        }
+    }
+
+    static CatanLandType randomType();
 
 private:
     Value value;

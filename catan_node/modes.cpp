@@ -174,6 +174,29 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
     }
 }
 
+CatanLandType CatanLandType::randomType()
+{
+    int totalWeight = 0;
+    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+    {
+        totalWeight += static_cast<CatanLandType>(i).toWeight();
+    }
+    Serial.print(F("Total weight "));
+    Serial.println(totalWeight);
+
+    int rnd = random(totalWeight);
+    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+    {
+        if (rnd < static_cast<CatanLandType>(i).toWeight())
+        {
+            return static_cast<CatanLandType>(i);
+        }
+        rnd -= static_cast<CatanLandType>(i).toWeight();
+    }
+
+    return CatanLandType::NONE;
+}
+
 void CatanMode::init()
 {
     randomSeed(analogRead(SEED_PIN));
@@ -458,7 +481,7 @@ void CatanMode::setupGame()
         }
         if (numEmpty == 0 || numEmpty == 6 || ALL_LAND)
         {
-            catanState.landType = CatanLandType(random(CatanLandType::DESERT, CatanLandType::WHEAT + 1));
+            catanState.landType = CatanLandType::randomType();
         }
         else
         {

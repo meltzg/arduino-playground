@@ -397,7 +397,7 @@ void CatanMode::renderState()
         {
             byte ledPos = EDGE_LED_POS[i];
 
-            if (catanState.roadOwners[i] == UNOWNED)
+            if (catanState.roadOwners[i] == UNOWNED || catanState.landType == CatanLandType::OCEAN)
             {
                 ledColors[ledPos] = BLACK;
             }
@@ -684,16 +684,26 @@ void CatanMode::reconcileSettlementValidation(StateResponse response)
         Serial.println(F("Invalid settlement index"));
         return;
     }
-    response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
-    byte neighboringSettlement = (response.placementInfo.toValidate + 1) % NUM_SETTLEMENTS;
 
-    if (response.state.settlementOwners[neighboringSettlement] == UNOWNED)
+    byte neighboringSettlement = (response.placementInfo.toValidate + 1) % NUM_SETTLEMENTS;
+    Serial.print(F("validate settlement "));
+    Serial.println(response.placementInfo.toValidate);
+    if (response.state.id == catanState.id ||
+        response.state.id == neighborIds[response.placementInfo.toValidate] ||
+        response.state.id == neighborIds[response.placementInfo.toValidate + 1])
+    {
+        response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
+    }
+
+    if (response.placementInfo.validateStep == 3 || response.state.settlementOwners[neighboringSettlement] == UNOWNED)
     {
         bool hasNextTile = false;
         byte nextTileIdx;
-        for (; response.placementInfo.validateStep < 2 && !hasNextTile; response.placementInfo.validateStep++)
+        for (; response.placementInfo.validateStep < (3 - response.placementInfo.toValidate) && !hasNextTile; response.placementInfo.validateStep++)
         {
-            nextTileIdx = (response.placementInfo.validateStep + (response.placementInfo.toValidate * 3) + 5) % 6;
+            Serial.print(F("step "));
+            Serial.println(response.placementInfo.validateStep);
+            nextTileIdx = (response.placementInfo.validateStep + (response.placementInfo.toValidate * 2) + 5) % 6;
             Serial.print(F("nextTileIdx "));
             Serial.println(nextTileIdx);
             Serial.print(F("nextTileId "));
@@ -723,6 +733,8 @@ void CatanMode::reconcileSettlementValidation(StateResponse response)
     {
         Serial.print(F("Invalid settlment neighbor "));
         Serial.println(response.state.settlementOwners[neighboringSettlement]);
+        Serial.print(F("step "));
+        Serial.println(response.placementInfo.validateStep);
     }
 }
 
@@ -756,7 +768,7 @@ void CatanMode::reconcileRoadValidation(StateResponse response)
     bool isValid = false;
 
     // The city behind the road
-    int cityToCheck1 = (response.placementInfo.toValidate - 1) % 6;
+    int cityToCheck1 = (response.placementInfo.toValidate + 5) % 6;
     int neighborTile1 = cityToNeighbor(cityToCheck1);
     // The city ahead of the road
     int cityToCheck2 = response.placementInfo.toValidate % 6;
@@ -835,7 +847,7 @@ void CatanMode::reconcileRoadValidation(StateResponse response)
         break;
     case 3: // check roads on adjacent tile
         int roadToCheck1 = (response.placementInfo.toValidate + 4) % NUM_ROADS;
-        int roadToCheck2 = (response.placementInfo.toValidate - 4) % NUM_ROADS;
+        int roadToCheck2 = (response.placementInfo.toValidate + 2) % NUM_ROADS;
 
         Serial.print(F("road 1: "));
         Serial.println(roadToCheck1);

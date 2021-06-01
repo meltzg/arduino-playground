@@ -291,7 +291,10 @@ void CatanMode::updateRoads(uint16_t state)
             Serial.println(catanState.roadOwners[i]);
             if (catanState.roadOwners[i] == UNOWNED)
             {
-                setRoadOwner(SetRoadRequest(i, currentPlayer));
+                PlacementValidationInfo validation = PlacementValidationInfo::ROAD;
+                validation.toValidate = i;
+                validation.playerNumber = currentPlayer;
+                reconcileRoadValidation(StateResponse(validation, catanState));
             }
             else if (catanState.roadOwners[i] == currentPlayer)
             {
@@ -679,6 +682,7 @@ void CatanMode::reconcileSettlementValidation(StateResponse response)
     if (response.placementInfo.toValidate >= NUM_SETTLEMENTS)
     {
         Serial.println(F("Invalid settlement index"));
+        return;
     }
     response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
     byte neighboringSettlement = (response.placementInfo.toValidate + 1) % NUM_SETTLEMENTS;
@@ -705,6 +709,10 @@ void CatanMode::reconcileSettlementValidation(StateResponse response)
             Serial.println(F("request next tile"));
             sendStateRequest(neighborIds[nextTileIdx], response.placementInfo);
         }
+        else if (!response.placementInfo.onLand)
+        {
+            Serial.println(F("cannot place settlement on ocean"));
+        }
         else
         {
             Serial.println(F("Settlement place approved"));
@@ -718,10 +726,138 @@ void CatanMode::reconcileSettlementValidation(StateResponse response)
     }
 }
 
+int cityToNeighbor(int cityNumber)
+{
+    switch (cityNumber)
+    {
+    case 0:
+    case 1:
+        return -1;
+    case 2:
+        return 3;
+    case 3:
+    case 4:
+        return 4;
+    case 5:
+        return 5;
+    default:
+        return -1;
+    }
+}
+
 void CatanMode::reconcileRoadValidation(StateResponse response)
 {
     if (response.placementInfo.toValidate >= NUM_ROADS)
     {
         Serial.println(F("Invalid road index"));
+        return;
+    }
+
+    bool isValid = false;
+
+    // The city behind the road
+    int cityToCheck1 = (response.placementInfo.toValidate - 1) % 6;
+    int neighborTile1 = cityToNeighbor(cityToCheck1);
+    // The city ahead of the road
+    int cityToCheck2 = response.placementInfo.toValidate % 6;
+    int neighborTile2 = cityToNeighbor(cityToCheck2);
+
+    Serial.print(F("to validate: "));
+    Serial.println(response.placementInfo.toValidate);
+    Serial.print(F("city 1: "));
+    Serial.println(cityToCheck1);
+    Serial.print(F("tile 1: "));
+    Serial.println(neighborTile1);
+    Serial.print(F("city 2: "));
+    Serial.println(cityToCheck2);
+    Serial.print(F("tile 2: "));
+    Serial.println(neighborTile2);
+
+    Serial.print(F("road check "));
+    Serial.println(response.placementInfo.validateStep);
+
+    switch (response.placementInfo.validateStep)
+    {
+    case 0: // check roads on same tile
+        if (response.state.id == catanState.id)
+        {
+            if (catanState.roadOwners[(response.placementInfo.toValidate + 1) % NUM_ROADS] == response.placementInfo.playerNumber ||
+                catanState.roadOwners[(response.placementInfo.toValidate - 1) % NUM_ROADS] == response.placementInfo.playerNumber)
+            {
+                isValid = true;
+            }
+            else
+            {
+                response.placementInfo.validateStep++;
+                if (neighborTile1 < 0)
+                {
+                    reconcileRoadValidation(response);
+                }
+                else
+                {
+                    sendStateRequest(neighborIds[neighborTile1], response.placementInfo);
+                }
+            }
+        }
+        else
+        {
+            Serial.println(F("Invalid start state for road validation"));
+        }
+        break;
+    case 1: // check previous settlement
+        if (response.state.settlementOwners[cityToCheck1 % 2] == response.placementInfo.playerNumber)
+        {
+            isValid = true;
+        }
+        else
+        {
+            response.placementInfo.validateStep++;
+            if (neighborTile1 < 0)
+            {
+                reconcileRoadValidation(response);
+            }
+            else
+            {
+                sendStateRequest(neighborIds[neighborTile1], response.placementInfo);
+            }
+        }
+        break;
+    case 2: // check next settlement
+        if (response.state.settlementOwners[cityToCheck2 % 2] == response.placementInfo.playerNumber)
+        {
+            isValid = true;
+        }
+        else
+        {
+            response.placementInfo.validateStep++;
+            sendStateRequest(neighborIds[response.placementInfo.toValidate], response.placementInfo);
+        }
+        break;
+    case 3: // check roads on adjacent tile
+        int roadToCheck1 = (response.placementInfo.toValidate + 4) % NUM_ROADS;
+        int roadToCheck2 = (response.placementInfo.toValidate - 4) % NUM_ROADS;
+
+        Serial.print(F("road 1: "));
+        Serial.println(roadToCheck1);
+        Serial.print(F("road 2: "));
+        Serial.println(roadToCheck2);
+
+        if (response.state.roadOwners[roadToCheck1] == response.placementInfo.playerNumber ||
+            response.state.roadOwners[roadToCheck2] == response.placementInfo.playerNumber)
+        {
+            isValid = true;
+        }
+        else
+        {
+            Serial.println(F("Invalid road placement"));
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (isValid)
+    {
+        setRoadOwner(SetRoadRequest(response.placementInfo.toValidate, response.placementInfo.playerNumber));
     }
 }

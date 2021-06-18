@@ -824,13 +824,13 @@ void CatanMode::reconcileRoadValidation(StateResponse response)
         else
         {
             response.placementInfo.validateStep++;
-            if (neighborTile1 < 0)
+            if (neighborTile2 < 0)
             {
                 reconcileRoadValidation(response);
             }
             else
             {
-                sendStateRequest(neighborIds[neighborTile1], response.placementInfo);
+                sendStateRequest(neighborIds[neighborTile2], response.placementInfo);
             }
         }
         break;

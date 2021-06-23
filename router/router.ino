@@ -165,7 +165,7 @@ void processMessage(Stream *srcPort, const Message &message)
         response.source = NODE_ID;
         response.dest = message.source;
         response.payloadSize = sizeof(nodeMessage);
-        response.sysCommand = ROUTER_ADD_NODE;
+        response.sysCommand = ROUTER_ADD_NODE | (message.sysCommand & ROUTER_SYS_COMMAND);
         response.body = (byte *)nodeMessage;
         routeMessage(response);
         return;
@@ -185,22 +185,20 @@ void processMessage(Stream *srcPort, const Message &message)
     if (message.sysCommand & ROUTER_GET_DISCOVERY_STATUS)
     {
         Serial.println(F("Get discovery stats"));
-        byte discoStats[sizeof(bool) + sizeof(size_t) * 2] = {0};
 
         DiscoveryStats stats = pathfinder.getDiscoveryStats();
         bool discoveryDone = stats.discoveryDone;
         size_t numNodes = stats.numNodes;
         size_t numEdges = stats.numEdges;
 
-        memcpy(discoStats, &discoveryDone, sizeof(bool));
-        memcpy(discoStats + sizeof(bool), &numNodes, sizeof(size_t));
-        memcpy(discoStats + sizeof(bool) + sizeof(size_t), &numEdges, sizeof(size_t));
+        Serial.print(F("sizeof discover stat "));
+        Serial.println(sizeof(stats));
         Message response;
         response.source = NODE_ID;
         response.dest = message.source;
-        response.payloadSize = sizeof(discoStats);
+        response.payloadSize = sizeof(DiscoveryStats);
         response.sysCommand = 0;
-        response.body = discoStats;
+        response.body = (char *)(&stats);
         routeMessage(response);
         return;
     }
@@ -297,9 +295,6 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
 
     char buf[PRINT_BUF_SIZE];
 
-    // Add edges to pathfinder
-    pathfinder.addNode(src, neighbors, numNeighbors);
-
     if (!doDistribute)
     {
         return;
@@ -310,30 +305,34 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     Message message;
     message.source = NODE_ID;
     message.payloadSize = (numNeighbors + 1) * sizeof(NodeId_t);
-    message.sysCommand = ROUTER_ADD_NODE;
+    message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
 
     Set<NodeId_t> uninitialized;
-    if (!pathfinder.getInitialized(src))
-    {
-        uninitialized.pushBack(src);
-    }
 
     NodeId_t nodeForward[numNeighbors + 1];
     nodeForward[0] = src;
     for (int i = 0; i < numNeighbors; i++)
     {
         nodeForward[i + 1] = neighbors[i];
-        if (neighbors[i] != EMPTY && !pathfinder.getInitialized(neighbors[i]))
+        if (neighbors[i] != EMPTY && pathfinder.getNextStep(NODE_ID, neighbors[i]) == EMPTY)
         {
+            Serial.print(F("B must initialize"));
+            Serial.println(src, HEX);
             uninitialized.pushBack(neighbors[i]);
         }
     }
     message.body = (byte *)nodeForward;
 
+
+    // Add edges to pathfinder
+    pathfinder.addNode(src, neighbors, numNeighbors);
+
     for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext())
     {
-        if (distribId == NODE_ID || distribId == src || !pathfinder.getInitialized(distribId))
+        if (distribId == NODE_ID || distribId == src || uninitialized.contains(distribId))
         {
+            Serial.print(F("skip update"));
+            Serial.println(distribId, HEX);
             continue;
         }
         message.dest = distribId;
@@ -365,7 +364,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         message.source = NODE_ID;
         message.dest = src;
         message.payloadSize = numAdj * sizeof(NodeId_t);
-        message.sysCommand = ROUTER_ADD_NODE;
+        message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
         message.body = (byte *)nodeMessage;
 
         if (distribId == NODE_ID)
@@ -382,11 +381,6 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         }
     }
 
-    for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext();)
-    {
-        pathfinder.setInitialized(iter.next());
-    }
-
     NodeId_t next = pathfinder.getNextNeighborRequest();
     if (next != EMPTY)
     {
@@ -397,7 +391,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         neighborRequest.source = NODE_ID;
         neighborRequest.dest = next;
         neighborRequest.payloadSize = 0;
-        neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
+        neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS | ROUTER_SYS_COMMAND;
         neighborRequest.body = NULL;
         routeMessage(neighborRequest);
     }
@@ -421,8 +415,6 @@ void startDiscovery()
     {
         initialNode[i + 1] = neighborIds[i];
     }
-
-    pathfinder.setInitialized(NODE_ID);
 
     updateNeighbors(NODE_ID, neighborIds, 6);
 }

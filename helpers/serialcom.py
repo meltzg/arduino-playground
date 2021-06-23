@@ -41,6 +41,14 @@ class Router(object):
     def neighbors(self):
         return self.get_neighbors(self.id)
 
+    @property
+    def discover_stats(self):
+        self.send_message(self.id, 0x10, b"")
+        sleep(0.25)
+        resp = self._conn.read_all()
+        print(resp)
+        return resp[-ID_SIZE:]
+
     def get_neighbors(self, dest):
         self.send_message(dest, 0x02, b"")
         resp = self._conn.read(10000)

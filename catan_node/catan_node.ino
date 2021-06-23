@@ -51,7 +51,7 @@ CatanMode catan(disp, leds, btns, netPort);
 
 // State information
 Mode *mode = NULL;
-byte modeIdx = MODE_CATAN;
+byte modeIdx = MODE_NETWORK_TEST;
 unsigned long previousMillis = 0;
 uint16_t previousState = 0;
 

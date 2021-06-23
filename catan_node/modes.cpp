@@ -174,6 +174,25 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
     }
 }
 
+void NetworkTestMode::handleDiscoveryRequest()
+{
+    Message neighborRequest;
+    neighborRequest.source = myId;
+    neighborRequest.dest = myId;
+    neighborRequest.payloadSize = 0;
+    neighborRequest.sysCommand = ROUTER_START_DISCOVERY;
+    neighborRequest.body = NULL;
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, neighborRequest);
+    }
+    else
+    {
+        disp.setChars("Failure ");
+    }
+}
+
 CatanLandType CatanLandType::randomType()
 {
     int totalWeight = 0;

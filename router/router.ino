@@ -220,8 +220,27 @@ void routeMessage(const Message &message)
         writeMessage(&Serial, message);
         return;
     }
-    NodeId_t nextStep = message.dest == NODE_ID ? NODE_ID : pathfinder.getNextStep(NODE_ID, message.dest);
+    
+    NodeId_t nextStep = EMPTY;
+    for (int i = 0; i < 6; i++)
+    {
+        if (neighborIds[i] == message.dest)
+        {
+            nextStep = message.dest;
+        }
+    }
 
+    if (nextStep == EMPTY)
+    {
+        if (message.dest == NODE_ID)
+        {
+            nextStep = NODE_ID;
+        }
+        else{
+            nextStep = pathfinder.getNextStep(NODE_ID, message.dest);
+        }
+    }
+    
     if (nextStep == EMPTY)
     {
         Serial.println(F("path not found"));
@@ -279,8 +298,6 @@ void resetNeighbors()
         Serial.print(F(", "));
     }
 
-    pathfinder.addNode(NODE_ID, neighborIds, 6);
-
     Serial.println();
 }
 
@@ -300,13 +317,6 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         return;
     }
 
-    Serial.println(F("Send new node to existing"));
-    pathfinder.resetIterator(NODE_ID);
-    Message message;
-    message.source = NODE_ID;
-    message.payloadSize = (numNeighbors + 1) * sizeof(NodeId_t);
-    message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
-
     Set<NodeId_t> uninitialized;
 
     NodeId_t nodeForward[numNeighbors + 1];
@@ -321,12 +331,16 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
             uninitialized.pushBack(neighbors[i]);
         }
     }
+    
+    Message message;
+    message.source = NODE_ID;
+    message.payloadSize = (numNeighbors + 1) * sizeof(NodeId_t);
+    message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
     message.body = (byte *)nodeForward;
-
 
     // Add edges to pathfinder
     pathfinder.addNode(src, neighbors, numNeighbors);
-
+    pathfinder.resetIterator(NODE_ID);
     for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext())
     {
         if (distribId == NODE_ID || distribId == src || uninitialized.contains(distribId))
@@ -335,6 +349,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
             Serial.println(distribId, HEX);
             continue;
         }
+        Serial.println(F("Send new node to existing"));
         message.dest = distribId;
         routeMessage(message);
     }
@@ -385,7 +400,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     if (next != EMPTY)
     {
         Serial.print(F("Sending get neighbor request: "));
-        Serial.println(next);
+        Serial.println(next, HEX);
 
         Message neighborRequest;
         neighborRequest.source = NODE_ID;

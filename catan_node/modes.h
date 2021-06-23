@@ -30,7 +30,7 @@
 // Netowrk test
 #define BTN_ID 9
 #define BTN_NEIGHBORS 1
-#define BTN_DISCOVER 10
+#define BTN_DISCOVER 3
 
 // Catan
 #define ALL_LAND false
@@ -116,7 +116,7 @@ private:
     void handleNodeResponse(const Message &message);
     void handleIdRequest();
     void handleNeighborRequest(NodeId_t destination);
-    void handleDiscoveryRequest() {}
+    void handleDiscoveryRequest();
 };
 
 class CatanLandType

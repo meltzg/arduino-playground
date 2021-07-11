@@ -112,11 +112,15 @@ private:
     NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
     char displayMessage[100] = {0};
+    unsigned long previousDiscoveryMillis = 0;
+    bool pollDiscovery = false;
 
     void handleNodeResponse(const Message &message);
+    void handleDiscoveryStatsResponse(const Message &message);
     void sendIdRequest();
     void sendNeighborRequest(NodeId_t destination);
     void sendDiscoveryRequest();
+    void sendDiscoveryStatsRequest();
 };
 
 class CatanLandType

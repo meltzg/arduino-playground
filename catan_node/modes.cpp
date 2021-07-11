@@ -1,4 +1,5 @@
 #include "modes.h"
+#include "PathFinder.h"
 
 const byte Mode::EDGE_LED_POS[6] = {0, 3, 6, 7, 8, 9};
 const byte Mode::EDGE_BTN_POS[6] = {0, 2, 4, 5, 6, 7};
@@ -84,6 +85,10 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
 
         previousState = state;
     }
+    if (pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
+    {
+        sendDiscoveryStatsRequest();
+    }
 }
 
 void NetworkTestMode::processMessage(const Message &message)
@@ -91,6 +96,10 @@ void NetworkTestMode::processMessage(const Message &message)
     if (message.sysCommand & ROUTER_ADD_NODE)
     {
         handleNodeResponse(message);
+    }
+    else if (message.sysCommand & ROUTER_RESPONSE_DISCOVERY_STATUS)
+    {
+        handleDiscoveryStatsResponse(message);
     }
 }
 
@@ -128,6 +137,19 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
     leds.setState(ledColors);
 }
 
+void NetworkTestMode::handleDiscoveryStatsResponse(const Message &message)
+{
+    Serial.println(F("handle disc stat resp"));
+    DiscoveryStats *stats = (DiscoveryStats *)message.body;
+    sprintf(displayMessage, "D: %d, N: %d, E: %d    ", stats->discoveryDone, stats->numNodes, stats->numEdges);
+    disp.setChars(displayMessage);
+    Serial.println(displayMessage);
+    if (stats->discoveryDone)
+    {
+        pollDiscovery = false;
+    }
+}
+
 void NetworkTestMode::sendIdRequest()
 {
     Message idRequest;
@@ -145,7 +167,7 @@ void NetworkTestMode::sendIdRequest()
     }
     else
     {
-        disp.setChars("Failure ");
+        disp.setChars("ID req Failure ");
         return;
     }
 
@@ -170,7 +192,7 @@ void NetworkTestMode::sendNeighborRequest(NodeId_t destination)
     }
     else
     {
-        disp.setChars("Failure ");
+        disp.setChars("N req Failure ");
     }
 }
 
@@ -186,10 +208,31 @@ void NetworkTestMode::sendDiscoveryRequest()
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
         writeMessage(&netPort, neighborRequest);
+        pollDiscovery = true;
     }
     else
     {
-        disp.setChars("Failure ");
+        disp.setChars("D req Failure ");
+    }
+}
+
+void NetworkTestMode::sendDiscoveryStatsRequest()
+{
+    Message neighborRequest;
+    neighborRequest.source = myId;
+    neighborRequest.dest = myId;
+    neighborRequest.payloadSize = 0;
+    neighborRequest.sysCommand = ROUTER_GET_DISCOVERY_STATUS;
+    neighborRequest.body = NULL;
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, neighborRequest);
+        previousDiscoveryMillis = millis();
+    }
+    else
+    {
+        disp.setChars("D stat Failure ");
     }
 }
 

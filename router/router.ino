@@ -198,7 +198,7 @@ void processMessage(Stream *srcPort, const Message &message)
         response.source = NODE_ID;
         response.dest = message.source;
         response.payloadSize = sizeof(DiscoveryStats);
-        response.sysCommand = 0;
+        response.sysCommand = ROUTER_RESPONSE_DISCOVERY_STATUS;
         response.body = (char *)(&stats);
         routeMessage(response);
         return;

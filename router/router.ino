@@ -181,6 +181,7 @@ void processMessage(Stream *srcPort, const Message &message)
     {
         Serial.println(F("Start Discovery"));
         startDiscovery();
+        return;
     }
     if (message.sysCommand & ROUTER_GET_DISCOVERY_STATUS)
     {
@@ -314,6 +315,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
 
     if (!doDistribute)
     {
+        pathfinder.addNode(src, neighbors, numNeighbors);
         return;
     }
 
@@ -324,10 +326,10 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     for (int i = 0; i < numNeighbors; i++)
     {
         nodeForward[i + 1] = neighbors[i];
-        if (neighbors[i] != EMPTY && pathfinder.getNextStep(NODE_ID, neighbors[i]) == EMPTY)
+        if (neighbors[i] != EMPTY && pathfinder.getNextStep(NODE_ID, neighbors[i]) == EMPTY && neighbors[i] != NODE_ID)
         {
-            Serial.print(F("B must initialize"));
-            Serial.println(src, HEX);
+            Serial.print(F("B must initialize "));
+            Serial.println(neighbors[i], HEX);
             uninitialized.pushBack(neighbors[i]);
         }
     }

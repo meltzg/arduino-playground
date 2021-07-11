@@ -114,9 +114,9 @@ private:
     char displayMessage[100] = {0};
 
     void handleNodeResponse(const Message &message);
-    void handleIdRequest();
-    void handleNeighborRequest(NodeId_t destination);
-    void handleDiscoveryRequest();
+    void sendIdRequest();
+    void sendNeighborRequest(NodeId_t destination);
+    void sendDiscoveryRequest();
 };
 
 class CatanLandType

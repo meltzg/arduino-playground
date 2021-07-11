@@ -60,15 +60,15 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
     {
         if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
         {
-            handleIdRequest();
+            sendIdRequest();
         }
         else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
         {
-            handleNeighborRequest(myId);
+            sendNeighborRequest(myId);
         }
         else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
         {
-            handleDiscoveryRequest();
+            sendDiscoveryRequest();
         }
         else
         {
@@ -76,7 +76,7 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
             {
                 if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((state >> EDGE_BTN_POS[i]) & 1) == 0 && neighborIds[i] != EMPTY)
                 {
-                    handleNeighborRequest(neighborIds[i]);
+                    sendNeighborRequest(neighborIds[i]);
                     break;
                 }
             }
@@ -128,7 +128,7 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
     leds.setState(ledColors);
 }
 
-void NetworkTestMode::handleIdRequest()
+void NetworkTestMode::sendIdRequest()
 {
     Message idRequest;
     idRequest.source = EMPTY;
@@ -155,7 +155,7 @@ void NetworkTestMode::handleIdRequest()
     Serial.println(displayMessage);
 }
 
-void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
+void NetworkTestMode::sendNeighborRequest(NodeId_t destination)
 {
     Message neighborRequest;
     neighborRequest.source = myId;
@@ -174,7 +174,7 @@ void NetworkTestMode::handleNeighborRequest(NodeId_t destination)
     }
 }
 
-void NetworkTestMode::handleDiscoveryRequest()
+void NetworkTestMode::sendDiscoveryRequest()
 {
     Message neighborRequest;
     neighborRequest.source = myId;

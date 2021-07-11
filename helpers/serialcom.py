@@ -23,7 +23,7 @@ class Router(object):
             + HARD_PORT
             + dest
             + to_bytes(len(payload), 2)
-            + to_bytes(command, 1)
+            + to_bytes(command, 2)
             + payload
         )
         print("sending message: ", message)

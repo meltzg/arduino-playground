@@ -316,6 +316,9 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     if (!doDistribute)
     {
         pathfinder.addNode(src, neighbors, numNeighbors);
+        DiscoveryStats stats = pathfinder.getDiscoveryStats();
+        sprintf(buf, "D: %d, N: %d, E: %d    ", stats.discoveryDone, stats.numNodes, stats.numEdges);
+        Serial.println(buf);
         return;
     }
 

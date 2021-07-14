@@ -61,6 +61,7 @@ void setup()
     startPorts();
 
     Serial.println(F("starting"));
+    logDiscoveryStats();
 }
 
 void loop()
@@ -127,6 +128,14 @@ void stopPorts()
     PORT_4.end();
     PORT_5.end();
     PORT_A.end();
+}
+
+void logDiscoveryStats()
+{
+    DiscoveryStats stats = pathfinder.getDiscoveryStats();
+    char buf[50];
+    sprintf(buf, "D: %d, N: %d, E: %d    ", stats.discoveryDone, stats.numNodes, stats.numEdges);
+    Serial.println(buf);
 }
 
 void processMessage(Stream *srcPort, const Message &message)
@@ -221,7 +230,7 @@ void routeMessage(const Message &message)
         writeMessage(&Serial, message);
         return;
     }
-    
+
     NodeId_t nextStep = EMPTY;
     for (int i = 0; i < 6; i++)
     {
@@ -237,11 +246,12 @@ void routeMessage(const Message &message)
         {
             nextStep = NODE_ID;
         }
-        else{
+        else
+        {
             nextStep = pathfinder.getNextStep(NODE_ID, message.dest);
         }
     }
-    
+
     if (nextStep == EMPTY)
     {
         Serial.println(F("path not found"));
@@ -316,9 +326,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     if (!doDistribute)
     {
         pathfinder.addNode(src, neighbors, numNeighbors);
-        DiscoveryStats stats = pathfinder.getDiscoveryStats();
-        sprintf(buf, "D: %d, N: %d, E: %d    ", stats.discoveryDone, stats.numNodes, stats.numEdges);
-        Serial.println(buf);
+        logDiscoveryStats();
         return;
     }
 
@@ -336,7 +344,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
             uninitialized.pushBack(neighbors[i]);
         }
     }
-    
+
     Message message;
     message.source = NODE_ID;
     message.payloadSize = (numNeighbors + 1) * sizeof(NodeId_t);
@@ -361,43 +369,46 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
 
     Serial.println(F("Send entire graph to new nodes"));
     pathfinder.resetIterator(NODE_ID);
-    for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext())
+    if (!uninitialized.isEmpty())
     {
-        sprintf(buf, "creating add node message for %hx: ", distribId);
-        Serial.print(buf);
-        Set<NodeId_t> adj;
-        pathfinder.getAdjacent(distribId, adj);
-        ListIterator<NodeId_t> adjIter(adj);
-
-        int numAdj = 1 + adj.count;
-        NodeId_t nodeMessage[numAdj] = {0};
-        nodeMessage[0] = distribId;
-        for (int i = 1; adjIter.hasNext(); i++)
+        for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext())
         {
-            nodeMessage[i] = adjIter.next();
-            sprintf(buf, "%hx, ", nodeMessage[i]);
+            sprintf(buf, "creating add node message for %hx: ", distribId);
             Serial.print(buf);
-        }
-        Serial.println();
+            Set<NodeId_t> adj;
+            pathfinder.getAdjacent(distribId, adj);
+            ListIterator<NodeId_t> adjIter(adj);
 
-        Message message;
-        message.source = NODE_ID;
-        message.dest = src;
-        message.payloadSize = numAdj * sizeof(NodeId_t);
-        message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
-        message.body = (byte *)nodeMessage;
+            int numAdj = 1 + adj.count;
+            NodeId_t nodeMessage[numAdj] = {0};
+            nodeMessage[0] = distribId;
+            for (int i = 1; adjIter.hasNext(); i++)
+            {
+                nodeMessage[i] = adjIter.next();
+                sprintf(buf, "%hx, ", nodeMessage[i]);
+                Serial.print(buf);
+            }
+            Serial.println();
 
-        if (distribId == NODE_ID)
-        {
-            // clear destination's topology to ensure it always has the most correct graph
-            // Needed in the case of rediscovery
-            Serial.println(F("Destination will clear its topology"));
-            message.sysCommand |= ROUTER_CLEAR_TOPOLOGY;
-        }
-        for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext();)
-        {
-            message.dest = iter.next();
-            routeMessage(message);
+            Message message;
+            message.source = NODE_ID;
+            message.dest = src;
+            message.payloadSize = numAdj * sizeof(NodeId_t);
+            message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
+            message.body = (byte *)nodeMessage;
+
+            if (distribId == NODE_ID)
+            {
+                // clear destination's topology to ensure it always has the most correct graph
+                // Needed in the case of rediscovery
+                Serial.println(F("Destination will clear its topology"));
+                message.sysCommand |= ROUTER_CLEAR_TOPOLOGY;
+            }
+            for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext();)
+            {
+                message.dest = iter.next();
+                routeMessage(message);
+            }
         }
     }
 
@@ -420,8 +431,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         Serial.println(F("No next neighbor"));
     }
 
-    sprintf(buf, "Total Nodes: %d", pathfinder.getDiscoveryStats().numNodes);
-    Serial.println(buf);
+    logDiscoveryStats();
 }
 
 void startDiscovery()

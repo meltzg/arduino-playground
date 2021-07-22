@@ -58,8 +58,29 @@ typedef uint16_t NodeId_t;
 typedef uint16_t MessageSize_t;
 typedef uint16_t SysCommand_t;
 
-struct Message
+class Message
 {
+public:
+    Message(NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *body) : source(source), dest(dest), payloadSize(payloadSize), sysCommand(sysCommand), body(body) {}
+    Message() {}
+
+    NodeId_t getSource() { return source; }
+    void setSource(NodeId_t source) { this->source = source; }
+    
+    NodeId_t getDest() { return dest; }
+    void setDest(NodeId_t dest) { this->dest = dest; }
+    
+    MessageSize_t getPayloadSize() { return payloadSize; }
+    
+    SysCommand_t getSysCommand() { return sysCommand; }
+    void setSysCommand(SysCommand_t sysCommand) { this->sysCommand = sysCommand; }
+    
+    byte *getBody() { return body; }
+    void setBody(byte *body) { this->body = body; }
+
+    void free();
+
+private:
     NodeId_t source = EMPTY;
     NodeId_t dest = EMPTY;
     MessageSize_t payloadSize = 0;

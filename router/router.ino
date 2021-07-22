@@ -70,10 +70,9 @@ void loop()
     if (Serial.available() > 0)
     {
         Message message = readMessage(&Serial);
-        message.source = PORT_H;
+        message.setSource(PORT_H);
         processMessage(&Serial, message);
-        delete[] message.body;
-        message.body = NULL;
+        message.free();
     }
 
     for (int i = 0; i < 6; i++)
@@ -84,11 +83,10 @@ void loop()
         {
             Serial.println(F("recieving message"));
             Message message = readMessage(port);
-            Serial.write((char *)message.body, message.payloadSize);
+            Serial.write((char *)message.getBody(), message.getPayloadSize());
             Serial.println();
             processMessage(port, message);
-            delete[] message.body;
-            message.body = NULL;
+            message.free();
         }
     }
 
@@ -97,12 +95,11 @@ void loop()
     {
         Serial.println(F("from user"));
         Message message = readMessage(&PORT_A);
-        message.source = NODE_ID;
-        Serial.write((char *)message.body, message.payloadSize);
+        message.setSource(NODE_ID);
+        Serial.write((char *)message.getBody(), message.getPayloadSize());
         Serial.println();
         processMessage(&PORT_A, message);
-        delete[] message.body;
-        message.body = NULL;
+        message.free();
     }
 }
 
@@ -141,27 +138,27 @@ void logDiscoveryStats()
 void processMessage(Stream *srcPort, const Message &message)
 {
     char buf[PRINT_BUF_SIZE];
-    if (message.sysCommand & ROUTER_GET_ID)
+    if (message.getSysCommand() & ROUTER_GET_ID)
     {
         // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
-        sprintf(buf, "Node ID requested by %hx", message.source);
+        sprintf(buf, "Node ID requested by %hx", message.getSource());
         Serial.println(buf);
         srcPort->write((char *)&NODE_ID, sizeof(NODE_ID));
         return;
     }
-    if (message.dest != NODE_ID)
+    if (message.getDest() != NODE_ID)
     {
         routeMessage(message);
         return;
     }
-    if (message.sysCommand & ROUTER_CLEAR_TOPOLOGY)
+    if (message.getSysCommand() & ROUTER_CLEAR_TOPOLOGY)
     {
         Serial.println(F("Clear topology"));
         pathfinder.clearTopology();
     }
-    if (message.sysCommand & ROUTER_GET_NEIGHBORS)
+    if (message.getSysCommand() & ROUTER_GET_NEIGHBORS)
     {
-        sprintf(buf, "Node Neighbors requested by %hx", message.source);
+        sprintf(buf, "Node Neighbors requested by %hx", message.getSource());
         Serial.println(buf);
         resetNeighbors();
         NodeId_t nodeMessage[7] = {0};
@@ -170,29 +167,29 @@ void processMessage(Stream *srcPort, const Message &message)
         {
             nodeMessage[i + 1] = neighborIds[i];
         }
-        Message response;
-        response.source = NODE_ID;
-        response.dest = message.source;
-        response.payloadSize = sizeof(nodeMessage);
-        response.sysCommand = ROUTER_ADD_NODE | (message.sysCommand & ROUTER_SYS_COMMAND);
-        response.body = (byte *)nodeMessage;
+        Message response(
+            NODE_ID,
+            message.getSource(),
+            sizeof(nodeMessage),
+            ROUTER_ADD_NODE | (message.getSysCommand() & ROUTER_SYS_COMMAND),
+            (byte *)nodeMessage);
         routeMessage(response);
         return;
     }
-    if (message.sysCommand & ROUTER_ADD_NODE)
+    if (message.getSysCommand() & ROUTER_ADD_NODE)
     {
-        sprintf(buf, "Adding node to topology", message.source);
+        sprintf(buf, "Adding node to topology", message.getSource());
         Serial.println(buf);
-        NodeId_t *nodeIds = (NodeId_t *)message.body;
-        updateNeighbors(nodeIds[0], nodeIds + 1, (message.payloadSize / sizeof(NodeId_t)) - 1);
+        NodeId_t *nodeIds = (NodeId_t *)message.getBody();
+        updateNeighbors(nodeIds[0], nodeIds + 1, (message.getPayloadSize() / sizeof(NodeId_t)) - 1);
     }
-    if (message.sysCommand & ROUTER_START_DISCOVERY)
+    if (message.getSysCommand() & ROUTER_START_DISCOVERY)
     {
         Serial.println(F("Start Discovery"));
         startDiscovery();
         return;
     }
-    if (message.sysCommand & ROUTER_GET_DISCOVERY_STATUS)
+    if (message.getSysCommand() & ROUTER_GET_DISCOVERY_STATUS)
     {
         Serial.println(F("Get discovery stats"));
 
@@ -203,16 +200,16 @@ void processMessage(Stream *srcPort, const Message &message)
 
         Serial.print(F("sizeof discover stat "));
         Serial.println(sizeof(stats));
-        Message response;
-        response.source = NODE_ID;
-        response.dest = message.source;
-        response.payloadSize = sizeof(DiscoveryStats);
-        response.sysCommand = ROUTER_RESPONSE_DISCOVERY_STATUS;
-        response.body = (char *)(&stats);
+        Message response(
+            NODE_ID,
+            message.getSource(),
+            sizeof(DiscoveryStats),
+            ROUTER_RESPONSE_DISCOVERY_STATUS,
+            (char *)(&stats));
         routeMessage(response);
         return;
     }
-    if (message.sysCommand & ROUTER_SYS_COMMAND)
+    if (message.getSysCommand() & ROUTER_SYS_COMMAND)
     {
         // return without sending message to actor
         return;
@@ -223,9 +220,9 @@ void processMessage(Stream *srcPort, const Message &message)
 void routeMessage(const Message &message)
 {
     char buf[PRINT_BUF_SIZE];
-    sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", message.source, message.dest, NODE_ID, message.payloadSize);
+    sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", message.getSource(), message.getDest(), NODE_ID, message.getPayloadSize());
     Serial.println(buf);
-    if (message.dest == PORT_H)
+    if (message.getDest() == PORT_H)
     {
         writeMessage(&Serial, message);
         return;
@@ -234,21 +231,22 @@ void routeMessage(const Message &message)
     NodeId_t nextStep = EMPTY;
     for (int i = 0; i < 6; i++)
     {
-        if (neighborIds[i] == message.dest)
+        if (neighborIds[i] == message.getDest())
         {
-            nextStep = message.dest;
+            nextStep = message.getDest();
+            break;
         }
     }
 
     if (nextStep == EMPTY)
     {
-        if (message.dest == NODE_ID)
+        if (message.getDest() == NODE_ID)
         {
             nextStep = NODE_ID;
         }
         else
         {
-            nextStep = pathfinder.getNextStep(NODE_ID, message.dest);
+            nextStep = pathfinder.getNextStep(NODE_ID, message.getDest());
         }
     }
 
@@ -285,12 +283,12 @@ void routeMessage(const Message &message)
 void resetNeighbors()
 {
     Serial.println(F("Reset Edges"));
-    Message idRequest;
-    idRequest.source = NODE_ID;
-    idRequest.dest = EMPTY;
-    idRequest.payloadSize = 0;
-    idRequest.sysCommand = ROUTER_GET_ID;
-    idRequest.body = NULL;
+    Message idRequest(
+        NODE_ID,
+        EMPTY,
+        0,
+        ROUTER_GET_ID,
+        NULL);
     for (int i = 0; i < 6; i++)
     {
         NEIGHBORS[i]->listen();
@@ -345,11 +343,12 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         }
     }
 
-    Message message;
-    message.source = NODE_ID;
-    message.payloadSize = (numNeighbors + 1) * sizeof(NodeId_t);
-    message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
-    message.body = (byte *)nodeForward;
+    Message message(
+        NODE_ID,
+        EMPTY,
+        (numNeighbors + 1) * sizeof(NodeId_t),
+        ROUTER_ADD_NODE | ROUTER_SYS_COMMAND,
+        (byte *)nodeForward);
 
     // Add edges to pathfinder
     pathfinder.addNode(src, neighbors, numNeighbors);
@@ -363,7 +362,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
             continue;
         }
         Serial.println(F("Send new node to existing"));
-        message.dest = distribId;
+        message.setDest(distribId);
         routeMessage(message);
     }
 
@@ -390,23 +389,23 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
             }
             Serial.println();
 
-            Message message;
-            message.source = NODE_ID;
-            message.dest = src;
-            message.payloadSize = numAdj * sizeof(NodeId_t);
-            message.sysCommand = ROUTER_ADD_NODE | ROUTER_SYS_COMMAND;
-            message.body = (byte *)nodeMessage;
+            Message message(
+                NODE_ID,
+                src,
+                numAdj * sizeof(NodeId_t),
+                ROUTER_ADD_NODE | ROUTER_SYS_COMMAND,
+                (byte *)nodeMessage);
 
             if (distribId == NODE_ID)
             {
                 // clear destination's topology to ensure it always has the most correct graph
                 // Needed in the case of rediscovery
                 Serial.println(F("Destination will clear its topology"));
-                message.sysCommand |= ROUTER_CLEAR_TOPOLOGY;
+                message.setSysCommand(message.getSysCommand() | ROUTER_CLEAR_TOPOLOGY);
             }
             for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext();)
             {
-                message.dest = iter.next();
+                message.setDest(iter.next());
                 routeMessage(message);
             }
         }
@@ -418,12 +417,13 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         Serial.print(F("Sending get neighbor request: "));
         Serial.println(next, HEX);
 
-        Message neighborRequest;
-        neighborRequest.source = NODE_ID;
-        neighborRequest.dest = next;
-        neighborRequest.payloadSize = 0;
-        neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS | ROUTER_SYS_COMMAND;
-        neighborRequest.body = NULL;
+        Message neighborRequest(
+            NODE_ID,
+            next,
+            0,
+            ROUTER_GET_NEIGHBORS | ROUTER_SYS_COMMAND,
+            NULL);
+
         routeMessage(neighborRequest);
     }
     else

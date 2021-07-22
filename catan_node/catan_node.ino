@@ -86,8 +86,7 @@ void loop()
     {
         Message message = readMessage(&netPort);
         mode->processMessage(message);
-        delete[] message.body;
-        message.body = NULL;
+        message.free();
     }
     mode->processState(currentMillis, btnState);
 

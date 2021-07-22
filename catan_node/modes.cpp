@@ -93,11 +93,11 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
 
 void NetworkTestMode::processMessage(const Message &message)
 {
-    if (message.sysCommand & ROUTER_ADD_NODE)
+    if (message.getSysCommand() & ROUTER_ADD_NODE)
     {
         handleNodeResponse(message);
     }
-    else if (message.sysCommand & ROUTER_RESPONSE_DISCOVERY_STATUS)
+    else if (message.getSysCommand() & ROUTER_RESPONSE_DISCOVERY_STATUS)
     {
         handleDiscoveryStatsResponse(message);
     }
@@ -109,18 +109,18 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
     sprintf(
         displayMessage,
         "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
-        ((NodeId_t *)(message.body))[1],
-        ((NodeId_t *)(message.body))[2],
-        ((NodeId_t *)(message.body))[3],
-        ((NodeId_t *)(message.body))[4],
-        ((NodeId_t *)(message.body))[5],
-        ((NodeId_t *)(message.body))[6]);
+        ((NodeId_t *)(message.getBody()))[1],
+        ((NodeId_t *)(message.getBody()))[2],
+        ((NodeId_t *)(message.getBody()))[3],
+        ((NodeId_t *)(message.getBody()))[4],
+        ((NodeId_t *)(message.getBody()))[5],
+        ((NodeId_t *)(message.getBody()))[6]);
 
     disp.setChars(displayMessage);
     Serial.println(displayMessage);
     for (int i = 0; i < 6; i++)
     {
-        NodeId_t id = ((NodeId_t *)(message.body))[i + 1];
+        NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
         if (id == EMPTY)
         {
             ledColors[EDGE_LED_POS[i]] = RED;
@@ -129,7 +129,7 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
         {
             ledColors[EDGE_LED_POS[i]] = GREEN;
         }
-        if (message.source == myId)
+        if (message.getSource() == myId)
         {
             neighborIds[i] = id;
         }
@@ -140,7 +140,7 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
 void NetworkTestMode::handleDiscoveryStatsResponse(const Message &message)
 {
     Serial.println(F("handle disc stat resp"));
-    DiscoveryStats *stats = (DiscoveryStats *)message.body;
+    DiscoveryStats *stats = (DiscoveryStats *)message.getBody();
     sprintf(displayMessage, "D: %d, N: %d, E: %d    ", stats->discoveryDone, stats->numNodes, stats->numEdges);
     disp.setChars(displayMessage);
     Serial.println(displayMessage);
@@ -152,12 +152,12 @@ void NetworkTestMode::handleDiscoveryStatsResponse(const Message &message)
 
 void NetworkTestMode::sendIdRequest()
 {
-    Message idRequest;
-    idRequest.source = EMPTY;
-    idRequest.dest = EMPTY;
-    idRequest.payloadSize = 0;
-    idRequest.sysCommand = ROUTER_GET_ID;
-    idRequest.body = NULL;
+    Message idRequest(
+        EMPTY,
+        EMPTY,
+        0,
+        ROUTER_GET_ID,
+        NULL);
     myId = 0;
 
     if (ackWait(&netPort, MAX_NET_RETRIES))
@@ -179,12 +179,12 @@ void NetworkTestMode::sendIdRequest()
 
 void NetworkTestMode::sendNeighborRequest(NodeId_t destination)
 {
-    Message neighborRequest;
-    neighborRequest.source = myId;
-    neighborRequest.dest = destination;
-    neighborRequest.payloadSize = 0;
-    neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
-    neighborRequest.body = NULL;
+    Message neighborRequest(
+        myId,
+        destination,
+        0,
+        ROUTER_GET_NEIGHBORS,
+        NULL);
 
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
@@ -198,16 +198,16 @@ void NetworkTestMode::sendNeighborRequest(NodeId_t destination)
 
 void NetworkTestMode::sendDiscoveryRequest()
 {
-    Message neighborRequest;
-    neighborRequest.source = myId;
-    neighborRequest.dest = myId;
-    neighborRequest.payloadSize = 0;
-    neighborRequest.sysCommand = ROUTER_START_DISCOVERY;
-    neighborRequest.body = NULL;
+    Message discoveryRequest(
+        myId,
+        myId,
+        0,
+        ROUTER_START_DISCOVERY,
+        NULL);
 
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
-        writeMessage(&netPort, neighborRequest);
+        writeMessage(&netPort, discoveryRequest);
         pollDiscovery = true;
     }
     else
@@ -218,16 +218,16 @@ void NetworkTestMode::sendDiscoveryRequest()
 
 void NetworkTestMode::sendDiscoveryStatsRequest()
 {
-    Message neighborRequest;
-    neighborRequest.source = myId;
-    neighborRequest.dest = myId;
-    neighborRequest.payloadSize = 0;
-    neighborRequest.sysCommand = ROUTER_GET_DISCOVERY_STATUS;
-    neighborRequest.body = NULL;
+    Message discoveryStatsRequest(
+        myId,
+        myId,
+        0,
+        ROUTER_GET_DISCOVERY_STATUS,
+        NULL);
 
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
-        writeMessage(&netPort, neighborRequest);
+        writeMessage(&netPort, discoveryStatsRequest);
         previousDiscoveryMillis = millis();
     }
     else
@@ -294,8 +294,7 @@ void CatanMode::processState(unsigned long currentMillis, uint16_t state)
         hadMessage = true;
         Message message = readMessage(&netPort);
         processMessage(message);
-        delete[] message.body;
-        message.body = NULL;
+        message.free();
     }
 
     if (currentMillis - previousMillis > 75)
@@ -497,12 +496,12 @@ void CatanMode::setupGame()
     Serial.println(F("setup"));
     if (setupStage == 0)
     {
-        Message idRequest;
-        idRequest.source = EMPTY;
-        idRequest.dest = EMPTY;
-        idRequest.payloadSize = 0;
-        idRequest.sysCommand = ROUTER_GET_ID;
-        idRequest.body = NULL;
+        Message idRequest(
+            EMPTY,
+            EMPTY,
+            0,
+            ROUTER_GET_ID,
+            NULL);
 
         if (ackWait(&netPort, MAX_NET_RETRIES))
         {
@@ -518,12 +517,12 @@ void CatanMode::setupGame()
         Serial.print(F("ID: "));
         Serial.println(catanState.id, HEX);
 
-        Message neighborRequest;
-        neighborRequest.source = catanState.id;
-        neighborRequest.dest = catanState.id;
-        neighborRequest.payloadSize = 0;
-        neighborRequest.sysCommand = ROUTER_GET_NEIGHBORS;
-        neighborRequest.body = NULL;
+        Message neighborRequest(
+            catanState.id,
+            catanState.id,
+            0,
+            ROUTER_GET_NEIGHBORS,
+            NULL);
 
         if (ackWait(&netPort, MAX_NET_RETRIES))
         {
@@ -587,27 +586,27 @@ void CatanMode::setTileValue(byte val)
 
 void CatanMode::processMessage(const Message &message)
 {
-    if (message.sysCommand)
+    if (message.getSysCommand())
     {
-        if (message.sysCommand & ROUTER_ADD_NODE && message.source == catanState.id)
+        if (message.getSysCommand() & ROUTER_ADD_NODE && message.getSource() == catanState.id)
             advanceSetupStage(CATAN_SETUP_NEIGHBORS);
         for (int i = 0; i < 6; i++)
         {
-            NodeId_t id = ((NodeId_t *)(message.body))[i + 1];
+            NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
             neighborIds[i] = id;
             Serial.println(id, HEX);
         }
     }
     else
     {
-        CatanMessage *command = (CatanMessage *)message.body;
+        CatanMessage *command = (CatanMessage *)message.getBody();
         switch (command->command)
         {
         case SET_ROAD:
             setRoadOwner(*(SetRoadRequest *)command, false);
             break;
         case GET_STATE:
-            sendStateResponse(message.source, ((GetStateRequest *)command)->placementInfo);
+            sendStateResponse(message.getSource(), ((GetStateRequest *)command)->placementInfo);
             break;
         case STATE_RESPONSE:
             reconcileStateResponse(*(StateResponse *)command);
@@ -662,16 +661,17 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
     if (updateNeighbor)
     {
         SetRoadRequest command((request.roadNumber + NUM_ROADS / 2) % NUM_ROADS, request.playerNumber);
-        Message msg;
-        msg.source = catanState.id;
-        msg.dest = neighborIds[request.roadNumber];
-        msg.body = (byte *)&command;
-        msg.payloadSize = sizeof(SetRoadRequest);
+        Message msg(
+            catanState.id,
+            neighborIds[request.roadNumber],
+            sizeof(SetRoadRequest),
+            0,
+            (byte *)&command);
 
         Serial.print(F("updateNeighbor: "));
         Serial.println(updateNeighbor);
 
-        if (msg.dest != EMPTY)
+        if (msg.getDest() != EMPTY)
         {
             if (ackWait(&netPort, MAX_NET_RETRIES))
             {
@@ -688,11 +688,12 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo)
 {
     GetStateRequest request(placementInfo);
-    Message msg;
-    msg.source = catanState.id;
-    msg.dest = node;
-    msg.body = (byte *)&request;
-    msg.payloadSize = sizeof(GetStateRequest);
+    Message msg(
+        catanState.id,
+        node,
+        sizeof(GetStateRequest),
+        0,
+        (byte *)&request);
 
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
@@ -707,11 +708,12 @@ void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placemen
 void CatanMode::sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo)
 {
     StateResponse response(placementInfo, catanState);
-    Message msg;
-    msg.source = catanState.id;
-    msg.dest = node;
-    msg.body = (byte *)&response;
-    msg.payloadSize = sizeof(StateResponse);
+    Message msg(
+        catanState.id,
+        node,
+        sizeof(StateResponse),
+        0,
+        (byte *)&response);
 
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {

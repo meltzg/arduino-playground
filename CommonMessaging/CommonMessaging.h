@@ -42,39 +42,45 @@
 #define PORT_H 0xffff
 #define EMPTY 0x0000
 
+// System options
+#define ROUTER_SYS_COMMAND 0x01
+#define ROUTER_USE_CACHE 0x02
+
 // System commands
 #define ROUTER_GET_ID 0x01
 #define ROUTER_GET_NEIGHBORS 0x02
-#define ROUTER_ADD_NODE 0x04
-#define ROUTER_START_DISCOVERY 0x08
-#define ROUTER_GET_DISCOVERY_STATUS 0x10
-#define ROUTER_RESPONSE_DISCOVERY_STATUS 0x20
-#define ROUTER_CLEAR_TOPOLOGY 0x40
-#define ROUTER_SYS_COMMAND 0x80
-#define ROUTER_USE_CACHE 0x100
+#define ROUTER_ADD_NODE 0x03
+#define ROUTER_START_DISCOVERY 0x04
+#define ROUTER_GET_DISCOVERY_STATUS 0x05
+#define ROUTER_RESPONSE_DISCOVERY_STATUS 0x06
+#define ROUTER_CLEAR_TOPOLOGY 0x07
 
 typedef uint8_t StartCode_t;
 typedef uint16_t NodeId_t;
 typedef uint16_t MessageSize_t;
-typedef uint16_t SysCommand_t;
+typedef uint8_t SysOption_t;
+typedef uint8_t SysCommand_t;
 
 class Message
 {
 public:
-    Message(NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysCommand_t sysCommand, byte *body) : source(source), dest(dest), payloadSize(payloadSize), sysCommand(sysCommand), body(body) {}
+    Message(NodeId_t source, NodeId_t dest, MessageSize_t payloadSize, SysOption_t sysOption, SysCommand_t sysCommand, byte *body) : source(source), dest(dest), payloadSize(payloadSize), sysOption(sysOption), sysCommand(sysCommand), body(body) {}
     Message() {}
 
     NodeId_t getSource() { return source; }
     void setSource(NodeId_t source) { this->source = source; }
-    
+
     NodeId_t getDest() { return dest; }
     void setDest(NodeId_t dest) { this->dest = dest; }
-    
+
     MessageSize_t getPayloadSize() { return payloadSize; }
-    
+
+    SysOption_t getSysOption() { return sysOption; }
+    void setSysOption(SysOption_t sysOption) { this->sysOption = sysOption; }
+
     SysCommand_t getSysCommand() { return sysCommand; }
     void setSysCommand(SysCommand_t sysCommand) { this->sysCommand = sysCommand; }
-    
+
     byte *getBody() { return body; }
     void setBody(byte *body) { this->body = body; }
 
@@ -83,9 +89,10 @@ public:
 private:
     NodeId_t source = EMPTY;
     NodeId_t dest = EMPTY;
-    MessageSize_t payloadSize = 0;
+    const MessageSize_t payloadSize = 0;
+    SysOption_t sysOption = 0;
     SysCommand_t sysCommand = 0;
-    byte *body = NULL;
+    const byte *body = NULL;
 };
 
 bool ackWait(Stream *port, int maxRetries = -1);

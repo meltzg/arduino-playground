@@ -93,11 +93,11 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
 
 void NetworkTestMode::processMessage(const Message &message)
 {
-    if (message.getSysCommand() & ROUTER_ADD_NODE)
+    if (message.getSysCommand() == ROUTER_ADD_NODE)
     {
         handleNodeResponse(message);
     }
-    else if (message.getSysCommand() & ROUTER_RESPONSE_DISCOVERY_STATUS)
+    else if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)
     {
         handleDiscoveryStatsResponse(message);
     }
@@ -156,6 +156,7 @@ void NetworkTestMode::sendIdRequest()
         EMPTY,
         EMPTY,
         0,
+        0,
         ROUTER_GET_ID,
         NULL);
     myId = 0;
@@ -183,6 +184,7 @@ void NetworkTestMode::sendNeighborRequest(NodeId_t destination)
         myId,
         destination,
         0,
+        0,
         ROUTER_GET_NEIGHBORS,
         NULL);
 
@@ -201,6 +203,7 @@ void NetworkTestMode::sendDiscoveryRequest()
     Message discoveryRequest(
         myId,
         myId,
+        0,
         0,
         ROUTER_START_DISCOVERY,
         NULL);
@@ -221,6 +224,7 @@ void NetworkTestMode::sendDiscoveryStatsRequest()
     Message discoveryStatsRequest(
         myId,
         myId,
+        0,
         0,
         ROUTER_GET_DISCOVERY_STATUS,
         NULL);
@@ -500,6 +504,7 @@ void CatanMode::setupGame()
             EMPTY,
             EMPTY,
             0,
+            0,
             ROUTER_GET_ID,
             NULL);
 
@@ -520,6 +525,7 @@ void CatanMode::setupGame()
         Message neighborRequest(
             catanState.id,
             catanState.id,
+            0,
             0,
             ROUTER_GET_NEIGHBORS,
             NULL);
@@ -588,7 +594,7 @@ void CatanMode::processMessage(const Message &message)
 {
     if (message.getSysCommand())
     {
-        if (message.getSysCommand() & ROUTER_ADD_NODE && message.getSource() == catanState.id)
+        if (message.getSysCommand() == ROUTER_ADD_NODE && message.getSource() == catanState.id)
             advanceSetupStage(CATAN_SETUP_NEIGHBORS);
         for (int i = 0; i < 6; i++)
         {
@@ -666,6 +672,7 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
             neighborIds[request.roadNumber],
             sizeof(SetRoadRequest),
             0,
+            0,
             (byte *)&command);
 
         Serial.print(F("updateNeighbor: "));
@@ -693,6 +700,7 @@ void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placemen
         node,
         sizeof(GetStateRequest),
         0,
+        0,
         (byte *)&request);
 
     if (ackWait(&netPort, MAX_NET_RETRIES))
@@ -712,6 +720,7 @@ void CatanMode::sendStateResponse(NodeId_t node, PlacementValidationInfo placeme
         catanState.id,
         node,
         sizeof(StateResponse),
+        0,
         0,
         (byte *)&response);
 

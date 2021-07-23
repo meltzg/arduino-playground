@@ -138,7 +138,7 @@ void logDiscoveryStats()
 void processMessage(Stream *srcPort, const Message &message)
 {
     char buf[PRINT_BUF_SIZE];
-    if (message.getSysCommand() & ROUTER_GET_ID)
+    if (message.getSysCommand() == ROUTER_GET_ID)
     {
         // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
         sprintf(buf, "Node ID requested by %hx", message.getSource());
@@ -151,12 +151,12 @@ void processMessage(Stream *srcPort, const Message &message)
         routeMessage(message);
         return;
     }
-    if (message.getSysCommand() & ROUTER_CLEAR_TOPOLOGY)
+    if (message.getSysCommand() == ROUTER_CLEAR_TOPOLOGY)
     {
         Serial.println(F("Clear topology"));
         pathfinder.clearTopology();
     }
-    if (message.getSysCommand() & ROUTER_GET_NEIGHBORS)
+    if (message.getSysCommand() == ROUTER_GET_NEIGHBORS)
     {
         sprintf(buf, "Node Neighbors requested by %hx", message.getSource());
         Serial.println(buf);
@@ -171,25 +171,26 @@ void processMessage(Stream *srcPort, const Message &message)
             NODE_ID,
             message.getSource(),
             sizeof(nodeMessage),
-            ROUTER_ADD_NODE | (message.getSysCommand() & ROUTER_SYS_COMMAND),
+            message.getSysOption() & ROUTER_SYS_COMMAND,
+            ROUTER_ADD_NODE,
             (byte *)nodeMessage);
         routeMessage(response);
         return;
     }
-    if (message.getSysCommand() & ROUTER_ADD_NODE)
+    if (message.getSysCommand() == ROUTER_ADD_NODE)
     {
         sprintf(buf, "Adding node to topology", message.getSource());
         Serial.println(buf);
         NodeId_t *nodeIds = (NodeId_t *)message.getBody();
         updateNeighbors(nodeIds[0], nodeIds + 1, (message.getPayloadSize() / sizeof(NodeId_t)) - 1);
     }
-    if (message.getSysCommand() & ROUTER_START_DISCOVERY)
+    if (message.getSysCommand() == ROUTER_START_DISCOVERY)
     {
         Serial.println(F("Start Discovery"));
         startDiscovery();
         return;
     }
-    if (message.getSysCommand() & ROUTER_GET_DISCOVERY_STATUS)
+    if (message.getSysCommand() == ROUTER_GET_DISCOVERY_STATUS)
     {
         Serial.println(F("Get discovery stats"));
 
@@ -204,12 +205,13 @@ void processMessage(Stream *srcPort, const Message &message)
             NODE_ID,
             message.getSource(),
             sizeof(DiscoveryStats),
+            0,
             ROUTER_RESPONSE_DISCOVERY_STATUS,
             (char *)(&stats));
         routeMessage(response);
         return;
     }
-    if (message.getSysCommand() & ROUTER_SYS_COMMAND)
+    if (message.getSysOption() & ROUTER_SYS_COMMAND)
     {
         // return without sending message to actor
         return;
@@ -287,6 +289,7 @@ void resetNeighbors()
         NODE_ID,
         EMPTY,
         0,
+        0,
         ROUTER_GET_ID,
         NULL);
     for (int i = 0; i < 6; i++)
@@ -347,7 +350,8 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
         NODE_ID,
         EMPTY,
         (numNeighbors + 1) * sizeof(NodeId_t),
-        ROUTER_ADD_NODE | ROUTER_SYS_COMMAND,
+        ROUTER_SYS_COMMAND,
+        ROUTER_ADD_NODE,
         (byte *)nodeForward);
 
     // Add edges to pathfinder
@@ -393,7 +397,8 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
                 NODE_ID,
                 src,
                 numAdj * sizeof(NodeId_t),
-                ROUTER_ADD_NODE | ROUTER_SYS_COMMAND,
+                ROUTER_SYS_COMMAND,
+                ROUTER_ADD_NODE,
                 (byte *)nodeMessage);
 
             if (distribId == NODE_ID)
@@ -421,7 +426,8 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
             NODE_ID,
             next,
             0,
-            ROUTER_GET_NEIGHBORS | ROUTER_SYS_COMMAND,
+            ROUTER_SYS_COMMAND,
+            ROUTER_GET_NEIGHBORS,
             NULL);
 
         routeMessage(neighborRequest);

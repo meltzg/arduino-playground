@@ -148,8 +148,11 @@ void processMessage(Stream *srcPort, const Message &message)
     }
     if (message.getDest() != NODE_ID)
     {
-        routeMessage(message);
-        return;
+        if (!(message.getSysOption() & ROUTER_USE_CACHE) || !(message.getSysCommand() & ROUTER_GET_NEIGHBORS))
+        {
+            routeMessage(message);
+            return;
+        }
     }
     if (message.getSysCommand() == ROUTER_CLEAR_TOPOLOGY)
     {
@@ -160,21 +163,47 @@ void processMessage(Stream *srcPort, const Message &message)
     {
         sprintf(buf, "Node Neighbors requested by %hx", message.getSource());
         Serial.println(buf);
-        resetNeighbors();
-        NodeId_t nodeMessage[7] = {0};
-        nodeMessage[0] = NODE_ID;
-        for (int i = 0; i < 6; i++)
+        int numNodes = 0;
+        NodeId_t *nodeMessage = NULL;
+
+        if (message.getDest() == NODE_ID)
         {
-            nodeMessage[i + 1] = neighborIds[i];
+            if (!(message.getSysOption() & ROUTER_USE_CACHE))
+            {
+                resetNeighbors();
+            }
+            numNodes = 7;
+            nodeMessage = new NodeId_t[numNodes];
+            nodeMessage[0] = NODE_ID;
+            for (int i = 0; i < 6; i++)
+            {
+                nodeMessage[i + 1] = neighborIds[i];
+            }
         }
+        else
+        {
+            Set<NodeId_t> adj;
+            pathfinder.getAdjacent(message.getDest(), adj);
+            ListIterator<NodeId_t> adjIter(adj);
+
+            numNodes = 1 + adj.count;
+            nodeMessage = new NodeId_t[numNodes];
+            nodeMessage[0] = message.getDest();
+            for (int i = 1; adjIter.hasNext(); i++)
+            {
+                nodeMessage[i] = adjIter.next();
+            }
+        }
+
         Message response(
             NODE_ID,
             message.getSource(),
-            sizeof(nodeMessage),
+            sizeof(NodeId_t) * numNodes,
             message.getSysOption() & ROUTER_SYS_COMMAND,
             ROUTER_ADD_NODE,
             (byte *)nodeMessage);
         routeMessage(response);
+        delete[] nodeMessage;
         return;
     }
     if (message.getSysCommand() == ROUTER_ADD_NODE)

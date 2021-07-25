@@ -4,6 +4,7 @@
 #include <SoftwareSerial.h>
 #include <CommonMessaging.h>
 #include <Components.h>
+#include <DataStructures.h>
 
 /*
    Edges         LEDs        Buttons
@@ -26,6 +27,12 @@
 
 #define MAX_NET_RETRIES 1000
 
+// Mode definitions
+#define NUM_MODES 3
+#define MODE_COMPONENT_TEST 0
+#define MODE_NETWORK_TEST 1
+#define MODE_CATAN 2
+
 // Mode Specific Defines
 // Netowrk test
 #define BTN_ID 9
@@ -33,7 +40,7 @@
 #define BTN_DISCOVER 3
 
 // Catan
-#define ALL_LAND false
+#define ALL_LAND true
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5
@@ -58,6 +65,11 @@
 #define NUM_BRICK_TILES 5
 #define NUM_STONE_TILES 5
 #define NUM_DESERT_TILES 2
+
+struct ModeMessage
+{
+    byte modeId;
+};
 
 class Mode
 {
@@ -99,6 +111,21 @@ private:
     unsigned long previousMillisLeds = 0;
 };
 
+enum NetworkTestCommand : byte
+{
+    START_NODE
+};
+
+struct NetworkTestMessage : public ModeMessage
+{
+    NetworkTestCommand command;
+};
+
+struct WakeNodeMessage : public NetworkTestMessage
+{
+    WakeNodeMessage() {modeId = MODE_NETWORK_TEST; command = START_NODE;}
+};
+
 class NetworkTestMode : public Mode
 {
 public:
@@ -114,11 +141,14 @@ private:
     char displayMessage[100] = {0};
     unsigned long previousDiscoveryMillis = 0;
     bool pollDiscovery = false;
+    bool postDiscovery = false;
+    Set<NodeId_t> discoveryVisited;
+    LinkedList<NodeId_t> discoveryQueue;
 
     void handleNodeResponse(const Message &message);
     void handleDiscoveryStatsResponse(const Message &message);
     void sendIdRequest();
-    void sendNeighborRequest(NodeId_t destination);
+    void sendNeighborRequest(NodeId_t destination, bool useCache = false);
     void sendDiscoveryRequest();
     void sendDiscoveryStatsRequest();
 };
@@ -237,7 +267,7 @@ struct CatanState
     bool hasRobber = false;
 };
 
-struct CatanMessage
+struct CatanMessage : public ModeMessage
 {
     CatanCommand command;
 };
@@ -247,7 +277,11 @@ struct SetRoadRequest : public CatanMessage
     byte roadNumber;
     byte playerNumber;
 
-    SetRoadRequest(byte roadNumber, byte playerNumber) : roadNumber(roadNumber), playerNumber(playerNumber) { command = SET_ROAD; }
+    SetRoadRequest(byte roadNumber, byte playerNumber) : roadNumber(roadNumber), playerNumber(playerNumber)
+    {
+        modeId = MODE_CATAN;
+        command = SET_ROAD;
+    }
 };
 
 class PlacementValidationInfo
@@ -279,7 +313,11 @@ struct GetStateRequest : public CatanMessage
 {
     PlacementValidationInfo placementInfo = PlacementValidationInfo::NONE;
 
-    GetStateRequest(PlacementValidationInfo placementInfo) : placementInfo(placementInfo) { command = GET_STATE; }
+    GetStateRequest(PlacementValidationInfo placementInfo) : placementInfo(placementInfo)
+    {
+        modeId = MODE_CATAN;
+        command = GET_STATE;
+    }
 };
 
 struct StateResponse : public CatanMessage
@@ -287,7 +325,11 @@ struct StateResponse : public CatanMessage
     CatanState state;
     PlacementValidationInfo placementInfo = PlacementValidationInfo::NONE;
 
-    StateResponse(PlacementValidationInfo placementInfo, CatanState state) : placementInfo(placementInfo), state(state) { command = STATE_RESPONSE; }
+    StateResponse(PlacementValidationInfo placementInfo, CatanState state) : placementInfo(placementInfo), state(state)
+    {
+        modeId = MODE_CATAN;
+        command = STATE_RESPONSE;
+    }
 };
 
 class CatanMode : public Mode

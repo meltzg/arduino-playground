@@ -16,12 +16,6 @@
 #define BTN_DATA 12
 #define BTN_CLOCK 13
 
-// Mode definitions
-#define NUM_MODES 3
-#define MODE_COMPONENT_TEST 0
-#define MODE_NETWORK_TEST 1
-#define MODE_CATAN 2
-
 #define BTN_CENTER 8
 
 // Component setup

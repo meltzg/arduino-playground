@@ -147,6 +147,8 @@ void NetworkTestMode::handleDiscoveryStatsResponse(const Message &message)
     if (stats->discoveryDone)
     {
         pollDiscovery = false;
+        postDiscovery = true;
+        sendNeighborRequest(myId, true);
     }
 }
 
@@ -178,13 +180,13 @@ void NetworkTestMode::sendIdRequest()
     Serial.println(displayMessage);
 }
 
-void NetworkTestMode::sendNeighborRequest(NodeId_t destination)
+void NetworkTestMode::sendNeighborRequest(NodeId_t destination, bool useCache)
 {
     Message neighborRequest(
         myId,
         destination,
         0,
-        0,
+        useCache ? ROUTER_USE_CACHE : 0,
         ROUTER_GET_NEIGHBORS,
         NULL);
 

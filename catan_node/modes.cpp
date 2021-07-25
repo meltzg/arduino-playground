@@ -101,40 +101,116 @@ void NetworkTestMode::processMessage(const Message &message)
     {
         handleDiscoveryStatsResponse(message);
     }
+    else if (!message.getSysCommand() && message.getPayloadSize() > 0)
+    {
+        NetworkTestMessage *command = (NetworkTestMessage *)message.getBody();
+        switch (command->command)
+        {
+        case START_NODE:
+            sendIdRequest();
+            sendNeighborRequest(myId, true);
+        }
+    }
 }
 
 void NetworkTestMode::handleNodeResponse(const Message &message)
 {
-    __int24 ledColors[leds.getNumLeds()] = {BLACK};
-    sprintf(
-        displayMessage,
-        "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
-        ((NodeId_t *)(message.getBody()))[1],
-        ((NodeId_t *)(message.getBody()))[2],
-        ((NodeId_t *)(message.getBody()))[3],
-        ((NodeId_t *)(message.getBody()))[4],
-        ((NodeId_t *)(message.getBody()))[5],
-        ((NodeId_t *)(message.getBody()))[6]);
-
-    disp.setChars(displayMessage);
-    Serial.println(displayMessage);
-    for (int i = 0; i < 6; i++)
+    NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
+    if (!postDiscovery)
     {
-        NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
-        if (id == EMPTY)
+        __int24 ledColors[leds.getNumLeds()] = {BLACK};
+        sprintf(
+            displayMessage,
+            "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
+            nodes[1],
+            nodes[2],
+            nodes[3],
+            nodes[4],
+            nodes[5],
+            nodes[6]);
+
+        disp.setChars(displayMessage);
+        Serial.println(displayMessage);
+        for (int i = 0; i < 6; i++)
         {
-            ledColors[EDGE_LED_POS[i]] = RED;
+            NodeId_t id = nodes[i + 1];
+            Serial.println(id, HEX);
+            if (id == EMPTY)
+            {
+                ledColors[EDGE_LED_POS[i]] = RED;
+            }
+            else
+            {
+                ledColors[EDGE_LED_POS[i]] = GREEN;
+            }
+            if (message.getSource() == myId)
+            {
+                neighborIds[i] = id;
+            }
+        }
+        leds.setState(ledColors);
+    }
+    else
+    {
+        int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
+        Serial.print(F("Num nodes "));
+        Serial.println(numNodes);
+        NodeId_t id = nodes[0];
+        discoveryVisited.pushBack(id);
+        for (int i = 1; i < numNodes; i++)
+        {
+            id = nodes[i];
+            if (id != EMPTY && !discoveryVisited.contains(id))
+            {
+                Serial.print(F("I "));
+                Serial.println(i);
+                Serial.print(F("doop "));
+                Serial.println(id, HEX);
+                discoveryQueue.pushBack(id);
+                discoveryVisited.pushBack(id);
+                Serial.print(F("pood "));
+                Serial.println(discoveryQueue.peekFront(), HEX);
+            }
+        }
+
+        if (discoveryQueue.isEmpty())
+        {
+            Serial.println(F("Post Discovery Complete"));
+            discoveryQueue.purge();
+            discoveryVisited.purge();
+            postDiscovery = false;
+            sendNeighborRequest(myId, true);
         }
         else
         {
-            ledColors[EDGE_LED_POS[i]] = GREEN;
-        }
-        if (message.getSource() == myId)
-        {
-            neighborIds[i] = id;
+            NodeId_t nextNode = discoveryQueue.popFront();
+
+            WakeNodeMessage command;
+            Message msg(
+                myId,
+                nextNode,
+                sizeof(WakeNodeMessage),
+                0,
+                0,
+                (byte *)&command);
+
+            Serial.print(F("Waking next node "));
+            Serial.println(nextNode, HEX);
+
+            if (msg.getDest() != EMPTY)
+            {
+                if (ackWait(&netPort, MAX_NET_RETRIES))
+                {
+                    writeMessage(&netPort, msg);
+                }
+                else
+                {
+                    Serial.println(F("Fail"));
+                }
+            }
+            sendNeighborRequest(nextNode, true);
         }
     }
-    leds.setState(ledColors);
 }
 
 void NetworkTestMode::handleDiscoveryStatsResponse(const Message &message)
@@ -182,6 +258,10 @@ void NetworkTestMode::sendIdRequest()
 
 void NetworkTestMode::sendNeighborRequest(NodeId_t destination, bool useCache)
 {
+    Serial.print(F("Request neighbors "));
+    Serial.println(destination, HEX);
+    Serial.print(F("Use Cache "));
+    Serial.println(useCache);
     Message neighborRequest(
         myId,
         destination,

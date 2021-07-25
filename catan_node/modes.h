@@ -40,7 +40,7 @@
 #define BTN_DISCOVER 3
 
 // Catan
-#define ALL_LAND true
+#define ALL_LAND false
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5

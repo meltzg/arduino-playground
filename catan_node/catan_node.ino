@@ -45,7 +45,7 @@ CatanMode catan(disp, leds, btns, netPort);
 
 // State information
 Mode *mode = NULL;
-byte modeIdx = MODE_NETWORK_TEST;
+byte modeIdx = MODE_COMPONENT_TEST;
 unsigned long previousMillis = 0;
 uint16_t previousState = 0;
 
@@ -79,6 +79,16 @@ void loop()
     if (hasIncoming(&netPort))
     {
         Message message = readMessage(&netPort);
+        if (!message.getSysCommand() && message.getPayloadSize() > 0)
+        {
+            ModeMessage *command = (ModeMessage *)message.getBody();
+            if (command->modeId != modeIdx)
+            {
+                modeIdx = command->modeId;
+                selectMode(modeIdx);
+            }
+        }
+
         mode->processMessage(message);
         message.free();
     }

@@ -1,4 +1,5 @@
 PORT = /dev/ttyUSB0
+ISP_PORT = /dev/ttyACM0
 
 compile-catan:
 	arduino-cli compile -b arduino:avr:uno catan_node/ -v
@@ -23,3 +24,6 @@ compile-pathfinder-tester:
 
 upload-pathfinder-tester: compile-pathfinder-tester
 	arduino-cli upload -p ${PORT} -b arduino:avr:uno pathfinder_tester/ -v
+
+burn-bootloader:
+	arduino-cli burn-bootloader -b arduino:avr:uno -P arduinoasisp -p ${ISP_PORT} -v

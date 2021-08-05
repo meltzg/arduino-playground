@@ -55,6 +55,7 @@ PathFinder pathfinder(6);
 
 void setup()
 {
+    delay(2000);
     NODE_ID = getNodeId();
     Serial.begin(9600);
     Wire.begin();
@@ -168,7 +169,16 @@ void processMessage(Stream *srcPort, const Message &message)
 
         if (message.getDest() == NODE_ID)
         {
-            if (!(message.getSysOption() & ROUTER_USE_CACHE))
+            Set<NodeId_t> adj;
+            pathfinder.getAdjacent(message.getDest(), adj);
+            for (int i = 0; i < 6; i++)
+            {
+                if (neighborIds[i] != EMPTY)
+                {
+                    numNodes++;
+                }
+            }
+            if (!(message.getSysOption() & ROUTER_USE_CACHE) || numNodes < adj.count)
             {
                 resetNeighbors();
             }

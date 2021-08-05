@@ -57,6 +57,7 @@ void setup()
     __int24 ledColors[NUM_LEDS] = {BLACK};
     leds.setState(ledColors);
     selectMode(modeIdx);
+    delay(3000);
 }
 
 void loop()

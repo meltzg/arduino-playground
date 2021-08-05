@@ -611,6 +611,8 @@ SegmentDisplay::SegmentDisplay(int latchPin, int clockPin, int dataPin, int left
         digitalWrite(leftCommonPin, SEG_ON);
         digitalWrite(rightCommonPin, SEG_ON);
     }
+
+    registerWrite(0xFFFF);
 }
 
 void SegmentDisplay::registerWrite(uint16_t toWrite)

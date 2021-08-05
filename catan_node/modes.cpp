@@ -69,7 +69,7 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
         }
         else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
         {
-            sendDiscoveryRequest();
+            pollDiscovery = sendDiscoveryRequest();
         }
         else
         {
@@ -87,7 +87,10 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
     }
     if (pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
     {
-        sendDiscoveryStatsRequest();
+        if (sendDiscoveryStatsRequest())
+        {
+            previousDiscoveryMillis = millis();
+        }
     }
 }
 
@@ -280,7 +283,7 @@ void NetworkTestMode::sendNeighborRequest(NodeId_t destination, bool useCache)
     }
 }
 
-void NetworkTestMode::sendDiscoveryRequest()
+bool Mode::sendDiscoveryRequest()
 {
     Message discoveryRequest(
         myId,
@@ -293,15 +296,16 @@ void NetworkTestMode::sendDiscoveryRequest()
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
         writeMessage(&netPort, discoveryRequest);
-        pollDiscovery = true;
     }
     else
     {
         disp.setChars("D req Failure ");
+        return false;
     }
+    return true;
 }
 
-void NetworkTestMode::sendDiscoveryStatsRequest()
+bool Mode::sendDiscoveryStatsRequest()
 {
     Message discoveryStatsRequest(
         myId,
@@ -314,12 +318,13 @@ void NetworkTestMode::sendDiscoveryStatsRequest()
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
         writeMessage(&netPort, discoveryStatsRequest);
-        previousDiscoveryMillis = millis();
     }
     else
     {
         disp.setChars("D stat Failure ");
+        return false;
     }
+    return true;
 }
 
 CatanLandType CatanLandType::randomType()
@@ -580,8 +585,9 @@ void CatanMode::renderState()
 void CatanMode::setupGame()
 {
     Serial.println(F("setup"));
-    if (setupStage == 0)
+    switch (setupStage)
     {
+    case 0:
         Message idRequest(
             EMPTY,
             EMPTY,
@@ -620,9 +626,12 @@ void CatanMode::setupGame()
         {
             Serial.println(F("Fail"));
         }
-    }
-    else
-    {
+        break;
+    case 1:
+        sendDiscoveryRequest();
+        break;
+    default:
+
         int numEmpty = 0;
         for (int i = 0; i < 6; i++)
         {

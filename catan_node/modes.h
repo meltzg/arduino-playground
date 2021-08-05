@@ -82,6 +82,8 @@ public:
     virtual void init() {}
     virtual void processState(unsigned long currentMillis, uint16_t state) = 0;
     virtual void processMessage(const Message &message) = 0;
+    bool sendDiscoveryRequest();
+    bool sendDiscoveryStatsRequest();
 
 protected:
     static const byte EDGE_LED_POS[6];
@@ -93,6 +95,8 @@ protected:
     const LEDStatusDisplay &leds;
     const ButtonArray16 &btns;
     const SoftwareSerial &netPort;
+
+    NodeId_t myId = EMPTY;
 
     unsigned long previousMillis = 0;
     uint16_t previousState = 0;
@@ -136,7 +140,6 @@ public:
     void processMessage(const Message &message);
 
 private:
-    NodeId_t myId = EMPTY;
     NodeId_t neighborIds[6];
     char displayMessage[100] = {0};
     unsigned long previousDiscoveryMillis = 0;
@@ -149,8 +152,6 @@ private:
     void handleDiscoveryStatsResponse(const Message &message);
     void sendIdRequest();
     void sendNeighborRequest(NodeId_t destination, bool useCache = false);
-    void sendDiscoveryRequest();
-    void sendDiscoveryStatsRequest();
 };
 
 class CatanLandType

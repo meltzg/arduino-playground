@@ -82,8 +82,6 @@ public:
     virtual void init() {}
     virtual void processState(unsigned long currentMillis, uint16_t state) = 0;
     virtual void processMessage(const Message &message) = 0;
-    bool sendDiscoveryRequest();
-    bool sendDiscoveryStatsRequest();
 
 protected:
     static const byte EDGE_LED_POS[6];
@@ -100,6 +98,8 @@ protected:
 
     unsigned long previousMillis = 0;
     uint16_t previousState = 0;
+
+    char displayMessage[100] = {0};
 };
 
 class ComponentTestMode : public Mode
@@ -115,6 +115,27 @@ private:
     unsigned long previousMillisLeds = 0;
 };
 
+class DiscoveryMode : public Mode
+{
+public:
+    using Mode::Mode;
+
+    virtual void processState(unsigned long currentMillis, uint16_t state);
+    virtual void processMessage(const Message &message);
+
+protected:
+    bool pollDiscovery = false;
+    bool postDiscovery = false;
+
+    bool sendDiscoveryRequest();
+    bool sendDiscoveryStatsRequest();
+    void handleDiscoveryStatsResponse(const Message &message);
+    virtual void doPostDiscovery() = 0;
+
+private:
+    unsigned long previousDiscoveryMillis = 0;
+};
+
 enum NetworkTestCommand : byte
 {
     START_NODE
@@ -127,29 +148,31 @@ struct NetworkTestMessage : public ModeMessage
 
 struct WakeNodeMessage : public NetworkTestMessage
 {
-    WakeNodeMessage() {modeId = MODE_NETWORK_TEST; command = START_NODE;}
+    WakeNodeMessage()
+    {
+        modeId = MODE_NETWORK_TEST;
+        command = START_NODE;
+    }
 };
 
-class NetworkTestMode : public Mode
+class NetworkTestMode : public DiscoveryMode
 {
 public:
-    using Mode::Mode;
+    using DiscoveryMode::DiscoveryMode;
 
     void init();
     void processState(unsigned long currentMillis, uint16_t state);
     void processMessage(const Message &message);
 
+protected:
+    void doPostDiscovery();
+
 private:
     NodeId_t neighborIds[6];
-    char displayMessage[100] = {0};
-    unsigned long previousDiscoveryMillis = 0;
-    bool pollDiscovery = false;
-    bool postDiscovery = false;
     Set<NodeId_t> discoveryVisited;
     LinkedList<NodeId_t> discoveryQueue;
 
     void handleNodeResponse(const Message &message);
-    void handleDiscoveryStatsResponse(const Message &message);
     void sendIdRequest();
     void sendNeighborRequest(NodeId_t destination, bool useCache = false);
 };

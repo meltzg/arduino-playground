@@ -39,6 +39,93 @@ void ComponentTestMode::processState(unsigned long currentMillis, uint16_t state
     }
 }
 
+void DiscoveryMode::processState(unsigned long currentMillis, uint16_t state)
+{
+    if (state != previousState)
+    {
+        if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
+        {
+            pollDiscovery = sendDiscoveryRequest();
+        }
+
+        previousState = state;
+    }
+    if (pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
+    {
+        if (sendDiscoveryStatsRequest())
+        {
+            previousDiscoveryMillis = currentMillis;
+        }
+    }
+}
+
+void DiscoveryMode::processMessage(const Message &message)
+{
+    if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)
+    {
+        handleDiscoveryStatsResponse(message);
+    }
+}
+
+bool DiscoveryMode::sendDiscoveryRequest()
+{
+    Message discoveryRequest(
+        myId,
+        myId,
+        0,
+        0,
+        ROUTER_START_DISCOVERY,
+        NULL);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, discoveryRequest);
+    }
+    else
+    {
+        disp.setChars("D req Failure ");
+        return false;
+    }
+    return true;
+}
+
+bool DiscoveryMode::sendDiscoveryStatsRequest()
+{
+    Message discoveryStatsRequest(
+        myId,
+        myId,
+        0,
+        0,
+        ROUTER_GET_DISCOVERY_STATUS,
+        NULL);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, discoveryStatsRequest);
+    }
+    else
+    {
+        disp.setChars("D stat Failure ");
+        return false;
+    }
+    return true;
+}
+
+void DiscoveryMode::handleDiscoveryStatsResponse(const Message &message)
+{
+    Serial.println(F("handle disc stat resp"));
+    DiscoveryStats *stats = (DiscoveryStats *)message.getBody();
+    sprintf(displayMessage, "D: %d, N: %d, E: %d    ", stats->discoveryDone, stats->numNodes, stats->numEdges);
+    disp.setChars(displayMessage);
+    Serial.println(displayMessage);
+    if (stats->discoveryDone)
+    {
+        pollDiscovery = false;
+        postDiscovery = true;
+        doPostDiscovery();
+    }
+}
+
 void NetworkTestMode::init()
 {
     disp.setRenderChars(true);
@@ -67,10 +154,6 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
         {
             sendNeighborRequest(myId);
         }
-        else if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
-        {
-            pollDiscovery = sendDiscoveryRequest();
-        }
         else
         {
             for (int i = 0; i < 6; i++)
@@ -82,16 +165,8 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
                 }
             }
         }
-
-        previousState = state;
     }
-    if (pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
-    {
-        if (sendDiscoveryStatsRequest())
-        {
-            previousDiscoveryMillis = millis();
-        }
-    }
+    DiscoveryMode::processState(currentMillis, state);
 }
 
 void NetworkTestMode::processMessage(const Message &message)
@@ -99,10 +174,6 @@ void NetworkTestMode::processMessage(const Message &message)
     if (message.getSysCommand() == ROUTER_ADD_NODE)
     {
         handleNodeResponse(message);
-    }
-    else if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)
-    {
-        handleDiscoveryStatsResponse(message);
     }
     else if (!message.getSysCommand() && message.getPayloadSize() > 0)
     {
@@ -114,6 +185,15 @@ void NetworkTestMode::processMessage(const Message &message)
             sendNeighborRequest(myId, true);
         }
     }
+    else
+    {
+        DiscoveryMode::processMessage(message);
+    }
+}
+
+void NetworkTestMode::doPostDiscovery()
+{
+    sendNeighborRequest(myId, true);
 }
 
 void NetworkTestMode::handleNodeResponse(const Message &message)
@@ -165,13 +245,10 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
             id = nodes[i];
             if (id != EMPTY && !discoveryVisited.contains(id))
             {
-                Serial.print(F("I "));
                 Serial.println(i);
-                Serial.print(F("doop "));
                 Serial.println(id, HEX);
                 discoveryQueue.pushBack(id);
                 discoveryVisited.pushBack(id);
-                Serial.print(F("pood "));
                 Serial.println(discoveryQueue.peekFront(), HEX);
             }
         }
@@ -213,21 +290,6 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
             }
             sendNeighborRequest(nextNode, true);
         }
-    }
-}
-
-void NetworkTestMode::handleDiscoveryStatsResponse(const Message &message)
-{
-    Serial.println(F("handle disc stat resp"));
-    DiscoveryStats *stats = (DiscoveryStats *)message.getBody();
-    sprintf(displayMessage, "D: %d, N: %d, E: %d    ", stats->discoveryDone, stats->numNodes, stats->numEdges);
-    disp.setChars(displayMessage);
-    Serial.println(displayMessage);
-    if (stats->discoveryDone)
-    {
-        pollDiscovery = false;
-        postDiscovery = true;
-        sendNeighborRequest(myId, true);
     }
 }
 
@@ -281,50 +343,6 @@ void NetworkTestMode::sendNeighborRequest(NodeId_t destination, bool useCache)
     {
         disp.setChars("N req Failure ");
     }
-}
-
-bool Mode::sendDiscoveryRequest()
-{
-    Message discoveryRequest(
-        myId,
-        myId,
-        0,
-        0,
-        ROUTER_START_DISCOVERY,
-        NULL);
-
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, discoveryRequest);
-    }
-    else
-    {
-        disp.setChars("D req Failure ");
-        return false;
-    }
-    return true;
-}
-
-bool Mode::sendDiscoveryStatsRequest()
-{
-    Message discoveryStatsRequest(
-        myId,
-        myId,
-        0,
-        0,
-        ROUTER_GET_DISCOVERY_STATUS,
-        NULL);
-
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, discoveryStatsRequest);
-    }
-    else
-    {
-        disp.setChars("D stat Failure ");
-        return false;
-    }
-    return true;
 }
 
 CatanLandType CatanLandType::randomType()
@@ -628,7 +646,7 @@ void CatanMode::setupGame()
         }
         break;
     case 1:
-        sendDiscoveryRequest();
+        // sendDiscoveryRequest();
         break;
     default:
 

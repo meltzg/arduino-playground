@@ -43,7 +43,7 @@ void DiscoveryMode::processState(unsigned long currentMillis, uint16_t state)
 {
     if (state != previousState)
     {
-        if (((previousState >> BTN_DISCOVER) & 1) && ((state >> BTN_DISCOVER) & 1) == 0)
+        if (((previousState >> btnDiscover) & 1) && ((state >> btnDiscover) & 1) == 0)
         {
             pollDiscovery = sendDiscoveryRequest();
         }
@@ -67,8 +67,37 @@ void DiscoveryMode::processMessage(const Message &message)
     }
 }
 
+bool DiscoveryMode::sendIdRequest()
+{
+    Message idRequest(
+        EMPTY,
+        EMPTY,
+        0,
+        0,
+        ROUTER_GET_ID,
+        NULL);
+    myId = 0;
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, idRequest);
+        netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
+    }
+    else
+    {
+        disp.setChars("ID req Failure ");
+        return false;
+    }
+
+    return true;
+}
+
 bool DiscoveryMode::sendDiscoveryRequest()
 {
+    if (myId == EMPTY && !sendIdRequest())
+    {
+        return false;
+    }
     Message discoveryRequest(
         myId,
         myId,
@@ -128,6 +157,7 @@ void DiscoveryMode::handleDiscoveryStatsResponse(const Message &message)
 
 void NetworkTestMode::init()
 {
+    btnDiscover = BTN_DISCOVER;
     disp.setRenderChars(true);
     __int24 ledColors[leds.getNumLeds()];
     for (int i = 0; i < leds.getNumLeds(); i++)
@@ -148,7 +178,12 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
     {
         if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
         {
-            sendIdRequest();
+            if (sendIdRequest())
+            {
+                sprintf(displayMessage, "My ID: %04X ", myId);
+                disp.setChars(displayMessage);
+                Serial.println(displayMessage);
+            }
         }
         else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
         {
@@ -293,34 +328,6 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
     }
 }
 
-void NetworkTestMode::sendIdRequest()
-{
-    Message idRequest(
-        EMPTY,
-        EMPTY,
-        0,
-        0,
-        ROUTER_GET_ID,
-        NULL);
-    myId = 0;
-
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, idRequest);
-        netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
-    }
-    else
-    {
-        disp.setChars("ID req Failure ");
-        return;
-    }
-
-    sprintf(displayMessage, "My ID: %04X ", myId);
-    disp.setChars(displayMessage);
-
-    Serial.println(displayMessage);
-}
-
 void NetworkTestMode::sendNeighborRequest(NodeId_t destination, bool useCache)
 {
     Serial.print(F("Request neighbors "));
@@ -397,15 +404,6 @@ void CatanMode::init()
 
 void CatanMode::processState(unsigned long currentMillis, uint16_t state)
 {
-    bool hadMessage = false;
-    if (hasIncoming(&netPort))
-    {
-        hadMessage = true;
-        Message message = readMessage(&netPort);
-        processMessage(message);
-        message.free();
-    }
-
     if (currentMillis - previousMillis > 75)
     {
         bool skipRobber = false;

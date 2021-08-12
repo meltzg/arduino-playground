@@ -124,9 +124,12 @@ public:
     virtual void processMessage(const Message &message);
 
 protected:
+    int btnDiscover = 0;
+
     bool pollDiscovery = false;
     bool postDiscovery = false;
 
+    bool sendIdRequest();
     bool sendDiscoveryRequest();
     bool sendDiscoveryStatsRequest();
     void handleDiscoveryStatsResponse(const Message &message);
@@ -164,7 +167,7 @@ public:
     void processState(unsigned long currentMillis, uint16_t state);
     void processMessage(const Message &message);
 
-protected:
+protected:    
     void doPostDiscovery();
 
 private:
@@ -173,7 +176,6 @@ private:
     LinkedList<NodeId_t> discoveryQueue;
 
     void handleNodeResponse(const Message &message);
-    void sendIdRequest();
     void sendNeighborRequest(NodeId_t destination, bool useCache = false);
 };
 

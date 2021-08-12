@@ -132,7 +132,9 @@ protected:
     bool sendIdRequest();
     bool sendDiscoveryRequest();
     bool sendDiscoveryStatsRequest();
+    bool sendNeighborRequest(NodeId_t destination, bool useCache = false);
     void handleDiscoveryStatsResponse(const Message &message);
+    virtual void handleNodeResponse(const Message &message) = 0;
     virtual void doPostDiscovery() = 0;
 
 private:
@@ -167,7 +169,7 @@ public:
     void processState(unsigned long currentMillis, uint16_t state);
     void processMessage(const Message &message);
 
-protected:    
+protected:
     void doPostDiscovery();
 
 private:
@@ -176,7 +178,6 @@ private:
     LinkedList<NodeId_t> discoveryQueue;
 
     void handleNodeResponse(const Message &message);
-    void sendNeighborRequest(NodeId_t destination, bool useCache = false);
 };
 
 class CatanLandType
@@ -282,14 +283,18 @@ enum CatanCommand : byte
     STATE_RESPONSE
 };
 
-struct CatanState
+struct BaseCatanState
+{
+    CatanLandType landType = CatanLandType::NONE;
+    byte rollValue = 0;
+};
+
+struct CatanState : public BaseCatanState
 {
     NodeId_t id = EMPTY;
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
-    CatanLandType landType = CatanLandType::NONE;
-    byte rollValue = 0;
     bool hasRobber = false;
 };
 
@@ -358,37 +363,40 @@ struct StateResponse : public CatanMessage
     }
 };
 
-class CatanMode : public Mode
+class CatanMode : public DiscoveryMode
 {
 public:
-    using Mode::Mode;
+    using DiscoveryMode::DiscoveryMode;
 
     void init();
     void processState(unsigned long currentMillis, uint16_t state);
     void processMessage(const Message &message);
 
+protected:
+    void handleNodeResponse(const Message &message);
+    void doPostDiscovery();
+
 private:
     static const __int24 PLAYER_COLORS[6];
     static const __int24 LAND_COLORS[8];
+
+    Map<NodeId_t, BaseCatanState> initialStates;
+    LinkedList<NodeId_t> discoveryQueue;
 
     NodeId_t neighborIds[6];
     CatanState catanState;
     bool playerSelectMode = false;
     byte currentPlayer = 0;
     bool playStarted = false;
-    byte setupStage = 0;
-    char displayValue[10] = {0};
 
-    static __int24 getPlayerColoer(byte playerNumber);
+    static __int24 getPlayerColor(byte playerNumber);
 
     void updateRoads(uint16_t state);
     void updateSettlements(uint16_t state);
     void updateRobber(uint16_t state);
     void updateCurrentPlayer(uint16_t state);
     void renderState();
-    void setupGame();
     void setTileValue(byte val);
-    void advanceSetupStage(byte stage);
 
     void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
     void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);

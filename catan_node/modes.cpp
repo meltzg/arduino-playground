@@ -65,6 +65,10 @@ void DiscoveryMode::processMessage(const Message &message)
     {
         handleDiscoveryStatsResponse(message);
     }
+    else if (message.getSysCommand() == ROUTER_ADD_NODE)
+    {
+        handleNodeResponse(message);
+    }
 }
 
 bool DiscoveryMode::sendIdRequest()
@@ -140,6 +144,32 @@ bool DiscoveryMode::sendDiscoveryStatsRequest()
     return true;
 }
 
+bool DiscoveryMode::sendNeighborRequest(NodeId_t destination, bool useCache)
+{
+    Serial.print(F("Request neighbors "));
+    Serial.println(destination, HEX);
+    Serial.print(F("Use Cache "));
+    Serial.println(useCache);
+    Message neighborRequest(
+        myId,
+        destination,
+        0,
+        useCache ? ROUTER_USE_CACHE : 0,
+        ROUTER_GET_NEIGHBORS,
+        NULL);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, neighborRequest);
+    }
+    else
+    {
+        disp.setChars("N req Failure ");
+        return false;
+    }
+    return true;
+}
+
 void DiscoveryMode::handleDiscoveryStatsResponse(const Message &message)
 {
     Serial.println(F("handle disc stat resp"));
@@ -206,11 +236,7 @@ void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
 
 void NetworkTestMode::processMessage(const Message &message)
 {
-    if (message.getSysCommand() == ROUTER_ADD_NODE)
-    {
-        handleNodeResponse(message);
-    }
-    else if (!message.getSysCommand() && message.getPayloadSize() > 0)
+    if (!message.getSysCommand() && message.getPayloadSize() > 0)
     {
         NetworkTestMessage *command = (NetworkTestMessage *)message.getBody();
         switch (command->command)
@@ -328,30 +354,6 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
     }
 }
 
-void NetworkTestMode::sendNeighborRequest(NodeId_t destination, bool useCache)
-{
-    Serial.print(F("Request neighbors "));
-    Serial.println(destination, HEX);
-    Serial.print(F("Use Cache "));
-    Serial.println(useCache);
-    Message neighborRequest(
-        myId,
-        destination,
-        0,
-        useCache ? ROUTER_USE_CACHE : 0,
-        ROUTER_GET_NEIGHBORS,
-        NULL);
-
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, neighborRequest);
-    }
-    else
-    {
-        disp.setChars("N req Failure ");
-    }
-}
-
 CatanLandType CatanLandType::randomType()
 {
     int totalWeight = 0;
@@ -377,6 +379,7 @@ CatanLandType CatanLandType::randomType()
 
 void CatanMode::init()
 {
+    btnDiscover = BTN_LAND;
     randomSeed(analogRead(SEED_PIN));
     disp.setRenderChars(true);
     if (!playStarted)
@@ -404,7 +407,11 @@ void CatanMode::init()
 
 void CatanMode::processState(unsigned long currentMillis, uint16_t state)
 {
-    if (currentMillis - previousMillis > 75)
+    if (!playStarted)
+    {
+        DiscoveryMode::processState(currentMillis, state);
+    }
+    else if (currentMillis - previousMillis > 75)
     {
         bool skipRobber = false;
 
@@ -419,10 +426,6 @@ void CatanMode::processState(unsigned long currentMillis, uint16_t state)
             playerSelectMode = false;
             setTileValue(catanState.rollValue);
             skipRobber = true;
-        }
-        if (!playStarted && ((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0)
-        {
-            setupGame();
         }
         else if (state != previousState)
         {
@@ -445,6 +448,102 @@ void CatanMode::processState(unsigned long currentMillis, uint16_t state)
         previousState = state;
         previousMillis = currentMillis;
     }
+}
+
+void CatanMode::handleNodeResponse(const Message &message)
+{
+    NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
+
+    if (!playStarted)
+    {
+        Serial.print(F("Prep tile "));
+        Serial.println(nodes[0], HEX);
+        int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
+        Serial.print(F("Num nodes "));
+        Serial.println(numNodes);
+        NodeId_t id = nodes[0];
+
+        BaseCatanState initialState;
+        if (numNodes == 7 || numNodes == 1 || ALL_LAND)
+        {
+            initialState.landType = CatanLandType::randomType();
+        }
+        else
+        {
+            initialState.landType = CatanLandType::OCEAN;
+        }
+
+        if (initialState.landType == CatanLandType::OCEAN || initialState.landType == CatanLandType::DESERT)
+        {
+            initialState.rollValue = 0;
+        }
+        else
+        {
+            initialState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+        }
+
+        Serial.print(F("Land Type "));
+        Serial.println(initialState.landType.toString());
+        Serial.print(F("Roll Value "));
+        Serial.println(initialState.rollValue);
+
+        initialStates.put(id, initialState);
+
+        for (int i = 1; i < numNodes; i++)
+        {
+            id = nodes[i];
+            if (id != EMPTY && !initialStates.containsKey(id))
+            {
+                Serial.println(i);
+                Serial.println(id, HEX);
+                if (!discoveryQueue.contains(id))
+                {
+                    discoveryQueue.pushBack(id);
+                }
+                Serial.println(discoveryQueue.peekFront(), HEX);
+            }
+        }
+
+        if (discoveryQueue.isEmpty())
+        {
+            Serial.println(F("Post Discovery Complete"));
+            discoveryQueue.purge();
+        }
+        else
+        {
+            NodeId_t nextNode = discoveryQueue.popFront();
+
+            WakeNodeMessage command;
+            Message msg(
+                myId,
+                nextNode,
+                sizeof(WakeNodeMessage),
+                0,
+                0,
+                (byte *)&command);
+
+            Serial.print(F("Waking next node "));
+            Serial.println(nextNode, HEX);
+
+            if (msg.getDest() != EMPTY)
+            {
+                if (ackWait(&netPort, MAX_NET_RETRIES))
+                {
+                    writeMessage(&netPort, msg);
+                }
+                else
+                {
+                    Serial.println(F("Fail"));
+                }
+            }
+            sendNeighborRequest(nextNode, true);
+        }
+    }
+}
+
+void CatanMode::doPostDiscovery()
+{
+    sendNeighborRequest(myId, true);
 }
 
 void CatanMode::updateRoads(uint16_t state)
@@ -549,7 +648,7 @@ void CatanMode::renderState()
         for (int i = 0; i < NUM_ROADS; i++)
         {
             byte ledPos = EDGE_LED_POS[i];
-            ledColors[ledPos] = getPlayerColoer(i);
+            ledColors[ledPos] = getPlayerColor(i);
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
         {
@@ -557,7 +656,7 @@ void CatanMode::renderState()
             ledColors[ledPos[0]] = BLACK;
             ledColors[ledPos[1]] = BLACK;
         }
-        ledColors[LED_LAND] = getPlayerColoer(currentPlayer);
+        ledColors[LED_LAND] = getPlayerColor(currentPlayer);
     }
     else
     {
@@ -571,7 +670,7 @@ void CatanMode::renderState()
             }
             else
             {
-                ledColors[ledPos] = getPlayerColoer(catanState.roadOwners[i]);
+                ledColors[ledPos] = getPlayerColor(catanState.roadOwners[i]);
             }
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
@@ -585,10 +684,10 @@ void CatanMode::renderState()
             }
             else
             {
-                ledColors[ledPos[0]] = getPlayerColoer(catanState.settlementOwners[i]);
+                ledColors[ledPos[0]] = getPlayerColor(catanState.settlementOwners[i]);
                 if (catanState.isCity[i])
                 {
-                    ledColors[ledPos[1]] = getPlayerColoer(catanState.settlementOwners[i]);
+                    ledColors[ledPos[1]] = getPlayerColor(catanState.settlementOwners[i]);
                 }
             }
         }
@@ -598,117 +697,28 @@ void CatanMode::renderState()
     leds.setState(ledColors);
 }
 
-void CatanMode::setupGame()
-{
-    Serial.println(F("setup"));
-    switch (setupStage)
-    {
-    case 0:
-        Message idRequest(
-            EMPTY,
-            EMPTY,
-            0,
-            0,
-            ROUTER_GET_ID,
-            NULL);
-
-        if (ackWait(&netPort, MAX_NET_RETRIES))
-        {
-            writeMessage(&netPort, idRequest);
-            netPort.readBytes((byte *)&catanState.id, sizeof(NodeId_t));
-        }
-        else
-        {
-            Serial.println(F("Fail"));
-            return;
-        }
-
-        Serial.print(F("ID: "));
-        Serial.println(catanState.id, HEX);
-
-        Message neighborRequest(
-            catanState.id,
-            catanState.id,
-            0,
-            0,
-            ROUTER_GET_NEIGHBORS,
-            NULL);
-
-        if (ackWait(&netPort, MAX_NET_RETRIES))
-        {
-            writeMessage(&netPort, neighborRequest);
-        }
-        else
-        {
-            Serial.println(F("Fail"));
-        }
-        break;
-    case 1:
-        // sendDiscoveryRequest();
-        break;
-    default:
-
-        int numEmpty = 0;
-        for (int i = 0; i < 6; i++)
-        {
-            if (neighborIds[i] == EMPTY)
-            {
-                numEmpty++;
-            }
-        }
-        if (numEmpty == 0 || numEmpty == 6 || ALL_LAND)
-        {
-            catanState.landType = CatanLandType::randomType();
-        }
-        else
-        {
-            catanState.landType = CatanLandType::OCEAN;
-        }
-
-        if (catanState.landType == CatanLandType::OCEAN || catanState.landType == CatanLandType::DESERT)
-        {
-            catanState.rollValue = 0;
-        }
-        else
-        {
-            catanState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
-        }
-
-        setTileValue(catanState.rollValue);
-
-        playStarted = true;
-    }
-}
-
 void CatanMode::setTileValue(byte val)
 {
     if (val < MIN_ROLL)
     {
-        sprintf(displayValue, "  ");
+        sprintf(displayMessage, "  ");
     }
     else if (val > MAX_ROLL)
     {
-        sprintf(displayValue, "Robber ");
+        sprintf(displayMessage, "Robber ");
     }
     else
     {
-        sprintf(displayValue, "%02d", val);
+        sprintf(displayMessage, "%02d", val);
     }
-    disp.setChars(displayValue);
+    disp.setChars(displayMessage);
 }
 
 void CatanMode::processMessage(const Message &message)
 {
     if (message.getSysCommand())
     {
-        if (message.getSysCommand() == ROUTER_ADD_NODE && message.getSource() == catanState.id)
-            advanceSetupStage(CATAN_SETUP_NEIGHBORS);
-        for (int i = 0; i < 6; i++)
-        {
-            NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
-            neighborIds[i] = id;
-            Serial.println(id, HEX);
-        }
+        DiscoveryMode::processMessage(message);
     }
     else
     {
@@ -727,21 +737,9 @@ void CatanMode::processMessage(const Message &message)
             break;
         }
     }
-    if (!playStarted)
-    {
-        setupGame();
-    }
 }
 
-void CatanMode::advanceSetupStage(byte stage)
-{
-    if (setupStage <= stage)
-    {
-        ++setupStage;
-    }
-}
-
-__int24 CatanMode::getPlayerColoer(byte playerNumber)
+__int24 CatanMode::getPlayerColor(byte playerNumber)
 {
     switch (playerNumber)
     {

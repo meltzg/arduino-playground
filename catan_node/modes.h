@@ -99,7 +99,7 @@ protected:
     unsigned long previousMillis = 0;
     uint16_t previousState = 0;
 
-    char displayMessage[100] = {0};
+    char displayMessage[40] = {0};
 };
 
 class ComponentTestMode : public Mode
@@ -279,6 +279,7 @@ private:
 enum CatanCommand : byte
 {
     SET_ROAD,
+    SET_INITIAL_STATE,
     GET_STATE,
     STATE_RESPONSE
 };
@@ -312,6 +313,17 @@ struct SetRoadRequest : public CatanMessage
     {
         modeId = MODE_CATAN;
         command = SET_ROAD;
+    }
+};
+
+struct SetInitialStateRequest : public CatanMessage
+{
+    BaseCatanState initialState;
+
+    SetInitialStateRequest(BaseCatanState initialState) : initialState(initialState)
+    {
+        modeId = MODE_CATAN;
+        command = SET_INITIAL_STATE;
     }
 };
 
@@ -399,6 +411,8 @@ private:
     void setTileValue(byte val);
 
     void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
+    void setInitialState(SetInitialStateRequest request);
+    void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
     void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
     void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);
 

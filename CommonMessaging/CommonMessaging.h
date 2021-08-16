@@ -45,6 +45,7 @@
 // System options
 #define ROUTER_SYS_COMMAND 0x01
 #define ROUTER_USE_CACHE 0x02
+#define ROUTER_BROADCAST 0x04
 
 // System commands
 #define ROUTER_GET_ID 0x01

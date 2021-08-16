@@ -508,6 +508,19 @@ void CatanMode::handleNodeResponse(const Message &message)
         {
             Serial.println(F("Post Discovery Complete"));
             discoveryQueue.purge();
+
+            for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
+            {
+                Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
+                if (stateInfo.left == myId)
+                {
+                    continue;
+                }
+                SetInitialStateRequest request(stateInfo.right);
+                sendSetInitialStateRequest(stateInfo.left, request);
+            }
+            SetInitialStateRequest request(*initialStates.get(myId));
+            sendSetInitialStateRequest(myId, request);
         }
         else
         {
@@ -537,6 +550,15 @@ void CatanMode::handleNodeResponse(const Message &message)
                 }
             }
             sendNeighborRequest(nextNode, true);
+        }
+    }
+    else if (message.getSource() == catanState.id)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
+            neighborIds[i] = id;
+            Serial.println(id, HEX);
         }
     }
 }
@@ -728,6 +750,9 @@ void CatanMode::processMessage(const Message &message)
         case SET_ROAD:
             setRoadOwner(*(SetRoadRequest *)command, false);
             break;
+        case SET_INITIAL_STATE:
+            setInitialState(*(SetInitialStateRequest *)command);
+            break;
         case GET_STATE:
             sendStateResponse(message.getSource(), ((GetStateRequest *)command)->placementInfo);
             break;
@@ -794,6 +819,43 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
                 Serial.println(F("Fail"));
             }
         }
+    }
+}
+
+void CatanMode::setInitialState(SetInitialStateRequest request)
+{
+    catanState.landType = request.initialState.landType;
+    catanState.rollValue = request.initialState.rollValue;
+    setTileValue(catanState.rollValue);
+
+    playStarted = true;
+
+    sendIdRequest();
+    catanState.id = myId;
+
+    Serial.print(F("ID: "));
+    Serial.println(catanState.id, HEX);
+
+    sendNeighborRequest(myId, true);
+}
+
+void CatanMode::sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)
+{
+    Message msg(
+        catanState.id,
+        node,
+        sizeof(GetStateRequest),
+        0,
+        0,
+        (byte *)&request);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, msg);
+    }
+    else
+    {
+        Serial.println(F("Fail"));
     }
 }
 

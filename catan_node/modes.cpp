@@ -520,7 +520,7 @@ void CatanMode::handleNodeResponse(const Message &message)
                 sendSetInitialStateRequest(stateInfo.left, request);
             }
             SetInitialStateRequest request(*initialStates.get(myId));
-            sendSetInitialStateRequest(myId, request);
+            setInitialState(request);
         }
         else
         {

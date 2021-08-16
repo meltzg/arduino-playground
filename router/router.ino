@@ -147,6 +147,17 @@ void processMessage(Stream *srcPort, const Message &message)
         srcPort->write((char *)&NODE_ID, sizeof(NODE_ID));
         return;
     }
+    if (message.getSysCommand() & ROUTER_BROADCAST)
+    {
+        Serial.println(F("Broadcasting message"));
+        pathfinder.resetIterator(NODE_ID);
+        for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext())
+        {
+            Serial.println(distribId, HEX);
+            message.setDest(distribId);
+            routeMessage(message);
+        }
+    }
     if (message.getDest() != NODE_ID)
     {
         if (!(message.getSysOption() & ROUTER_USE_CACHE) || !(message.getSysCommand() & ROUTER_GET_NEIGHBORS))

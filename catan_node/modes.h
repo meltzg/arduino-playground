@@ -99,7 +99,7 @@ protected:
     unsigned long previousMillis = 0;
     uint16_t previousState = 0;
 
-    char displayMessage[40] = {0};
+    char displayMessage[50] = {0};
 };
 
 class ComponentTestMode : public Mode

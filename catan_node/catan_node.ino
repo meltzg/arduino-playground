@@ -83,6 +83,10 @@ void loop()
         if (!message.getSysCommand() && message.getPayloadSize() > 0)
         {
             ModeMessage *command = (ModeMessage *)message.getBody();
+            Serial.print(F("Current Mode ID "));
+            Serial.println(modeIdx);
+            Serial.print(F("Message Mode ID "));
+            Serial.println(command->modeId);
             if (command->modeId != modeIdx)
             {
                 modeIdx = command->modeId;

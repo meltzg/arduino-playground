@@ -525,30 +525,6 @@ void CatanMode::handleNodeResponse(const Message &message)
         else
         {
             NodeId_t nextNode = discoveryQueue.popFront();
-
-            WakeNodeMessage command;
-            Message msg(
-                myId,
-                nextNode,
-                sizeof(WakeNodeMessage),
-                0,
-                0,
-                (byte *)&command);
-
-            Serial.print(F("Waking next node "));
-            Serial.println(nextNode, HEX);
-
-            if (msg.getDest() != EMPTY)
-            {
-                if (ackWait(&netPort, MAX_NET_RETRIES))
-                {
-                    writeMessage(&netPort, msg);
-                }
-                else
-                {
-                    Serial.println(F("Fail"));
-                }
-            }
             sendNeighborRequest(nextNode, true);
         }
     }

@@ -1042,6 +1042,7 @@ void CatanMode::reconcileRoadValidation(StateResponse response)
             response.placementInfo.validateStep++;
             if (neighborTile2 < 0)
             {
+                response.state = catanState;
                 reconcileRoadValidation(response);
             }
             else

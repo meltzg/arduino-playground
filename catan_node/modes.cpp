@@ -354,12 +354,12 @@ void NetworkTestMode::handleNodeResponse(const Message &message)
     }
 }
 
-CatanLandType CatanLandType::randomType()
+CatanLandType CatanLandType::randomType(bool includeDesert)
 {
     int totalWeight = 0;
     for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
     {
-        totalWeight += static_cast<CatanLandType>(i).toWeight();
+        totalWeight += static_cast<CatanLandType>(i).toWeight(includeDesert);
     }
     Serial.print(F("Total weight "));
     Serial.println(totalWeight);
@@ -367,14 +367,19 @@ CatanLandType CatanLandType::randomType()
     int rnd = random(totalWeight);
     for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
     {
-        if (rnd < static_cast<CatanLandType>(i).toWeight())
+        if (rnd < static_cast<CatanLandType>(i).toWeight(includeDesert))
         {
             return static_cast<CatanLandType>(i);
         }
-        rnd -= static_cast<CatanLandType>(i).toWeight();
+        rnd -= static_cast<CatanLandType>(i).toWeight(includeDesert);
     }
 
     return CatanLandType::NONE;
+}
+
+int CatanLandType::numDessertTiles(int numLandTiles)
+{
+    return numLandTiles / 30 + 1;
 }
 
 void CatanMode::init()
@@ -509,18 +514,7 @@ void CatanMode::handleNodeResponse(const Message &message)
             Serial.println(F("Post Discovery Complete"));
             discoveryQueue.purge();
 
-            for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
-            {
-                Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
-                if (stateInfo.left == myId)
-                {
-                    continue;
-                }
-                SetInitialStateRequest request(stateInfo.right);
-                sendSetInitialStateRequest(stateInfo.left, request);
-            }
-            SetInitialStateRequest request(*initialStates.get(myId));
-            setInitialState(request);
+            setupBoard();
         }
         else
         {
@@ -727,7 +721,7 @@ void CatanMode::processMessage(const Message &message)
             setRoadOwner(*(SetRoadRequest *)command, false);
             break;
         case SET_INITIAL_STATE:
-            setInitialState(*(SetInitialStateRequest *)command);
+            setInitialState(message.getSource(), *(SetInitialStateRequest *)command);
             break;
         case GET_STATE:
             sendStateResponse(message.getSource(), ((GetStateRequest *)command)->placementInfo);
@@ -798,11 +792,22 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
     }
 }
 
-void CatanMode::setInitialState(SetInitialStateRequest request)
+void CatanMode::setInitialState(NodeId_t node, SetInitialStateRequest request)
 {
     catanState.landType = request.initialState.landType;
     catanState.rollValue = request.initialState.rollValue;
-    setTileValue(catanState.rollValue);
+    catanState.hasRobber = request.initialState.hasRobber;
+
+    catanState.controllerId = node;
+
+    if (catanState.hasRobber)
+    {
+        setTileValue(0xFF);
+    }
+    else
+    {
+        setTileValue(catanState.rollValue);
+    }
 
     playStarted = true;
 
@@ -952,6 +957,66 @@ void CatanMode::reconcileSettlementValidation(StateResponse response)
         Serial.print(F("step "));
         Serial.println(response.placementInfo.validateStep);
     }
+}
+
+void CatanMode::setupBoard()
+{
+    int numLand = 0;
+    for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
+    {
+        Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
+        if (stateInfo.right.landType != CatanLandType::OCEAN)
+        {
+            numLand++;
+        }
+    }
+
+    const int numDesert = CatanLandType::numDessertTiles(numLand);
+    Set<int> desertTileIndices;
+    while (desertTileIndices.count < numDesert)
+    {
+        desertTileIndices.pushBack(random(numLand));
+    }
+
+    bool robberAssigned = false;
+    while (desertTileIndices.count > 0)
+    {
+        int index = desertTileIndices.popFront();
+        int i = 0;
+        for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
+        {
+            Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
+            if (stateInfo.right.landType != CatanLandType::OCEAN)
+            {
+                if (i == index)
+                {
+                    initialStates.get(stateInfo.left)->landType = CatanLandType::DESERT;
+                    if (!robberAssigned)
+                    {
+                        robberAssigned = true;
+                        initialStates.get(stateInfo.left)->hasRobber = true;
+                        break;
+                    }
+                }
+                i++;
+            }
+        }
+    }
+
+    for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
+    {
+        Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
+        if (stateInfo.left == myId)
+        {
+            continue;
+        }
+        SetInitialStateRequest request(stateInfo.right);
+        sendSetInitialStateRequest(stateInfo.left, request);
+    }
+    SetInitialStateRequest request(*initialStates.get(myId));
+    setInitialState(myId, request);
+
+    initialStates.purge();
 }
 
 int cityToNeighbor(int cityNumber)

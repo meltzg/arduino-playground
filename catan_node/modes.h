@@ -40,7 +40,7 @@
 #define BTN_DISCOVER 3
 
 // Catan
-#define ALL_LAND false
+#define ALL_LAND true
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5
@@ -247,14 +247,14 @@ public:
         }
     }
 
-    byte toWeight()
+    byte toWeight(bool includeDesert = false)
     {
         switch (value)
         {
         case OCEAN:
             return 0;
         case DESERT:
-            return NUM_DESERT_TILES;
+            return includeDesert ? NUM_DESERT_TILES : 0;
         case BRICK:
             return NUM_BRICK_TILES;
         case SHEEP:
@@ -270,7 +270,8 @@ public:
         }
     }
 
-    static CatanLandType randomType();
+    static CatanLandType randomType(bool includeDesert = false);
+    static int numDessertTiles(int numLandTiles);
 
 private:
     Value value;
@@ -288,15 +289,16 @@ struct BaseCatanState
 {
     CatanLandType landType = CatanLandType::NONE;
     byte rollValue = 0;
+    bool hasRobber = false;
 };
 
 struct CatanState : public BaseCatanState
 {
     NodeId_t id = EMPTY;
+    NodeId_t controllerId;
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
-    bool hasRobber = false;
 };
 
 struct CatanMessage : public ModeMessage
@@ -411,7 +413,7 @@ private:
     void setTileValue(byte val);
 
     void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
-    void setInitialState(SetInitialStateRequest request);
+    void setInitialState(NodeId_t node, SetInitialStateRequest request);
     void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
     void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
     void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);
@@ -419,6 +421,8 @@ private:
     void reconcileStateResponse(StateResponse response);
     void reconcileSettlementValidation(StateResponse response);
     void reconcileRoadValidation(StateResponse response);
+
+    void setupBoard();
 };
 
 #endif // _MODES_H_

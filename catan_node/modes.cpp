@@ -528,6 +528,7 @@ void CatanMode::handleNodeResponse(const Message &message)
             id = nodes[i];
             if (id != EMPTY && !initialStates.containsKey(id))
             {
+                topology.addEdge(nodes[0], id);
                 Serial.println(i);
                 Serial.println(id, HEX);
                 if (!discoveryQueue.contains(id))
@@ -558,14 +559,6 @@ void CatanMode::handleNodeResponse(const Message &message)
             NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
             neighborIds[i] = id;
             Serial.println(id, HEX);
-        }
-
-        if (catanState.landType == CatanLandType::OCEAN && catanState.portType != CatanLandType::NONE)
-        {
-            do
-            {
-                catanState.portLocation = random(6);
-            } while (neighborIds[catanState.portLocation] == EMPTY);
         }
     }
 }
@@ -704,7 +697,17 @@ void CatanMode::renderState()
         }
         if (RENDER_PORTS && catanState.landType == CatanLandType::OCEAN && catanState.portType != CatanLandType::NONE)
         {
-            ledColors[EDGE_LED_POS[catanState.portLocation]] = catanState.portType.toGRB();
+            Serial.print(F("harbor type "));
+            Serial.println(catanState.portType.toString());
+            Serial.print(F("harbor port "));
+            Serial.println(catanState.portNeighbor, HEX);
+            for (int i = 0; i < 6; i++)
+            {
+                if (neighborIds[i] == catanState.portNeighbor)
+                {
+                    ledColors[EDGE_LED_POS[i]] = catanState.portType.toGRB();
+                }
+            }
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
         {
@@ -843,12 +846,24 @@ void CatanMode::setInitialState(NodeId_t node, SetInitialStateRequest request)
     catanState.rollValue = request.initialState.rollValue;
     catanState.hasRobber = request.initialState.hasRobber;
     catanState.portType = request.initialState.portType;
+    catanState.portNeighbor = request.initialState.portNeighbor;
 
     catanState.controllerId = node;
 
     if (catanState.hasRobber)
     {
         setTileValue(0xFF);
+    }
+    else if (catanState.portType != CatanLandType::NONE)
+    {
+        if (catanState.portType == CatanLandType::DESERT)
+        {
+            disp.setChars("3/1  ");
+        }
+        else{
+            sprintf(displayMessage, "2/1 %s ", catanState.portType.toString());
+            disp.setChars(displayMessage);
+        }
     }
     else
     {
@@ -1085,20 +1100,50 @@ void CatanMode::setupBoard()
     const int numHarbor = CatanLandType::numHarbor(initialStates.values.count - numLand);
     while (specialTileIndices.count < numHarbor)
     {
-        specialTileIndices.pushBack(random(initialStates.values.count - numLand));
-    }
-    while (specialTileIndices.count > 0)
-    {
-        int index = specialTileIndices.popFront();
+        int possibleIndex = random(initialStates.values.count - numLand);
+        if (specialTileIndices.contains(possibleIndex))
+        {
+            continue;
+        }
         int i = 0;
         for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
         {
             Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
             if (stateInfo.right.landType == CatanLandType::OCEAN)
             {
-                if (i == index)
+                if (i == possibleIndex)
                 {
-                    initialStates.get(stateInfo.left)->portType = CatanLandType::randomHarbor();
+                    Set<NodeId_t> neighbors;
+                    LinkedList<NodeId_t> landNeighbors;
+                    topology.getAdjacent(stateInfo.left, neighbors);
+                    bool hasLandNeighbor = false;
+                    for (ListIterator<NodeId_t> neighborIter(neighbors); neighborIter.hasNext();)
+                    {
+                        NodeId_t neighbor = neighborIter.next();
+                        if (initialStates.get(neighbor)->landType != CatanLandType::OCEAN)
+                        {
+                            landNeighbors.pushBack(neighbor);
+                        }
+                    }
+                    if (landNeighbors.count > 0)
+                    {
+                        specialTileIndices.pushBack(possibleIndex);
+                        int harborIdx = random(landNeighbors.count);
+                        int j = 0;
+                        for (ListIterator<NodeId_t> landIter(neighbors); landIter.hasNext(); j++)
+                        {
+                            NodeId_t harborId = landIter.next();
+                            if (j == harborIdx)
+                            {
+                                 initialStates.get(stateInfo.left)->portType = CatanLandType::randomHarbor();
+                                 initialStates.get(stateInfo.left)->portNeighbor = harborId;
+                                 Serial.print(F("Set Harbor Port "));
+                                 Serial.println(initialStates.get(stateInfo.left)->portNeighbor, HEX);
+                                 break;
+                            }
+                        }
+                    }
+                    break;
                 }
                 i++;
             }

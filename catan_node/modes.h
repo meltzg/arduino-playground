@@ -41,7 +41,7 @@
 
 // Catan
 #define ALL_LAND true
-#define RENDER_PORTS false
+#define RENDER_PORTS true
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5
@@ -313,6 +313,7 @@ struct BaseCatanState
 {
     CatanLandType landType = CatanLandType::NONE;
     CatanLandType portType = CatanLandType::NONE;
+    NodeId_t portNeighbor = EMPTY;
     byte rollValue = 0;
     bool hasRobber = false;
 };
@@ -324,7 +325,6 @@ struct CatanState : public BaseCatanState
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
-    byte portLocation = 0;
 };
 
 struct CatanMessage : public ModeMessage
@@ -403,7 +403,7 @@ struct StateResponse : public CatanMessage
     }
 };
 
-struct SetCurrentPlayerRequest: public CatanMessage
+struct SetCurrentPlayerRequest : public CatanMessage
 {
     byte playerNumber = 0;
 
@@ -433,6 +433,7 @@ private:
 
     Map<NodeId_t, BaseCatanState> initialStates;
     LinkedList<NodeId_t> discoveryQueue;
+    Graph<NodeId_t> topology = Graph<NodeId_t>(true, 0, EEPROM.length());
 
     NodeId_t neighborIds[6];
     CatanState catanState;

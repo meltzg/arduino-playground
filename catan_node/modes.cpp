@@ -377,9 +377,37 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
     return CatanLandType::NONE;
 }
 
+CatanLandType CatanLandType::randomHarbor()
+{
+    int totalWeight = 0;
+    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+    {
+        totalWeight += static_cast<CatanLandType>(i).toHarborWeight();
+    }
+    Serial.print(F("Total weight "));
+    Serial.println(totalWeight);
+
+    int rnd = random(totalWeight);
+    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+    {
+        if (rnd < static_cast<CatanLandType>(i).toHarborWeight())
+        {
+            return static_cast<CatanLandType>(i);
+        }
+        rnd -= static_cast<CatanLandType>(i).toHarborWeight();
+    }
+
+    return CatanLandType::NONE;
+}
+
 int CatanLandType::numDessertTiles(int numLandTiles)
 {
     return numLandTiles / 30 + 1;
+}
+
+int CatanLandType::numHarbor(int numOceanTiles)
+{
+    return min(numOceanTiles, 11);
 }
 
 void CatanMode::init()
@@ -531,6 +559,14 @@ void CatanMode::handleNodeResponse(const Message &message)
             neighborIds[i] = id;
             Serial.println(id, HEX);
         }
+
+        if (catanState.landType == CatanLandType::OCEAN && catanState.portType != CatanLandType::NONE)
+        {
+            do
+            {
+                catanState.portLocation = random(6);
+            } while (neighborIds[catanState.portLocation] == EMPTY);
+        }
     }
 }
 
@@ -665,6 +701,10 @@ void CatanMode::renderState()
             {
                 ledColors[ledPos] = getPlayerColor(catanState.roadOwners[i]);
             }
+        }
+        if (RENDER_PORTS && catanState.landType == CatanLandType::OCEAN && catanState.portType != CatanLandType::NONE)
+        {
+            ledColors[EDGE_LED_POS[catanState.portLocation]] = catanState.portType.toGRB();
         }
         for (int i = 0; i < NUM_SETTLEMENTS; i++)
         {
@@ -802,6 +842,7 @@ void CatanMode::setInitialState(NodeId_t node, SetInitialStateRequest request)
     catanState.landType = request.initialState.landType;
     catanState.rollValue = request.initialState.rollValue;
     catanState.hasRobber = request.initialState.hasRobber;
+    catanState.portType = request.initialState.portType;
 
     catanState.controllerId = node;
 
@@ -1006,17 +1047,18 @@ void CatanMode::setupBoard()
         }
     }
 
+    // set desert tiles and robber
     const int numDesert = CatanLandType::numDessertTiles(numLand);
-    Set<int> desertTileIndices;
-    while (desertTileIndices.count < numDesert)
+    Set<int> specialTileIndices;
+    while (specialTileIndices.count < numDesert)
     {
-        desertTileIndices.pushBack(random(numLand));
+        specialTileIndices.pushBack(random(numLand));
     }
 
     bool robberAssigned = false;
-    while (desertTileIndices.count > 0)
+    while (specialTileIndices.count > 0)
     {
-        int index = desertTileIndices.popFront();
+        int index = specialTileIndices.popFront();
         int i = 0;
         for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
         {
@@ -1026,12 +1068,37 @@ void CatanMode::setupBoard()
                 if (i == index)
                 {
                     initialStates.get(stateInfo.left)->landType = CatanLandType::DESERT;
+                    initialStates.get(stateInfo.left)->rollValue = 0;
                     if (!robberAssigned)
                     {
                         robberAssigned = true;
                         initialStates.get(stateInfo.left)->hasRobber = true;
                         break;
                     }
+                }
+                i++;
+            }
+        }
+    }
+    specialTileIndices.purge();
+    // set harbors
+    const int numHarbor = CatanLandType::numHarbor(initialStates.values.count - numLand);
+    while (specialTileIndices.count < numHarbor)
+    {
+        specialTileIndices.pushBack(random(initialStates.values.count - numLand));
+    }
+    while (specialTileIndices.count > 0)
+    {
+        int index = specialTileIndices.popFront();
+        int i = 0;
+        for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
+        {
+            Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
+            if (stateInfo.right.landType == CatanLandType::OCEAN)
+            {
+                if (i == index)
+                {
+                    initialStates.get(stateInfo.left)->portType = CatanLandType::randomHarbor();
                 }
                 i++;
             }

@@ -41,6 +41,7 @@
 
 // Catan
 #define ALL_LAND true
+#define RENDER_PORTS false
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5
@@ -269,9 +270,31 @@ public:
             return 0;
         }
     }
+    byte toHarborWeight()
+    {
+        switch (value)
+        {
+        case DESERT:
+            return 5;
+        case BRICK:
+            return 1;
+        case SHEEP:
+            return 2;
+        case WOOD:
+            return 1;
+        case STONE:
+            return 1;
+        case WHEAT:
+            return 1;
+        default:
+            return 0;
+        }
+    }
 
     static CatanLandType randomType(bool includeDesert = false);
+    static CatanLandType randomHarbor();
     static int numDessertTiles(int numLandTiles);
+    static int numHarbor(int numOceanTiles);
 
 private:
     Value value;
@@ -289,6 +312,7 @@ enum CatanCommand : byte
 struct BaseCatanState
 {
     CatanLandType landType = CatanLandType::NONE;
+    CatanLandType portType = CatanLandType::NONE;
     byte rollValue = 0;
     bool hasRobber = false;
 };
@@ -300,6 +324,7 @@ struct CatanState : public BaseCatanState
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
+    byte portLocation = 0;
 };
 
 struct CatanMessage : public ModeMessage

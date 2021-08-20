@@ -147,7 +147,7 @@ void processMessage(Stream *srcPort, const Message &message)
         srcPort->write((char *)&NODE_ID, sizeof(NODE_ID));
         return;
     }
-    if (message.getSysCommand() & ROUTER_BROADCAST)
+    if (message.getSysOption() & ROUTER_BROADCAST)
     {
         Serial.println(F("Broadcasting message"));
         pathfinder.resetIterator(NODE_ID);
@@ -155,6 +155,7 @@ void processMessage(Stream *srcPort, const Message &message)
         {
             Serial.println(distribId, HEX);
             message.setDest(distribId);
+            message.setSysOption(message.getSysOption() & ~ROUTER_BROADCAST);
             routeMessage(message);
         }
     }

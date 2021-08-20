@@ -431,6 +431,7 @@ void CatanMode::processState(unsigned long currentMillis, uint16_t state)
             playerSelectMode = false;
             setTileValue(catanState.rollValue);
             skipRobber = true;
+            sendSetCurrentPlayerRequest();
         }
         else if (state != previousState)
         {
@@ -728,6 +729,10 @@ void CatanMode::processMessage(const Message &message)
             break;
         case STATE_RESPONSE:
             reconcileStateResponse(*(StateResponse *)command);
+            break;
+        case SET_PLAYER:
+            setCurrentPlayer(*(SetCurrentPlayerRequest *)command);
+            break;
         default:
             break;
         }
@@ -825,7 +830,7 @@ void CatanMode::sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest
     Message msg(
         catanState.id,
         node,
-        sizeof(GetStateRequest),
+        sizeof(SetInitialStateRequest),
         0,
         0,
         (byte *)&request);
@@ -880,6 +885,36 @@ void CatanMode::sendStateResponse(NodeId_t node, PlacementValidationInfo placeme
     {
         Serial.println(F("Fail"));
     }
+}
+
+void CatanMode::sendSetCurrentPlayerRequest()
+{
+    SetCurrentPlayerRequest request(currentPlayer);
+    Message msg(
+        catanState.id,
+        catanState.id,
+        sizeof(SetCurrentPlayerRequest),
+        ROUTER_BROADCAST,
+        0,
+        (byte *)&request);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, msg);
+    }
+    else
+    {
+        Serial.println(F("Fail"));
+    }
+}
+
+void CatanMode::setCurrentPlayer(SetCurrentPlayerRequest request)
+{
+    currentPlayer = request.playerNumber;
+    __int24 ledColors[leds.getNumLeds()] = {BLACK};
+    ledColors[LED_LAND] = getPlayerColor(currentPlayer);
+    leds.setState(ledColors);
+    delay(500);
 }
 
 void CatanMode::reconcileStateResponse(StateResponse response)

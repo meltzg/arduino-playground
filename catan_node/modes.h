@@ -282,7 +282,8 @@ enum CatanCommand : byte
     SET_ROAD,
     SET_INITIAL_STATE,
     GET_STATE,
-    STATE_RESPONSE
+    STATE_RESPONSE,
+    SET_PLAYER
 };
 
 struct BaseCatanState
@@ -377,6 +378,17 @@ struct StateResponse : public CatanMessage
     }
 };
 
+struct SetCurrentPlayerRequest: public CatanMessage
+{
+    byte playerNumber = 0;
+
+    SetCurrentPlayerRequest(byte playerNumber) : playerNumber(playerNumber)
+    {
+        modeId = MODE_CATAN;
+        command = SET_PLAYER;
+    }
+};
+
 class CatanMode : public DiscoveryMode
 {
 public:
@@ -417,6 +429,8 @@ private:
     void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
     void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
     void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);
+    void sendSetCurrentPlayerRequest();
+    void setCurrentPlayer(SetCurrentPlayerRequest request);
 
     void reconcileStateResponse(StateResponse response);
     void reconcileSettlementValidation(StateResponse response);

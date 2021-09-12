@@ -272,7 +272,7 @@ public:
     static CatanLandType randomType(bool includeDesert = false);
     static CatanLandType randomHarbor();
     static int numDessertTiles(int numLandTiles);
-    static int numHarbor(int numOceanTiles);
+    static int numHarborTiles(int numOceanTiles);
 
 private:
     Value value;
@@ -394,7 +394,6 @@ struct SetCurrentPlayerRequest : public CatanMessage
 
 // Mode State for catan
 
-extern Map<NodeId_t, BaseCatanState> initialStates;
 extern Graph<NodeId_t> topology;
 
 extern CatanState catanState;

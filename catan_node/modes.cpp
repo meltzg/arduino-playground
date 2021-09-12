@@ -37,7 +37,6 @@ NodeId_t neighborIds[6];
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
 
-Map<NodeId_t, BaseCatanState> initialStates;
 Graph<NodeId_t> topology = Graph<NodeId_t>(true, 0, EEPROM.length());
 
 CatanState catanState;
@@ -158,7 +157,6 @@ void handleDiscoveryStatsResponse(const Message &message)
         sendNeighborRequest(myId, true);
     }
 }
-
 
 void handleNodeResponseNetworkTest(const Message &message)
 {
@@ -308,7 +306,7 @@ int CatanLandType::numDessertTiles(int numLandTiles)
     return numLandTiles / 30 + 1;
 }
 
-int CatanLandType::numHarbor(int numOceanTiles)
+int CatanLandType::numHarborTiles(int numOceanTiles)
 {
     return min(numOceanTiles, 11);
 }
@@ -319,50 +317,24 @@ void handleNodeResponseCatan(const Message &message)
 
     if (!playStarted)
     {
-        Serial.print(F("Prep tile "));
-        Serial.println(nodes[0], HEX);
         int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
         Serial.print(F("Num nodes "));
         Serial.println(numNodes);
-        NodeId_t id = nodes[0];
+        NodeId_t sourceId = nodes[0];
 
-        BaseCatanState initialState;
-        if (numNodes == 7 || numNodes == 1 || ALL_LAND)
-        {
-            initialState.landType = CatanLandType::randomType();
-        }
-        else
-        {
-            initialState.landType = CatanLandType::OCEAN;
-        }
-
-        if (initialState.landType == CatanLandType::OCEAN || initialState.landType == CatanLandType::DESERT)
-        {
-            initialState.rollValue = 0;
-        }
-        else
-        {
-            initialState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
-        }
-
-        Serial.print(F("Land Type "));
-        Serial.println(initialState.landType.toString());
-        Serial.print(F("Roll Value "));
-        Serial.println(initialState.rollValue);
-
-        initialStates.put(id, initialState);
+        discoveryVisited.pushBack(sourceId);
 
         for (int i = 1; i < numNodes; i++)
         {
-            id = nodes[i];
-            if (id != EMPTY && !initialStates.containsKey(id))
+            NodeId_t sinkId = nodes[i];
+            if (sinkId != EMPTY && !discoveryVisited.contains(sinkId))
             {
-                topology.addEdge(nodes[0], id);
+                topology.addEdge(nodes[0], sinkId);
                 Serial.println(i);
-                Serial.println(id, HEX);
-                if (!discoveryQueue.contains(id))
+                Serial.println(sinkId, HEX);
+                if (!discoveryQueue.contains(sinkId))
                 {
-                    discoveryQueue.pushBack(id);
+                    discoveryQueue.pushBack(sinkId);
                 }
                 Serial.println(discoveryQueue.peekFront(), HEX);
             }
@@ -845,118 +817,102 @@ void reconcileSettlementValidation(StateResponse response)
 
 void setupBoard()
 {
+    Serial.println(F("Setup board"));
+
     int numLand = 0;
-    for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
+    for (GraphIterator<NodeId_t> iter(topology, myId); iter.hasNext();)
     {
-        Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
-        if (stateInfo.right.landType != CatanLandType::OCEAN)
+        NodeId_t curr = iter.next();
+        Set<NodeId_t> adj;
+        topology.getAdjacent(curr, adj);
+        if (ALL_LAND || adj.count == 0 || adj.count == 6)
         {
             numLand++;
         }
     }
 
-    // set desert tiles and robber
+    // get indicies for desert tiles
     const int numDesert = CatanLandType::numDessertTiles(numLand);
-    Set<int> specialTileIndices;
-    while (specialTileIndices.count < numDesert)
+    Set<int> desertTiles;
+    while (desertTiles.count < numDesert)
     {
-        specialTileIndices.pushBack(random(numLand));
+        desertTiles.pushBack(random(numLand));
     }
+    Serial.print(F("Num desert "));
+    Serial.println(numDesert);
+
+    // get indicies for harbor tiles
+    const int numHarbor = CatanLandType::numHarborTiles(topology.numNodes() - numLand);
+    Set<int> harborTiles;
+    while (harborTiles.count < numHarbor)
+    {
+        harborTiles.pushBack(random(topology.numNodes() - numLand));
+    }
+    Serial.print(F("Num harbor "));
+    Serial.println(numHarbor);
 
     bool robberAssigned = false;
-    while (specialTileIndices.count > 0)
+    int landIndex = 0, oceanIndex = 0;
+
+    BaseCatanState myState;
+
+    for (GraphIterator<NodeId_t> iter(topology, myId); iter.hasNext();)
     {
-        int index = specialTileIndices.popFront();
-        int i = 0;
-        for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
+        NodeId_t curr = iter.next();
+
+        Set<NodeId_t> adj;
+        topology.getAdjacent(curr, adj);
+
+        BaseCatanState initialState;
+
+        if (ALL_LAND || adj.count == 6 || adj.count == 0)
         {
-            Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
-            if (stateInfo.right.landType != CatanLandType::OCEAN)
+            if (desertTiles.contains(landIndex))
             {
-                if (i == index)
+                // desert tile
+                initialState.landType = CatanLandType::DESERT;
+                initialState.rollValue = 0;
+                if (!robberAssigned)
                 {
-                    initialStates.get(stateInfo.left)->landType = CatanLandType::DESERT;
-                    initialStates.get(stateInfo.left)->rollValue = 0;
-                    if (!robberAssigned)
-                    {
-                        robberAssigned = true;
-                        initialStates.get(stateInfo.left)->hasRobber = true;
-                        break;
-                    }
+                    robberAssigned = true;
+                    initialState.hasRobber = true;
                 }
-                i++;
+            }
+            else
+            {
+                // land tile
+                initialState.landType = CatanLandType::randomType();
+                initialState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+            }
+            landIndex++;
+        }
+        else
+        {
+            // ocean tile
+            initialState.landType = CatanLandType::OCEAN;
+            if (harborTiles.contains(oceanIndex))
+            {
+                // harbor tile
             }
         }
-    }
-    specialTileIndices.purge();
-    // set harbors
-    const int numHarbor = CatanLandType::numHarbor(initialStates.values.count - numLand);
-    while (specialTileIndices.count < numHarbor)
-    {
-        int possibleIndex = random(initialStates.values.count - numLand);
-        if (specialTileIndices.contains(possibleIndex))
-        {
-            continue;
-        }
-        int i = 0;
-        for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
-        {
-            Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
-            if (stateInfo.right.landType == CatanLandType::OCEAN)
-            {
-                if (i == possibleIndex)
-                {
-                    Set<NodeId_t> neighbors;
-                    LinkedList<NodeId_t> landNeighbors;
-                    topology.getAdjacent(stateInfo.left, neighbors);
-                    bool hasLandNeighbor = false;
-                    for (ListIterator<NodeId_t> neighborIter(neighbors); neighborIter.hasNext();)
-                    {
-                        NodeId_t neighbor = neighborIter.next();
-                        if (initialStates.get(neighbor)->landType != CatanLandType::OCEAN)
-                        {
-                            landNeighbors.pushBack(neighbor);
-                        }
-                    }
-                    if (landNeighbors.count > 0)
-                    {
-                        specialTileIndices.pushBack(possibleIndex);
-                        int harborIdx = random(landNeighbors.count);
-                        int j = 0;
-                        for (ListIterator<NodeId_t> landIter(neighbors); landIter.hasNext(); j++)
-                        {
-                            NodeId_t harborId = landIter.next();
-                            if (j == harborIdx)
-                            {
-                                initialStates.get(stateInfo.left)->portType = CatanLandType::randomHarbor();
-                                initialStates.get(stateInfo.left)->portNeighbor = harborId;
-                                Serial.print(F("Set Harbor Port "));
-                                Serial.println(initialStates.get(stateInfo.left)->portNeighbor, HEX);
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                }
-                i++;
-            }
-        }
-    }
 
-    for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
-    {
-        Pair<NodeId_t, BaseCatanState> stateInfo = iter.next();
-        if (stateInfo.left == myId)
-        {
-            continue;
-        }
-        SetInitialStateRequest request(stateInfo.right);
-        sendSetInitialStateRequest(stateInfo.left, request);
-    }
-    SetInitialStateRequest request(*initialStates.get(myId));
-    setInitialState(myId, request);
+        Serial.print(F("Land Type "));
+        Serial.println(initialState.landType.toString());
+        Serial.print(F("Roll Value "));
+        Serial.println(initialState.rollValue);
 
-    initialStates.purge();
+        if (curr == myId)
+        {
+            myState = initialState;
+        }
+        else
+        {
+            SetInitialStateRequest request(initialState);
+            sendSetInitialStateRequest(curr, request);
+        }
+    }
+    SetInitialStateRequest request(myState);
+    sendSetInitialStateRequest(myId, request);
 }
 
 int cityToNeighbor(int cityNumber)

@@ -159,104 +159,103 @@ void handleDiscoveryStatsResponse(const Message &message)
     }
 }
 
-void handleNodeResponse(const Message &message) {}
 
-// void NetworkTestMode::handleNodeResponse(const Message &message)
-// {
-//     NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
-//     if (!postDiscovery)
-//     {
-//         __int24 ledColors[leds.getNumLeds()] = {BLACK};
-//         sprintf(
-//             displayMessage,
-//             "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
-//             nodes[1],
-//             nodes[2],
-//             nodes[3],
-//             nodes[4],
-//             nodes[5],
-//             nodes[6]);
+void handleNodeResponseNetworkTest(const Message &message)
+{
+    NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
+    if (!postDiscovery)
+    {
+        __int24 ledColors[leds.getNumLeds()] = {BLACK};
+        sprintf(
+            displayMessage,
+            "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
+            nodes[1],
+            nodes[2],
+            nodes[3],
+            nodes[4],
+            nodes[5],
+            nodes[6]);
 
-//         disp.setChars(displayMessage);
-//         Serial.println(displayMessage);
-//         for (int i = 0; i < 6; i++)
-//         {
-//             NodeId_t id = nodes[i + 1];
-//             Serial.println(id, HEX);
-//             if (id == EMPTY)
-//             {
-//                 ledColors[EDGE_LED_POS[i]] = RED;
-//             }
-//             else
-//             {
-//                 ledColors[EDGE_LED_POS[i]] = GREEN;
-//             }
-//             if (message.getSource() == myId)
-//             {
-//                 neighborIds[i] = id;
-//             }
-//         }
-//         leds.setState(ledColors);
-//     }
-//     else
-//     {
-//         int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
-//         Serial.print(F("Num nodes "));
-//         Serial.println(numNodes);
-//         NodeId_t id = nodes[0];
-//         discoveryVisited.pushBack(id);
-//         for (int i = 1; i < numNodes; i++)
-//         {
-//             id = nodes[i];
-//             if (id != EMPTY && !discoveryVisited.contains(id))
-//             {
-//                 Serial.println(i);
-//                 Serial.println(id, HEX);
-//                 discoveryQueue.pushBack(id);
-//                 discoveryVisited.pushBack(id);
-//                 Serial.println(discoveryQueue.peekFront(), HEX);
-//             }
-//         }
+        disp.setChars(displayMessage);
+        Serial.println(displayMessage);
+        for (int i = 0; i < 6; i++)
+        {
+            NodeId_t id = nodes[i + 1];
+            Serial.println(id, HEX);
+            if (id == EMPTY)
+            {
+                ledColors[EDGE_LED_POS[i]] = RED;
+            }
+            else
+            {
+                ledColors[EDGE_LED_POS[i]] = GREEN;
+            }
+            if (message.getSource() == myId)
+            {
+                neighborIds[i] = id;
+            }
+        }
+        leds.setState(ledColors);
+    }
+    else
+    {
+        int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
+        Serial.print(F("Num nodes "));
+        Serial.println(numNodes);
+        NodeId_t id = nodes[0];
+        discoveryVisited.pushBack(id);
+        for (int i = 1; i < numNodes; i++)
+        {
+            id = nodes[i];
+            if (id != EMPTY && !discoveryVisited.contains(id))
+            {
+                Serial.println(i);
+                Serial.println(id, HEX);
+                discoveryQueue.pushBack(id);
+                discoveryVisited.pushBack(id);
+                Serial.println(discoveryQueue.peekFront(), HEX);
+            }
+        }
 
-//         if (discoveryQueue.isEmpty())
-//         {
-//             Serial.println(F("Post Discovery Complete"));
-//             discoveryQueue.purge();
-//             discoveryVisited.purge();
-//             postDiscovery = false;
-//             sendNeighborRequest(myId, true);
-//         }
-//         else
-//         {
-//             NodeId_t nextNode = discoveryQueue.popFront();
+        if (discoveryQueue.isEmpty())
+        {
+            Serial.println(F("Post Discovery Complete"));
+            discoveryQueue.purge();
+            discoveryVisited.purge();
+            postDiscovery = false;
+            sendNeighborRequest(myId, true);
+        }
+        else
+        {
+            NodeId_t nextNode = discoveryQueue.popFront();
 
-//             WakeNodeMessage command;
-//             Message msg(
-//                 myId,
-//                 nextNode,
-//                 sizeof(WakeNodeMessage),
-//                 0,
-//                 0,
-//                 (byte *)&command);
+            WakeNodeMessage command;
+            Message msg(
+                myId,
+                nextNode,
+                sizeof(WakeNodeMessage),
+                0,
+                0,
+                (byte *)&command);
 
-//             Serial.print(F("Waking next node "));
-//             Serial.println(nextNode, HEX);
+            Serial.print(F("Waking next node "));
+            Serial.println(nextNode, HEX);
 
-//             if (msg.getDest() != EMPTY)
-//             {
-//                 if (ackWait(&netPort, MAX_NET_RETRIES))
-//                 {
-//                     writeMessage(&netPort, msg);
-//                 }
-//                 else
-//                 {
-//                     Serial.println(F("Fail"));
-//                 }
-//             }
-//             sendNeighborRequest(nextNode, true);
-//         }
-//     }
-// }
+            if (msg.getDest() != EMPTY)
+            {
+                if (ackWait(&netPort, MAX_NET_RETRIES))
+                {
+                    writeMessage(&netPort, msg);
+                }
+                else
+                {
+                    Serial.println(F("Fail"));
+                }
+            }
+            sendNeighborRequest(nextNode, true);
+        }
+    }
+}
 
 CatanLandType CatanLandType::randomType(bool includeDesert)
 {
@@ -314,84 +313,84 @@ int CatanLandType::numHarbor(int numOceanTiles)
     return min(numOceanTiles, 11);
 }
 
-// void CatanMode::handleNodeResponse(const Message &message)
-// {
-//     NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
+void handleNodeResponseCatan(const Message &message)
+{
+    NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
 
-//     if (!playStarted)
-//     {
-//         Serial.print(F("Prep tile "));
-//         Serial.println(nodes[0], HEX);
-//         int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
-//         Serial.print(F("Num nodes "));
-//         Serial.println(numNodes);
-//         NodeId_t id = nodes[0];
+    if (!playStarted)
+    {
+        Serial.print(F("Prep tile "));
+        Serial.println(nodes[0], HEX);
+        int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
+        Serial.print(F("Num nodes "));
+        Serial.println(numNodes);
+        NodeId_t id = nodes[0];
 
-//         BaseCatanState initialState;
-//         if (numNodes == 7 || numNodes == 1 || ALL_LAND)
-//         {
-//             initialState.landType = CatanLandType::randomType();
-//         }
-//         else
-//         {
-//             initialState.landType = CatanLandType::OCEAN;
-//         }
+        BaseCatanState initialState;
+        if (numNodes == 7 || numNodes == 1 || ALL_LAND)
+        {
+            initialState.landType = CatanLandType::randomType();
+        }
+        else
+        {
+            initialState.landType = CatanLandType::OCEAN;
+        }
 
-//         if (initialState.landType == CatanLandType::OCEAN || initialState.landType == CatanLandType::DESERT)
-//         {
-//             initialState.rollValue = 0;
-//         }
-//         else
-//         {
-//             initialState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
-//         }
+        if (initialState.landType == CatanLandType::OCEAN || initialState.landType == CatanLandType::DESERT)
+        {
+            initialState.rollValue = 0;
+        }
+        else
+        {
+            initialState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+        }
 
-//         Serial.print(F("Land Type "));
-//         Serial.println(initialState.landType.toString());
-//         Serial.print(F("Roll Value "));
-//         Serial.println(initialState.rollValue);
+        Serial.print(F("Land Type "));
+        Serial.println(initialState.landType.toString());
+        Serial.print(F("Roll Value "));
+        Serial.println(initialState.rollValue);
 
-//         initialStates.put(id, initialState);
+        initialStates.put(id, initialState);
 
-//         for (int i = 1; i < numNodes; i++)
-//         {
-//             id = nodes[i];
-//             if (id != EMPTY && !initialStates.containsKey(id))
-//             {
-//                 topology.addEdge(nodes[0], id);
-//                 Serial.println(i);
-//                 Serial.println(id, HEX);
-//                 if (!discoveryQueue.contains(id))
-//                 {
-//                     discoveryQueue.pushBack(id);
-//                 }
-//                 Serial.println(discoveryQueue.peekFront(), HEX);
-//             }
-//         }
+        for (int i = 1; i < numNodes; i++)
+        {
+            id = nodes[i];
+            if (id != EMPTY && !initialStates.containsKey(id))
+            {
+                topology.addEdge(nodes[0], id);
+                Serial.println(i);
+                Serial.println(id, HEX);
+                if (!discoveryQueue.contains(id))
+                {
+                    discoveryQueue.pushBack(id);
+                }
+                Serial.println(discoveryQueue.peekFront(), HEX);
+            }
+        }
 
-//         if (discoveryQueue.isEmpty())
-//         {
-//             Serial.println(F("Post Discovery Complete"));
-//             discoveryQueue.purge();
+        if (discoveryQueue.isEmpty())
+        {
+            Serial.println(F("Post Discovery Complete"));
+            discoveryQueue.purge();
 
-//             setupBoard();
-//         }
-//         else
-//         {
-//             NodeId_t nextNode = discoveryQueue.popFront();
-//             sendNeighborRequest(nextNode, true);
-//         }
-//     }
-//     else if (message.getSource() == catanState.id)
-//     {
-//         for (int i = 0; i < 6; i++)
-//         {
-//             NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
-//             neighborIds[i] = id;
-//             Serial.println(id, HEX);
-//         }
-//     }
-// }
+            setupBoard();
+        }
+        else
+        {
+            NodeId_t nextNode = discoveryQueue.popFront();
+            sendNeighborRequest(nextNode, true);
+        }
+    }
+    else if (message.getSource() == catanState.id)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
+            neighborIds[i] = id;
+            Serial.println(id, HEX);
+        }
+    }
+}
 
 void updateRoads(uint16_t state)
 {

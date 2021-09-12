@@ -10,7 +10,7 @@ void setup()
 
     __int24 ledColors[NUM_LEDS] = {BLACK};
     leds.setState(ledColors);
-    selectMode(modeIdx);
+    selectMode();
     delay(3000);
 }
 
@@ -25,10 +25,16 @@ void loop()
 
     if (((previousState >> BTN_CENTER) & 1) && ((btnState >> BTN_CENTER) & 1) == 0)
     {
+        Serial.print(F("Old Mode "));
+        Serial.println(modeIdx);
+
         modeIdx++;
         modeIdx %= NUM_MODES;
 
-        selectMode(modeIdx);
+        Serial.print(F("New Mode "));
+        Serial.println(modeIdx);
+
+        selectMode();
     }
 
     if (hasIncoming(&netPort))
@@ -44,7 +50,7 @@ void loop()
             if (command->modeId != modeIdx)
             {
                 modeIdx = command->modeId;
-                selectMode(modeIdx);
+                selectMode();
             }
         }
 
@@ -56,14 +62,16 @@ void loop()
     previousState = btnState;
 }
 
-void selectMode(int modeIdx)
+void selectMode()
 {
-    switch (modeIdx)
+    if (modeIdx == MODE_COMPONENT_TEST)
     {
-    case MODE_COMPONENT_TEST:
+        Serial.println(F("Init component"));
         disp.setRenderChars(false);
-        break;
-    case MODE_NETWORK_TEST:
+    }
+    else if (modeIdx == MODE_NETWORK_TEST)
+    {
+        Serial.println(F("Init network test"));
         btnDiscover = BTN_DISCOVER;
         disp.setRenderChars(true);
         __int24 ledColors[leds.getNumLeds()];
@@ -77,8 +85,10 @@ void selectMode(int modeIdx)
         {
             neighborIds[i] = EMPTY;
         }
-        break;
-    case MODE_CATAN:
+    }
+    else if (modeIdx == MODE_CATAN)
+    {
+        Serial.println(F("Init catan"));
         btnDiscover = BTN_LAND;
         randomSeed(analogRead(SEED_PIN));
         disp.setRenderChars(true);
@@ -103,19 +113,22 @@ void selectMode(int modeIdx)
         {
             setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
         }
-        break;
-    default:
-        break;
     }
+    else
+    {
+        Serial.print(F("Invalid mode "));
+        Serial.println(modeIdx);
+    }
+    Serial.print(F("doop "));
+    Serial.println(modeIdx);
 }
 
 void processState(unsigned long currentMillis, uint16_t state)
 {
     bool doDiscoveryProcessing = false;
 
-    switch (modeIdx)
+    if (modeIdx == MODE_COMPONENT_TEST)
     {
-    case MODE_COMPONENT_TEST:
         static int colorOffset = 0;
         static int segmentOffset = 0;
 
@@ -140,8 +153,9 @@ void processState(unsigned long currentMillis, uint16_t state)
             leds.setState(ledColors);
             previousMillisLeds = currentMillis;
         }
-        break;
-    case MODE_NETWORK_TEST:
+    }
+    else if (modeIdx == MODE_NETWORK_TEST)
+    {
         if (state != previousState)
         {
             if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
@@ -170,8 +184,9 @@ void processState(unsigned long currentMillis, uint16_t state)
             }
         }
         doDiscoveryProcessing = true;
-        break;
-    case MODE_CATAN:
+    }
+    else if (modeIdx == MODE_CATAN)
+    {
         if (!playStarted)
         {
             doDiscoveryProcessing = true;
@@ -213,9 +228,6 @@ void processState(unsigned long currentMillis, uint16_t state)
             renderState();
             previousMillis = currentMillis;
         }
-        break;
-    default:
-        break;
     }
 
     if (doDiscoveryProcessing)
@@ -243,11 +255,11 @@ void processMessage(const Message &message)
 {
     bool doDiscoveryProcessing = false;
 
-    switch (modeIdx)
+    if (modeIdx == MODE_COMPONENT_TEST)
     {
-    case MODE_COMPONENT_TEST:
-        break;
-    case MODE_NETWORK_TEST:
+    }
+    else if (modeIdx == MODE_NETWORK_TEST)
+    {
         if (!message.getSysCommand() && message.getPayloadSize() > 0)
         {
             NetworkTestMessage *command = (NetworkTestMessage *)message.getBody();
@@ -262,8 +274,9 @@ void processMessage(const Message &message)
         {
             doDiscoveryProcessing = true;
         }
-        break;
-    case MODE_CATAN:
+    }
+    else if (modeIdx == MODE_CATAN)
+    {
         if (message.getSysCommand())
         {
             doDiscoveryProcessing = true;
@@ -292,9 +305,6 @@ void processMessage(const Message &message)
                 break;
             }
         }
-        break;
-    default:
-        break;
     }
 
     if (doDiscoveryProcessing)
@@ -305,7 +315,14 @@ void processMessage(const Message &message)
         }
         else if (message.getSysCommand() == ROUTER_ADD_NODE)
         {
-            handleNodeResponse(message);
+            if (modeIdx == MODE_NETWORK_TEST)
+            {
+                handleNodeResponseNetworkTest(message);
+            }
+            else if (modeIdx == MODE_CATAN)
+            {
+                handleNodeResponseCatan(message);
+            }
         }
     }
 }

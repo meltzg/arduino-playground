@@ -155,7 +155,7 @@ bool sendDiscoveryRequest();
 bool sendDiscoveryStatsRequest();
 bool sendNeighborRequest(NodeId_t destination, bool useCache = false);
 void handleDiscoveryStatsResponse(const Message &message);
-void handleNodeResponse(const Message &message);
+void handleNodeResponseNetworkTest(const Message &message);
 
 // Catan types
 
@@ -403,6 +403,8 @@ extern byte currentPlayer;
 extern bool playStarted;
 
 // Methods for catan
+
+void handleNodeResponseCatan(const Message &message);
 
 __int24 getPlayerColor(byte playerNumber);
 

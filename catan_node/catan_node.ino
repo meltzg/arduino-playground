@@ -294,6 +294,12 @@ void processMessage(const Message &message)
             case SET_PLAYER:
                 setCurrentPlayer(*(SetCurrentPlayerRequest *)command);
                 break;
+            case CLEAR_ROBBER:
+                if (((ClearRobberRequest *)command)->robberId != myId)
+                {
+                    catanState.hasRobber = false;
+                    setTileValue(catanState.rollValue);
+                }
             default:
                 break;
             }

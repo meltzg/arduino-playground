@@ -284,7 +284,8 @@ enum CatanCommand : byte
     SET_INITIAL_STATE,
     GET_STATE,
     STATE_RESPONSE,
-    SET_PLAYER
+    SET_PLAYER,
+    CLEAR_ROBBER
 };
 
 struct BaseCatanState
@@ -392,6 +393,17 @@ struct SetCurrentPlayerRequest : public CatanMessage
     }
 };
 
+struct ClearRobberRequest : public CatanMessage
+{
+    NodeId_t robberId;
+
+    ClearRobberRequest(NodeId_t robberId) : robberId(robberId)
+    {
+        modeId = MODE_CATAN;
+        command = CLEAR_ROBBER;
+    }
+};
+
 // Mode State for catan
 
 extern Graph<NodeId_t> topology;
@@ -420,6 +432,7 @@ void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
 void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
 void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);
 void sendSetCurrentPlayerRequest();
+void sendClearRobberRequest();
 void setCurrentPlayer(SetCurrentPlayerRequest request);
 
 void reconcileStateResponse(StateResponse response);

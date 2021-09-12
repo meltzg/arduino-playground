@@ -430,15 +430,11 @@ void updateRobber(uint16_t state)
 
     if (((previousState >> BTN_LAND) & 1) && ((state >> BTN_LAND) & 1) == 0)
     {
-        if (catanState.hasRobber)
-        {
-            catanState.hasRobber = false;
-            setTileValue(catanState.rollValue);
-        }
-        else
+        if (!catanState.hasRobber)
         {
             catanState.hasRobber = true;
             setTileValue(0xFF);
+            sendClearRobberRequest();
         }
     }
 }
@@ -715,6 +711,27 @@ void sendSetCurrentPlayerRequest()
         catanState.id,
         catanState.id,
         sizeof(SetCurrentPlayerRequest),
+        ROUTER_BROADCAST,
+        0,
+        (byte *)&request);
+
+    if (ackWait(&netPort, MAX_NET_RETRIES))
+    {
+        writeMessage(&netPort, msg);
+    }
+    else
+    {
+        Serial.println(F("Fail"));
+    }
+}
+
+void sendClearRobberRequest()
+{
+    ClearRobberRequest request(myId);
+    Message msg(
+        catanState.id,
+        catanState.id,
+        sizeof(ClearRobberRequest),
         ROUTER_BROADCAST,
         0,
         (byte *)&request);

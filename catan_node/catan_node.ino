@@ -58,8 +58,6 @@ void loop()
         message.free();
     }
     processState(currentMillis, btnState);
-
-    previousState = btnState;
 }
 
 void selectMode()
@@ -114,13 +112,6 @@ void selectMode()
             setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
         }
     }
-    else
-    {
-        Serial.print(F("Invalid mode "));
-        Serial.println(modeIdx);
-    }
-    Serial.print(F("doop "));
-    Serial.println(modeIdx);
 }
 
 void processState(unsigned long currentMillis, uint16_t state)
@@ -153,6 +144,7 @@ void processState(unsigned long currentMillis, uint16_t state)
             leds.setState(ledColors);
             previousMillisLeds = currentMillis;
         }
+        previousState = state;
     }
     else if (modeIdx == MODE_NETWORK_TEST)
     {
@@ -204,7 +196,7 @@ void processState(unsigned long currentMillis, uint16_t state)
             else if (playerSelectMode && btns.getOnDuration(BTN_LAND) == 0)
             {
                 playerSelectMode = false;
-                setTileValue(catanState.rollValue);
+                setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
                 skipRobber = true;
                 sendSetCurrentPlayerRequest();
             }
@@ -226,6 +218,7 @@ void processState(unsigned long currentMillis, uint16_t state)
             }
 
             renderState();
+            previousState = state;
             previousMillis = currentMillis;
         }
     }

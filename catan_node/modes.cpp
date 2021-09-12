@@ -1,77 +1,51 @@
 #include "modes.h"
 #include "PathFinder.h"
 
-const byte Mode::EDGE_LED_POS[6] = {0, 3, 6, 7, 8, 9};
-const byte Mode::EDGE_BTN_POS[6] = {0, 2, 4, 5, 6, 7};
-const byte Mode::CORNER_LED_POS[2][2] = {{1, 2}, {4, 5}};
-const byte Mode::CORNER_BTN_POS[2] = {1, 3};
+SegmentDisplay disp = SegmentDisplay(
+    SEGMENT_LATCH,
+    SEGMENT_CLOCK,
+    SEGMENT_DATA,
+    SEGMENT_LEFT,
+    SEGMENT_RIGHT,
+    500,
+    false);
 
-void ComponentTestMode::init()
-{
-    disp.setRenderChars(false);
-}
+LEDStatusDisplay leds = LEDStatusDisplay(LED_ARRAY, NUM_LEDS);
 
-void ComponentTestMode::processState(unsigned long currentMillis, uint16_t state)
-{
-    static int colorOffset = 0;
-    static int segmentOffset = 0;
+ButtonArray16 btns = ButtonArray16(
+    BTN_LOAD,
+    BTN_CLK_ENABLE,
+    BTN_DATA,
+    BTN_CLOCK);
 
-    if (currentMillis - previousMillis > 500)
-    {
-        disp.registerWrite(~(1 << (segmentOffset++ % 16)));
+SoftwareSerial netPort = SoftwareSerial(8, 9);
 
-        previousMillis = currentMillis;
-    }
-    if (currentMillis - previousMillisLeds > 100)
-    {
-        __int24 ledColors[leds.getNumLeds()] = {BLACK};
-        for (int i = 0; i < leds.getNumLeds(); i++)
-        {
-            if (((1 << i) & state) > 0)
-            {
-                continue;
-            }
-            ledColors[i] = RAINBOW[(i + colorOffset) % 6];
-        }
-        colorOffset++;
-        leds.setState(ledColors);
-        previousMillisLeds = currentMillis;
-    }
-}
+unsigned long previousMillis = 0;
+unsigned long previousMillisLeds = 0;
+uint16_t previousState = 0;
 
-void DiscoveryMode::processState(unsigned long currentMillis, uint16_t state)
-{
-    if (state != previousState)
-    {
-        if (((previousState >> btnDiscover) & 1) && ((state >> btnDiscover) & 1) == 0)
-        {
-            pollDiscovery = sendDiscoveryRequest();
-        }
+char displayMessage[50] = {0};
 
-        previousState = state;
-    }
-    if (pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
-    {
-        if (sendDiscoveryStatsRequest())
-        {
-            previousDiscoveryMillis = currentMillis;
-        }
-    }
-}
+NodeId_t myId = EMPTY;
+int btnDiscover = 0;
 
-void DiscoveryMode::processMessage(const Message &message)
-{
-    if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)
-    {
-        handleDiscoveryStatsResponse(message);
-    }
-    else if (message.getSysCommand() == ROUTER_ADD_NODE)
-    {
-        handleNodeResponse(message);
-    }
-}
+unsigned long previousDiscoveryMillis = 0;
+bool pollDiscovery = false;
+bool postDiscovery = false;
 
-bool DiscoveryMode::sendIdRequest()
+NodeId_t neighborIds[6];
+Set<NodeId_t> discoveryVisited;
+LinkedList<NodeId_t> discoveryQueue;
+
+Map<NodeId_t, BaseCatanState> initialStates;
+Graph<NodeId_t> topology = Graph<NodeId_t>(true, 0, EEPROM.length());
+
+CatanState catanState;
+bool playerSelectMode = false;
+byte currentPlayer = 0;
+bool playStarted = false;
+
+bool sendIdRequest()
 {
     Message idRequest(
         EMPTY,
@@ -96,7 +70,7 @@ bool DiscoveryMode::sendIdRequest()
     return true;
 }
 
-bool DiscoveryMode::sendDiscoveryRequest()
+bool sendDiscoveryRequest()
 {
     if (myId == EMPTY && !sendIdRequest())
     {
@@ -122,7 +96,7 @@ bool DiscoveryMode::sendDiscoveryRequest()
     return true;
 }
 
-bool DiscoveryMode::sendDiscoveryStatsRequest()
+bool sendDiscoveryStatsRequest()
 {
     Message discoveryStatsRequest(
         myId,
@@ -144,7 +118,7 @@ bool DiscoveryMode::sendDiscoveryStatsRequest()
     return true;
 }
 
-bool DiscoveryMode::sendNeighborRequest(NodeId_t destination, bool useCache)
+bool sendNeighborRequest(NodeId_t destination, bool useCache)
 {
     Serial.print(F("Request neighbors "));
     Serial.println(destination, HEX);
@@ -170,7 +144,7 @@ bool DiscoveryMode::sendNeighborRequest(NodeId_t destination, bool useCache)
     return true;
 }
 
-void DiscoveryMode::handleDiscoveryStatsResponse(const Message &message)
+void handleDiscoveryStatsResponse(const Message &message)
 {
     Serial.println(F("handle disc stat resp"));
     DiscoveryStats *stats = (DiscoveryStats *)message.getBody();
@@ -181,83 +155,12 @@ void DiscoveryMode::handleDiscoveryStatsResponse(const Message &message)
     {
         pollDiscovery = false;
         postDiscovery = true;
-        doPostDiscovery();
+        sendNeighborRequest(myId, true);
     }
 }
 
-void NetworkTestMode::init()
-{
-    btnDiscover = BTN_DISCOVER;
-    disp.setRenderChars(true);
-    __int24 ledColors[leds.getNumLeds()];
-    for (int i = 0; i < leds.getNumLeds(); i++)
-    {
-        ledColors[i] = BLACK;
-    }
-    leds.setState(ledColors);
-    disp.setChars("Start ");
-    for (int i = 0; i < 6; i++)
-    {
-        neighborIds[i] = EMPTY;
-    }
-}
 
-void NetworkTestMode::processState(unsigned long currentMillis, uint16_t state)
-{
-    if (state != previousState)
-    {
-        if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
-        {
-            if (sendIdRequest())
-            {
-                sprintf(displayMessage, "My ID: %04X ", myId);
-                disp.setChars(displayMessage);
-                Serial.println(displayMessage);
-            }
-        }
-        else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
-        {
-            sendNeighborRequest(myId);
-        }
-        else
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((state >> EDGE_BTN_POS[i]) & 1) == 0 && neighborIds[i] != EMPTY)
-                {
-                    sendNeighborRequest(neighborIds[i]);
-                    break;
-                }
-            }
-        }
-    }
-    DiscoveryMode::processState(currentMillis, state);
-}
-
-void NetworkTestMode::processMessage(const Message &message)
-{
-    if (!message.getSysCommand() && message.getPayloadSize() > 0)
-    {
-        NetworkTestMessage *command = (NetworkTestMessage *)message.getBody();
-        switch (command->command)
-        {
-        case START_NODE:
-            sendIdRequest();
-            sendNeighborRequest(myId, true);
-        }
-    }
-    else
-    {
-        DiscoveryMode::processMessage(message);
-    }
-}
-
-void NetworkTestMode::doPostDiscovery()
-{
-    sendNeighborRequest(myId, true);
-}
-
-void NetworkTestMode::handleNodeResponse(const Message &message)
+void handleNodeResponseNetworkTest(const Message &message)
 {
     NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
     if (!postDiscovery)
@@ -410,81 +313,7 @@ int CatanLandType::numHarbor(int numOceanTiles)
     return min(numOceanTiles, 11);
 }
 
-void CatanMode::init()
-{
-    btnDiscover = BTN_LAND;
-    randomSeed(analogRead(SEED_PIN));
-    disp.setRenderChars(true);
-    if (!playStarted)
-    {
-        disp.setChars("Catan ");
-        for (int i = 0; i < 6; i++)
-        {
-            neighborIds[i] = EMPTY;
-        }
-
-        for (int i = 0; i < NUM_ROADS; i++)
-        {
-            catanState.roadOwners[i] = UNOWNED;
-        }
-        for (int i = 0; i < NUM_SETTLEMENTS; i++)
-        {
-            catanState.settlementOwners[i] = UNOWNED;
-        }
-    }
-    else
-    {
-        setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
-    }
-}
-
-void CatanMode::processState(unsigned long currentMillis, uint16_t state)
-{
-    if (!playStarted)
-    {
-        DiscoveryMode::processState(currentMillis, state);
-    }
-    else if (currentMillis - previousMillis > 75)
-    {
-        bool skipRobber = false;
-
-        if (playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
-        {
-            playerSelectMode = true;
-            disp.setChars(catanState.landType.toString());
-            updateCurrentPlayer(state);
-        }
-        else if (playerSelectMode && btns.getOnDuration(BTN_LAND) == 0)
-        {
-            playerSelectMode = false;
-            setTileValue(catanState.rollValue);
-            skipRobber = true;
-            sendSetCurrentPlayerRequest();
-        }
-        else if (state != previousState)
-        {
-            if (!playerSelectMode)
-            {
-                updateRoads(state);
-                updateSettlements(state);
-                if (!skipRobber)
-                {
-                    updateRobber(state);
-                }
-            }
-            else
-            {
-                updateCurrentPlayer(state);
-            }
-        }
-
-        renderState();
-        previousState = state;
-        previousMillis = currentMillis;
-    }
-}
-
-void CatanMode::handleNodeResponse(const Message &message)
+void handleNodeResponseCatan(const Message &message)
 {
     NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
 
@@ -563,12 +392,7 @@ void CatanMode::handleNodeResponse(const Message &message)
     }
 }
 
-void CatanMode::doPostDiscovery()
-{
-    sendNeighborRequest(myId, true);
-}
-
-void CatanMode::updateRoads(uint16_t state)
+void updateRoads(uint16_t state)
 {
     for (int i = 0; i < NUM_ROADS; i++)
     {
@@ -593,7 +417,7 @@ void CatanMode::updateRoads(uint16_t state)
     }
 }
 
-void CatanMode::updateSettlements(uint16_t state)
+void updateSettlements(uint16_t state)
 {
     for (int i = 0; i < NUM_SETTLEMENTS; i++)
     {
@@ -624,7 +448,7 @@ void CatanMode::updateSettlements(uint16_t state)
     }
 }
 
-void CatanMode::updateRobber(uint16_t state)
+void updateRobber(uint16_t state)
 {
     if (catanState.landType == CatanLandType::OCEAN)
     {
@@ -647,7 +471,7 @@ void CatanMode::updateRobber(uint16_t state)
     }
 }
 
-void CatanMode::updateCurrentPlayer(uint16_t state)
+void updateCurrentPlayer(uint16_t state)
 {
     for (int i = 0; i < NUM_ROADS; i++)
     {
@@ -661,7 +485,7 @@ void CatanMode::updateCurrentPlayer(uint16_t state)
     }
 }
 
-void CatanMode::renderState()
+void renderState()
 {
     __int24 ledColors[leds.getNumLeds()] = {BLACK};
 
@@ -733,7 +557,7 @@ void CatanMode::renderState()
     leds.setState(ledColors);
 }
 
-void CatanMode::setTileValue(byte val)
+void setTileValue(byte val)
 {
     if (val < MIN_ROLL)
     {
@@ -750,39 +574,7 @@ void CatanMode::setTileValue(byte val)
     disp.setChars(displayMessage);
 }
 
-void CatanMode::processMessage(const Message &message)
-{
-    if (message.getSysCommand())
-    {
-        DiscoveryMode::processMessage(message);
-    }
-    else
-    {
-        CatanMessage *command = (CatanMessage *)message.getBody();
-        switch (command->command)
-        {
-        case SET_ROAD:
-            setRoadOwner(*(SetRoadRequest *)command, false);
-            break;
-        case SET_INITIAL_STATE:
-            setInitialState(message.getSource(), *(SetInitialStateRequest *)command);
-            break;
-        case GET_STATE:
-            sendStateResponse(message.getSource(), ((GetStateRequest *)command)->placementInfo);
-            break;
-        case STATE_RESPONSE:
-            reconcileStateResponse(*(StateResponse *)command);
-            break;
-        case SET_PLAYER:
-            setCurrentPlayer(*(SetCurrentPlayerRequest *)command);
-            break;
-        default:
-            break;
-        }
-    }
-}
-
-__int24 CatanMode::getPlayerColor(byte playerNumber)
+__int24 getPlayerColor(byte playerNumber)
 {
     switch (playerNumber)
     {
@@ -803,7 +595,7 @@ __int24 CatanMode::getPlayerColor(byte playerNumber)
     }
 }
 
-void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
+void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 {
     catanState.roadOwners[request.roadNumber] = request.playerNumber;
     Serial.print(F("updateNeighbor: "));
@@ -840,7 +632,7 @@ void CatanMode::setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
     }
 }
 
-void CatanMode::setInitialState(NodeId_t node, SetInitialStateRequest request)
+void setInitialState(NodeId_t node, SetInitialStateRequest request)
 {
     catanState.landType = request.initialState.landType;
     catanState.rollValue = request.initialState.rollValue;
@@ -860,7 +652,8 @@ void CatanMode::setInitialState(NodeId_t node, SetInitialStateRequest request)
         {
             disp.setChars("3/1  ");
         }
-        else{
+        else
+        {
             sprintf(displayMessage, "2/1 %s ", catanState.portType.toString());
             disp.setChars(displayMessage);
         }
@@ -881,7 +674,7 @@ void CatanMode::setInitialState(NodeId_t node, SetInitialStateRequest request)
     sendNeighborRequest(myId, true);
 }
 
-void CatanMode::sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)
+void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)
 {
     Message msg(
         catanState.id,
@@ -901,7 +694,7 @@ void CatanMode::sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest
     }
 }
 
-void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo)
+void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo)
 {
     GetStateRequest request(placementInfo);
     Message msg(
@@ -922,7 +715,7 @@ void CatanMode::sendStateRequest(NodeId_t node, PlacementValidationInfo placemen
     }
 }
 
-void CatanMode::sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo)
+void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo)
 {
     StateResponse response(placementInfo, catanState);
     Message msg(
@@ -943,7 +736,7 @@ void CatanMode::sendStateResponse(NodeId_t node, PlacementValidationInfo placeme
     }
 }
 
-void CatanMode::sendSetCurrentPlayerRequest()
+void sendSetCurrentPlayerRequest()
 {
     SetCurrentPlayerRequest request(currentPlayer);
     Message msg(
@@ -964,7 +757,7 @@ void CatanMode::sendSetCurrentPlayerRequest()
     }
 }
 
-void CatanMode::setCurrentPlayer(SetCurrentPlayerRequest request)
+void setCurrentPlayer(SetCurrentPlayerRequest request)
 {
     currentPlayer = request.playerNumber;
     __int24 ledColors[leds.getNumLeds()] = {BLACK};
@@ -973,7 +766,7 @@ void CatanMode::setCurrentPlayer(SetCurrentPlayerRequest request)
     delay(500);
 }
 
-void CatanMode::reconcileStateResponse(StateResponse response)
+void reconcileStateResponse(StateResponse response)
 {
     switch (response.placementInfo)
     {
@@ -989,7 +782,7 @@ void CatanMode::reconcileStateResponse(StateResponse response)
     }
 }
 
-void CatanMode::reconcileSettlementValidation(StateResponse response)
+void reconcileSettlementValidation(StateResponse response)
 {
     if (response.placementInfo.toValidate >= NUM_SETTLEMENTS)
     {
@@ -1050,7 +843,7 @@ void CatanMode::reconcileSettlementValidation(StateResponse response)
     }
 }
 
-void CatanMode::setupBoard()
+void setupBoard()
 {
     int numLand = 0;
     for (ListIterator<Pair<NodeId_t, BaseCatanState>> iter(initialStates.values); iter.hasNext();)
@@ -1135,11 +928,11 @@ void CatanMode::setupBoard()
                             NodeId_t harborId = landIter.next();
                             if (j == harborIdx)
                             {
-                                 initialStates.get(stateInfo.left)->portType = CatanLandType::randomHarbor();
-                                 initialStates.get(stateInfo.left)->portNeighbor = harborId;
-                                 Serial.print(F("Set Harbor Port "));
-                                 Serial.println(initialStates.get(stateInfo.left)->portNeighbor, HEX);
-                                 break;
+                                initialStates.get(stateInfo.left)->portType = CatanLandType::randomHarbor();
+                                initialStates.get(stateInfo.left)->portNeighbor = harborId;
+                                Serial.print(F("Set Harbor Port "));
+                                Serial.println(initialStates.get(stateInfo.left)->portNeighbor, HEX);
+                                break;
                             }
                         }
                     }
@@ -1185,7 +978,7 @@ int cityToNeighbor(int cityNumber)
     }
 }
 
-void CatanMode::reconcileRoadValidation(StateResponse response)
+void reconcileRoadValidation(StateResponse response)
 {
     if (response.placementInfo.toValidate >= NUM_ROADS)
     {

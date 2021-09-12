@@ -1,53 +1,7 @@
 #include "modes.h"
 
-// Hardware config
-#define SEGMENT_LATCH A0
-#define SEGMENT_CLOCK A1
-#define SEGMENT_DATA A2
-#define SEGMENT_LEFT A3
-#define SEGMENT_RIGHT A4
-
-#define LED_ARRAY 7
-#define NUM_LEDS 11
-
-#define NUM_BUTTONS 10
-#define BTN_LOAD 10
-#define BTN_CLK_ENABLE 11
-#define BTN_DATA 12
-#define BTN_CLOCK 13
-
-#define BTN_CENTER 8
-
-// Component setup
-SegmentDisplay disp(
-    SEGMENT_LATCH,
-    SEGMENT_CLOCK,
-    SEGMENT_DATA,
-    SEGMENT_LEFT,
-    SEGMENT_RIGHT,
-    500,
-    false);
-
-LEDStatusDisplay leds(LED_ARRAY, NUM_LEDS);
-
-ButtonArray16 btns(
-    BTN_LOAD,
-    BTN_CLK_ENABLE,
-    BTN_DATA,
-    BTN_CLOCK);
-
-SoftwareSerial netPort(8, 9);
-
-// Modes
-ComponentTestMode componentTest(disp, leds, btns, netPort);
-NetworkTestMode networkTest(disp, leds, btns, netPort);
-CatanMode catan(disp, leds, btns, netPort);
-
 // State information
-Mode *mode = NULL;
 byte modeIdx = MODE_COMPONENT_TEST;
-unsigned long previousMillis = 0;
-uint16_t previousState = 0;
 
 void setup()
 {
@@ -56,7 +10,7 @@ void setup()
 
     __int24 ledColors[NUM_LEDS] = {BLACK};
     leds.setState(ledColors);
-    selectMode(modeIdx);
+    selectMode();
     delay(3000);
 }
 
@@ -71,10 +25,16 @@ void loop()
 
     if (((previousState >> BTN_CENTER) & 1) && ((btnState >> BTN_CENTER) & 1) == 0)
     {
+        Serial.print(F("Old Mode "));
+        Serial.println(modeIdx);
+
         modeIdx++;
         modeIdx %= NUM_MODES;
 
-        selectMode(modeIdx);
+        Serial.print(F("New Mode "));
+        Serial.println(modeIdx);
+
+        selectMode();
     }
 
     if (hasIncoming(&netPort))
@@ -90,33 +50,272 @@ void loop()
             if (command->modeId != modeIdx)
             {
                 modeIdx = command->modeId;
-                selectMode(modeIdx);
+                selectMode();
             }
         }
 
-        mode->processMessage(message);
+        processMessage(message);
         message.free();
     }
-    mode->processState(currentMillis, btnState);
-
-    previousState = btnState;
+    processState(currentMillis, btnState);
 }
 
-void selectMode(int modeIdx)
+void selectMode()
 {
-    switch (modeIdx)
+    if (modeIdx == MODE_COMPONENT_TEST)
     {
-    case MODE_COMPONENT_TEST:
-        mode = &componentTest;
-        break;
-    case MODE_NETWORK_TEST:
-        mode = &networkTest;
-        break;
-    case MODE_CATAN:
-        mode = &catan;
-    default:
-        break;
+        Serial.println(F("Init component"));
+        disp.setRenderChars(false);
+    }
+    else if (modeIdx == MODE_NETWORK_TEST)
+    {
+        Serial.println(F("Init network test"));
+        btnDiscover = BTN_DISCOVER;
+        disp.setRenderChars(true);
+        __int24 ledColors[leds.getNumLeds()];
+        for (int i = 0; i < leds.getNumLeds(); i++)
+        {
+            ledColors[i] = BLACK;
+        }
+        leds.setState(ledColors);
+        disp.setChars("Start ");
+        for (int i = 0; i < 6; i++)
+        {
+            neighborIds[i] = EMPTY;
+        }
+    }
+    else if (modeIdx == MODE_CATAN)
+    {
+        Serial.println(F("Init catan"));
+        btnDiscover = BTN_LAND;
+        randomSeed(analogRead(SEED_PIN));
+        disp.setRenderChars(true);
+        if (!playStarted)
+        {
+            disp.setChars("Catan ");
+            for (int i = 0; i < 6; i++)
+            {
+                neighborIds[i] = EMPTY;
+            }
+
+            for (int i = 0; i < NUM_ROADS; i++)
+            {
+                catanState.roadOwners[i] = UNOWNED;
+            }
+            for (int i = 0; i < NUM_SETTLEMENTS; i++)
+            {
+                catanState.settlementOwners[i] = UNOWNED;
+            }
+        }
+        else
+        {
+            setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
+        }
+    }
+}
+
+void processState(unsigned long currentMillis, uint16_t state)
+{
+    bool doDiscoveryProcessing = false;
+
+    if (modeIdx == MODE_COMPONENT_TEST)
+    {
+        static int colorOffset = 0;
+        static int segmentOffset = 0;
+
+        if (currentMillis - previousMillis > 500)
+        {
+            disp.registerWrite(~(1 << (segmentOffset++ % 16)));
+
+            previousMillis = currentMillis;
+        }
+        if (currentMillis - previousMillisLeds > 100)
+        {
+            __int24 ledColors[leds.getNumLeds()] = {BLACK};
+            for (int i = 0; i < leds.getNumLeds(); i++)
+            {
+                if (((1 << i) & state) > 0)
+                {
+                    continue;
+                }
+                ledColors[i] = RAINBOW[(i + colorOffset) % 6];
+            }
+            colorOffset++;
+            leds.setState(ledColors);
+            previousMillisLeds = currentMillis;
+        }
+        previousState = state;
+    }
+    else if (modeIdx == MODE_NETWORK_TEST)
+    {
+        if (state != previousState)
+        {
+            if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
+            {
+                if (sendIdRequest())
+                {
+                    sprintf(displayMessage, "My ID: %04X ", myId);
+                    disp.setChars(displayMessage);
+                    Serial.println(displayMessage);
+                }
+            }
+            else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
+            {
+                sendNeighborRequest(myId);
+            }
+            else
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((state >> EDGE_BTN_POS[i]) & 1) == 0 && neighborIds[i] != EMPTY)
+                    {
+                        sendNeighborRequest(neighborIds[i]);
+                        break;
+                    }
+                }
+            }
+        }
+        doDiscoveryProcessing = true;
+    }
+    else if (modeIdx == MODE_CATAN)
+    {
+        if (!playStarted)
+        {
+            doDiscoveryProcessing = true;
+        }
+        else if (currentMillis - previousMillis > 75)
+        {
+            bool skipRobber = false;
+
+            if (playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
+            {
+                playerSelectMode = true;
+                disp.setChars(catanState.landType.toString());
+                updateCurrentPlayer(state);
+            }
+            else if (playerSelectMode && btns.getOnDuration(BTN_LAND) == 0)
+            {
+                playerSelectMode = false;
+                setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
+                skipRobber = true;
+                sendSetCurrentPlayerRequest();
+            }
+            else if (state != previousState)
+            {
+                if (!playerSelectMode)
+                {
+                    updateRoads(state);
+                    updateSettlements(state);
+                    if (!skipRobber)
+                    {
+                        updateRobber(state);
+                    }
+                }
+                else
+                {
+                    updateCurrentPlayer(state);
+                }
+            }
+
+            renderState();
+            previousState = state;
+            previousMillis = currentMillis;
+        }
     }
 
-    mode->init();
+    if (doDiscoveryProcessing)
+    {
+        if (state != previousState)
+        {
+            if (((previousState >> btnDiscover) & 1) && ((state >> btnDiscover) & 1) == 0)
+            {
+                pollDiscovery = sendDiscoveryRequest();
+            }
+
+            previousState = state;
+        }
+        if (pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
+        {
+            if (sendDiscoveryStatsRequest())
+            {
+                previousDiscoveryMillis = currentMillis;
+            }
+        }
+    }
+}
+
+void processMessage(const Message &message)
+{
+    bool doDiscoveryProcessing = false;
+
+    if (modeIdx == MODE_COMPONENT_TEST)
+    {
+    }
+    else if (modeIdx == MODE_NETWORK_TEST)
+    {
+        if (!message.getSysCommand() && message.getPayloadSize() > 0)
+        {
+            NetworkTestMessage *command = (NetworkTestMessage *)message.getBody();
+            switch (command->command)
+            {
+            case START_NODE:
+                sendIdRequest();
+                sendNeighborRequest(myId, true);
+            }
+        }
+        else
+        {
+            doDiscoveryProcessing = true;
+        }
+    }
+    else if (modeIdx == MODE_CATAN)
+    {
+        if (message.getSysCommand())
+        {
+            doDiscoveryProcessing = true;
+        }
+        else
+        {
+            CatanMessage *command = (CatanMessage *)message.getBody();
+            switch (command->command)
+            {
+            case SET_ROAD:
+                setRoadOwner(*(SetRoadRequest *)command, false);
+                break;
+            case SET_INITIAL_STATE:
+                setInitialState(message.getSource(), *(SetInitialStateRequest *)command);
+                break;
+            case GET_STATE:
+                sendStateResponse(message.getSource(), ((GetStateRequest *)command)->placementInfo);
+                break;
+            case STATE_RESPONSE:
+                reconcileStateResponse(*(StateResponse *)command);
+                break;
+            case SET_PLAYER:
+                setCurrentPlayer(*(SetCurrentPlayerRequest *)command);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    if (doDiscoveryProcessing)
+    {
+        if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)
+        {
+            handleDiscoveryStatsResponse(message);
+        }
+        else if (message.getSysCommand() == ROUTER_ADD_NODE)
+        {
+            if (modeIdx == MODE_NETWORK_TEST)
+            {
+                handleNodeResponseNetworkTest(message);
+            }
+            else if (modeIdx == MODE_CATAN)
+            {
+                handleNodeResponseCatan(message);
+            }
+        }
+    }
 }

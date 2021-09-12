@@ -67,80 +67,54 @@
 #define NUM_STONE_TILES 5
 #define NUM_DESERT_TILES 2
 
+// Hardware config
+#define SEGMENT_LATCH A0
+#define SEGMENT_CLOCK A1
+#define SEGMENT_DATA A2
+#define SEGMENT_LEFT A3
+#define SEGMENT_RIGHT A4
+
+#define LED_ARRAY 7
+#define NUM_LEDS 11
+
+#define NUM_BUTTONS 10
+#define BTN_LOAD 10
+#define BTN_CLK_ENABLE 11
+#define BTN_DATA 12
+#define BTN_CLOCK 13
+
+#define BTN_CENTER 8
+
+const byte EDGE_LED_POS[6] = {0, 3, 6, 7, 8, 9};
+const byte EDGE_BTN_POS[6] = {0, 2, 4, 5, 6, 7};
+const byte CORNER_LED_POS[2][2] = {{1, 2}, {4, 5}};
+const byte CORNER_BTN_POS[2] = {1, 3};
+
+// Component setup
+extern SegmentDisplay disp;
+
+extern LEDStatusDisplay leds;
+
+extern ButtonArray16 btns;
+
+extern SoftwareSerial netPort;
+
+// Mode types
+
 struct ModeMessage
 {
     byte modeId;
 };
 
-class Mode
-{
-public:
-    Mode(const SegmentDisplay &disp, const LEDStatusDisplay &leds, const ButtonArray16 &btns, const SoftwareSerial &netPort) : disp(disp), leds(leds), btns(btns), netPort(netPort)
-    {
-        Serial.println(F("Construct"));
-        init();
-    }
-    virtual void init() {}
-    virtual void processState(unsigned long currentMillis, uint16_t state) = 0;
-    virtual void processMessage(const Message &message) = 0;
+// Mode State
 
-protected:
-    static const byte EDGE_LED_POS[6];
-    static const byte EDGE_BTN_POS[6];
-    static const byte CORNER_LED_POS[2][2];
-    static const byte CORNER_BTN_POS[2];
+extern unsigned long previousMillis;
+extern unsigned long previousMillisLeds;
+extern uint16_t previousState;
 
-    const SegmentDisplay &disp;
-    const LEDStatusDisplay &leds;
-    const ButtonArray16 &btns;
-    const SoftwareSerial &netPort;
+extern char displayMessage[50];
 
-    NodeId_t myId = EMPTY;
-
-    unsigned long previousMillis = 0;
-    uint16_t previousState = 0;
-
-    char displayMessage[50] = {0};
-};
-
-class ComponentTestMode : public Mode
-{
-public:
-    using Mode::Mode;
-
-    void init();
-    void processState(unsigned long currentMillis, uint16_t state);
-    void processMessage(const Message &message) {}
-
-private:
-    unsigned long previousMillisLeds = 0;
-};
-
-class DiscoveryMode : public Mode
-{
-public:
-    using Mode::Mode;
-
-    virtual void processState(unsigned long currentMillis, uint16_t state);
-    virtual void processMessage(const Message &message);
-
-protected:
-    int btnDiscover = 0;
-
-    bool pollDiscovery = false;
-    bool postDiscovery = false;
-
-    bool sendIdRequest();
-    bool sendDiscoveryRequest();
-    bool sendDiscoveryStatsRequest();
-    bool sendNeighborRequest(NodeId_t destination, bool useCache = false);
-    void handleDiscoveryStatsResponse(const Message &message);
-    virtual void handleNodeResponse(const Message &message) = 0;
-    virtual void doPostDiscovery() = 0;
-
-private:
-    unsigned long previousDiscoveryMillis = 0;
-};
+// Networking types
 
 enum NetworkTestCommand : byte
 {
@@ -161,25 +135,29 @@ struct WakeNodeMessage : public NetworkTestMessage
     }
 };
 
-class NetworkTestMode : public DiscoveryMode
-{
-public:
-    using DiscoveryMode::DiscoveryMode;
+// Mode State for networking
 
-    void init();
-    void processState(unsigned long currentMillis, uint16_t state);
-    void processMessage(const Message &message);
+extern NodeId_t myId;
+extern int btnDiscover;
 
-protected:
-    void doPostDiscovery();
+extern unsigned long previousDiscoveryMillis;
+extern bool pollDiscovery;
+extern bool postDiscovery;
 
-private:
-    NodeId_t neighborIds[6];
-    Set<NodeId_t> discoveryVisited;
-    LinkedList<NodeId_t> discoveryQueue;
+extern NodeId_t neighborIds[6];
+extern Set<NodeId_t> discoveryVisited;
+extern LinkedList<NodeId_t> discoveryQueue;
 
-    void handleNodeResponse(const Message &message);
-};
+// Methods for networking
+
+bool sendIdRequest();
+bool sendDiscoveryRequest();
+bool sendDiscoveryStatsRequest();
+bool sendNeighborRequest(NodeId_t destination, bool useCache = false);
+void handleDiscoveryStatsResponse(const Message &message);
+void handleNodeResponse(const Message &message);
+
+// Catan types
 
 class CatanLandType
 {
@@ -414,55 +392,39 @@ struct SetCurrentPlayerRequest : public CatanMessage
     }
 };
 
-class CatanMode : public DiscoveryMode
-{
-public:
-    using DiscoveryMode::DiscoveryMode;
+// Mode State for catan
 
-    void init();
-    void processState(unsigned long currentMillis, uint16_t state);
-    void processMessage(const Message &message);
+extern Map<NodeId_t, BaseCatanState> initialStates;
+extern Graph<NodeId_t> topology;
 
-protected:
-    void handleNodeResponse(const Message &message);
-    void doPostDiscovery();
+extern CatanState catanState;
+extern bool playerSelectMode;
+extern byte currentPlayer;
+extern bool playStarted;
 
-private:
-    static const __int24 PLAYER_COLORS[6];
-    static const __int24 LAND_COLORS[8];
+// Methods for catan
 
-    Map<NodeId_t, BaseCatanState> initialStates;
-    LinkedList<NodeId_t> discoveryQueue;
-    Graph<NodeId_t> topology = Graph<NodeId_t>(true, 0, EEPROM.length());
+__int24 getPlayerColor(byte playerNumber);
 
-    NodeId_t neighborIds[6];
-    CatanState catanState;
-    bool playerSelectMode = false;
-    byte currentPlayer = 0;
-    bool playStarted = false;
+void updateRoads(uint16_t state);
+void updateSettlements(uint16_t state);
+void updateRobber(uint16_t state);
+void updateCurrentPlayer(uint16_t state);
+void renderState();
+void setTileValue(byte val);
 
-    static __int24 getPlayerColor(byte playerNumber);
+void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
+void setInitialState(NodeId_t node, SetInitialStateRequest request);
+void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
+void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
+void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);
+void sendSetCurrentPlayerRequest();
+void setCurrentPlayer(SetCurrentPlayerRequest request);
 
-    void updateRoads(uint16_t state);
-    void updateSettlements(uint16_t state);
-    void updateRobber(uint16_t state);
-    void updateCurrentPlayer(uint16_t state);
-    void renderState();
-    void setTileValue(byte val);
+void reconcileStateResponse(StateResponse response);
+void reconcileSettlementValidation(StateResponse response);
+void reconcileRoadValidation(StateResponse response);
 
-    void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
-    void setInitialState(NodeId_t node, SetInitialStateRequest request);
-    void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
-    void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
-    void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);
-    void sendSetCurrentPlayerRequest();
-    void setCurrentPlayer(SetCurrentPlayerRequest request);
-
-    void reconcileStateResponse(StateResponse response);
-    void reconcileSettlementValidation(StateResponse response);
-    void reconcileRoadValidation(StateResponse response);
-
-    void setupBoard();
-};
+void setupBoard();
 
 #endif // _MODES_H_

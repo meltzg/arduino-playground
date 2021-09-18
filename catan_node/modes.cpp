@@ -609,6 +609,7 @@ void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 
 void setInitialState(NodeId_t node, SetInitialStateRequest request)
 {
+    catanState.id = request.initialState.id;
     catanState.landType = request.initialState.landType;
     catanState.rollValue = request.initialState.rollValue;
     catanState.hasRobber = request.initialState.hasRobber;
@@ -642,6 +643,7 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
 
     Serial.print(F("ID: "));
     Serial.println(catanState.id, HEX);
+    myId = catanState.id;
 
     sendNeighborRequest(myId, true);
 }

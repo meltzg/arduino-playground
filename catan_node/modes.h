@@ -154,6 +154,7 @@ bool sendIdRequest();
 bool sendDiscoveryRequest();
 bool sendDiscoveryStatsRequest();
 bool sendNeighborRequest(NodeId_t destination, bool useCache = false);
+void handleIdResponse(const Message &message);
 void handleDiscoveryStatsResponse(const Message &message);
 void handleNodeResponseNetworkTest(const Message &message);
 
@@ -290,6 +291,7 @@ enum CatanCommand : byte
 
 struct BaseCatanState
 {
+    NodeId_t id = EMPTY;
     CatanLandType landType = CatanLandType::NONE;
     CatanLandType portType = CatanLandType::NONE;
     NodeId_t portNeighbor = EMPTY;
@@ -299,7 +301,6 @@ struct BaseCatanState
 
 struct CatanState : public BaseCatanState
 {
-    NodeId_t id = EMPTY;
     NodeId_t controllerId;
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];

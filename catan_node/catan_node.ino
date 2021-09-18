@@ -152,12 +152,7 @@ void processState(unsigned long currentMillis, uint16_t state)
         {
             if (((previousState >> BTN_ID) & 1) && ((state >> BTN_ID) & 1) == 0)
             {
-                if (sendIdRequest())
-                {
-                    sprintf(displayMessage, "My ID: %04X ", myId);
-                    disp.setChars(displayMessage);
-                    Serial.println(displayMessage);
-                }
+                sendIdRequest();
             }
             else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
             {
@@ -229,12 +224,13 @@ void processState(unsigned long currentMillis, uint16_t state)
         {
             if (((previousState >> btnDiscover) & 1) && ((state >> btnDiscover) & 1) == 0)
             {
-                pollDiscovery = sendDiscoveryRequest();
+                pollDiscovery = true;
+                sendIdRequest();
             }
 
             previousState = state;
         }
-        if (pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
+        if (myId != EMPTY && pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
         {
             if (sendDiscoveryStatsRequest())
             {
@@ -260,7 +256,6 @@ void processMessage(const Message &message)
             {
             case START_NODE:
                 sendIdRequest();
-                sendNeighborRequest(myId, true);
             }
         }
         else
@@ -308,7 +303,26 @@ void processMessage(const Message &message)
 
     if (doDiscoveryProcessing)
     {
-        if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)
+        if (message.getSysCommand() == ROUTER_RESPONSE_ID)
+        {
+            handleIdResponse(message);
+            if (modeIdx == MODE_NETWORK_TEST)
+            {
+                if (pollDiscovery)
+                {
+                    sendDiscoveryRequest();
+                }
+                else
+                {
+                    sendNeighborRequest(myId, true);
+                }
+            }
+            else if (modeIdx == MODE_CATAN)
+            {
+                pollDiscovery = sendDiscoveryRequest();
+            }
+        }
+        else if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)
         {
             handleDiscoveryStatsResponse(message);
         }

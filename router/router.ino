@@ -53,6 +53,10 @@ NodeId_t NODE_ID;
 
 PathFinder pathfinder(6);
 
+Set<NodeId_t> pendingNeighborRequests;
+unsigned char pendingIdRequests = 0;
+bool pendingDiscovery = false;
+
 void setup()
 {
     delay(2000);
@@ -61,7 +65,8 @@ void setup()
     Wire.begin();
     startPorts();
 
-    Serial.println(F("starting"));
+    Serial.print(F("starting "));
+    Serial.println(NODE_ID, HEX);
     logDiscoveryStats();
 }
 
@@ -144,7 +149,15 @@ void processMessage(Stream *srcPort, const Message &message)
         // Get ID is usually only used when the sender doesn't know the ID of the node, so just send it back the same srcPort
         sprintf(buf, "Node ID requested by %hx", message.getSource());
         Serial.println(buf);
-        srcPort->write((char *)&NODE_ID, sizeof(NODE_ID));
+        Message response(
+            NODE_ID,
+            message.getSource(),
+            sizeof(NodeId_t),
+            message.getSysOption(),
+            ROUTER_RESPONSE_ID,
+            (byte *)(&NODE_ID));
+        ackWait(srcPort);
+        writeMessage(srcPort, response);
         return;
     }
     if (message.getSysOption() & ROUTER_BROADCAST)
@@ -165,6 +178,49 @@ void processMessage(Stream *srcPort, const Message &message)
         {
             routeMessage(message);
             return;
+        }
+    }
+    if (message.getSysCommand() == ROUTER_RESPONSE_ID)
+    {
+        pendingIdRequests--;
+        for (int i = 0; i < 6; i++)
+        {
+            if (NEIGHBORS[i] == srcPort)
+            {
+                neighborIds[i] = *((NodeId_t *)message.getBody());
+                Serial.print(F("Neighbor "));
+                Serial.print(i);
+                Serial.print(F(": "));
+                Serial.println(neighborIds[i], HEX);
+            }
+        }
+        if (pendingIdRequests == 0)
+        {
+            int numNodes = 7;
+            NodeId_t nodeMessage[numNodes];
+            nodeMessage[0] = NODE_ID;
+            for (int i = 0; i < 6; i++)
+            {
+                nodeMessage[i + 1] = neighborIds[i];
+            }
+            Message response(
+                NODE_ID,
+                message.getSource(),
+                sizeof(NodeId_t) * numNodes,
+                message.getSysOption() & ROUTER_SYS_COMMAND,
+                ROUTER_ADD_NODE,
+                (byte *)nodeMessage);
+
+            while (!pendingNeighborRequests.isEmpty())
+            {
+                response.setDest(pendingNeighborRequests.popFront());
+                routeMessage(response);
+            }
+            if (pendingDiscovery)
+            {
+                pendingDiscovery = false;
+                updateNeighbors(NODE_ID, neighborIds, 6);
+            }
         }
     }
     if (message.getSysCommand() == ROUTER_CLEAR_TOPOLOGY)
@@ -193,6 +249,8 @@ void processMessage(Stream *srcPort, const Message &message)
             if (!(message.getSysOption() & ROUTER_USE_CACHE) || numNodes < adj.count)
             {
                 resetNeighbors();
+                pendingNeighborRequests.pushBack(message.getSource());
+                return;
             }
             numNodes = 7;
             nodeMessage = new NodeId_t[numNodes];
@@ -265,6 +323,7 @@ void processMessage(Stream *srcPort, const Message &message)
     if (message.getSysOption() & ROUTER_SYS_COMMAND)
     {
         // return without sending message to actor
+        Serial.println(F("Message not for actor"));
         return;
     }
     routeMessage(message);
@@ -336,32 +395,24 @@ void routeMessage(const Message &message)
 void resetNeighbors()
 {
     Serial.println(F("Reset Edges"));
+    pendingIdRequests = 0;
     Message idRequest(
         NODE_ID,
         EMPTY,
         0,
-        0,
+        ROUTER_SYS_COMMAND,
         ROUTER_GET_ID,
         NULL);
     for (int i = 0; i < 6; i++)
     {
         NEIGHBORS[i]->listen();
+        neighborIds[i] = EMPTY;
         if (ackWait(NEIGHBORS[i], NEIGHBOR_RETRIES))
         {
+            pendingIdRequests++;
             writeMessage(NEIGHBORS[i], idRequest);
-            NodeId_t neighbor = EMPTY;
-            NEIGHBORS[i]->readBytes((byte *)&neighbor, sizeof(NodeId_t));
-            neighborIds[i] = neighbor;
         }
-        else
-        {
-            neighborIds[i] = EMPTY;
-        }
-        Serial.print(neighborIds[i], HEX);
-        Serial.print(F(", "));
     }
-
-    Serial.println();
 }
 
 void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
@@ -496,14 +547,7 @@ void startDiscovery()
     pathfinder.startDiscovery();
 
     resetNeighbors();
-    NodeId_t initialNode[7];
-    initialNode[0] = NODE_ID;
-    for (int i = 0; i < 6; i++)
-    {
-        initialNode[i + 1] = neighborIds[i];
-    }
-
-    updateNeighbors(NODE_ID, neighborIds, 6);
+    pendingDiscovery = true;
 }
 
 int strcicmp(char const *a, char const *b)

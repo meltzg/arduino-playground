@@ -58,7 +58,6 @@ bool sendIdRequest()
     if (ackWait(&netPort, MAX_NET_RETRIES))
     {
         writeMessage(&netPort, idRequest);
-        netPort.readBytes((byte *)&myId, sizeof(NodeId_t));
     }
     else
     {
@@ -71,7 +70,7 @@ bool sendIdRequest()
 
 bool sendDiscoveryRequest()
 {
-    if (myId == EMPTY && !sendIdRequest())
+    if (myId == EMPTY)
     {
         return false;
     }
@@ -141,6 +140,14 @@ bool sendNeighborRequest(NodeId_t destination, bool useCache)
         return false;
     }
     return true;
+}
+
+void handleIdResponse(const Message &message)
+{
+    myId = *((NodeId_t *)message.getBody());
+    sprintf(displayMessage, "My ID: %04X ", myId);
+    disp.setChars(displayMessage);
+    Serial.println(displayMessage);
 }
 
 void handleDiscoveryStatsResponse(const Message &message)
@@ -633,9 +640,6 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
 
     playStarted = true;
 
-    sendIdRequest();
-    catanState.id = myId;
-
     Serial.print(F("ID: "));
     Serial.println(catanState.id, HEX);
 
@@ -881,6 +885,7 @@ void setupBoard()
         topology.getAdjacent(curr, adj);
 
         BaseCatanState initialState;
+        initialState.id = curr;
 
         if (ALL_LAND || adj.count == 6 || adj.count == 0)
         {

@@ -37,9 +37,9 @@ void loop()
         selectMode();
     }
 
-    if (hasIncoming(&netPort))
+    Message message = readMessage(&netPort);
+    if (message.isValid())
     {
-        Message message = readMessage(&netPort);
         if (!message.getSysCommand() && message.getPayloadSize() > 0)
         {
             ModeMessage *command = (ModeMessage *)message.getBody();

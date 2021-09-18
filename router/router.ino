@@ -85,10 +85,10 @@ void loop()
     {
         SoftwareSerial *port = NEIGHBORS[i];
         port->listen();
-        if (hasIncoming(port))
+        Message message = readMessage(port);
+        if (message.isValid())
         {
             Serial.println(F("recieving message"));
-            Message message = readMessage(port);
             Serial.write((char *)message.getBody(), message.getPayloadSize());
             Serial.println();
             processMessage(port, message);
@@ -97,10 +97,10 @@ void loop()
     }
 
     PORT_A.listen();
-    if (hasIncoming(&PORT_A))
+    Message message = readMessage(&PORT_A);
+    if (message.isValid())
     {
         Serial.println(F("from user"));
-        Message message = readMessage(&PORT_A);
         message.setSource(NODE_ID);
         Serial.write((char *)message.getBody(), message.getPayloadSize());
         Serial.println();
@@ -156,7 +156,6 @@ void processMessage(Stream *srcPort, const Message &message)
             message.getSysOption(),
             ROUTER_RESPONSE_ID,
             (byte *)(&NODE_ID));
-        ackWait(srcPort);
         writeMessage(srcPort, response);
         return;
     }
@@ -374,7 +373,6 @@ void routeMessage(const Message &message)
     if (nextStep == NODE_ID)
     {
         PORT_A.listen();
-        ackWait(&PORT_A);
         writeMessage(&PORT_A, message);
     }
     else
@@ -384,7 +382,6 @@ void routeMessage(const Message &message)
             if (neighborIds[i] == nextStep)
             {
                 NEIGHBORS[i]->listen();
-                ackWait(NEIGHBORS[i]);
                 writeMessage(NEIGHBORS[i], message);
                 break;
             }
@@ -407,10 +404,9 @@ void resetNeighbors()
     {
         NEIGHBORS[i]->listen();
         neighborIds[i] = EMPTY;
-        if (ackWait(NEIGHBORS[i], NEIGHBOR_RETRIES))
+        if (writeMessage(NEIGHBORS[i], idRequest, NEIGHBOR_RETRIES))
         {
             pendingIdRequests++;
-            writeMessage(NEIGHBORS[i], idRequest);
         }
     }
 }

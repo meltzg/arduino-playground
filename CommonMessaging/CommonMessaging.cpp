@@ -1,7 +1,8 @@
 #include <Arduino.h>
 #include "CommonMessaging.h"
 
-void Message::free() {
+void Message::free()
+{
     delete[] body;
     body = NULL;
 }
@@ -16,6 +17,10 @@ bool ackWait(Stream *port, int maxRetries = -1)
         byte pong = port->read();
         if (pong == ACK_BYTE)
         {
+            // send the start code and consume any remaining bytes from the destination
+            port->write(START_CODE);
+            while (port->read() >= 0)
+                ;
             return true;
         }
     }
@@ -25,11 +30,17 @@ bool ackWait(Stream *port, int maxRetries = -1)
 bool hasIncoming(Stream *port)
 {
     long start = millis();
+    StartCode_t startByte;
     while (millis() - start < LISTEN_WAIT)
     {
         if (port->available() && port->read() == PING_BYTE)
         {
-            port->write(ACK_BYTE);
+            do
+            {
+                port->write(ACK_BYTE);
+                port->readBytes(&startByte, sizeof(StartCode_t));
+            } while (startByte != START_CODE);
+
             return true;
         }
     }
@@ -38,27 +49,30 @@ bool hasIncoming(Stream *port)
 
 Message readMessage(Stream *srcPort)
 {
-    Serial.print(millis());
-    Serial.println(F(": rxmsg"));
-    byte startByte;
-    do
-    {
-        srcPort->readBytes(&startByte, sizeof(StartCode_t));
-    } while (startByte != START_CODE);
     Message message;
-    srcPort->readBytes((byte *)&message, sizeof(Message));
-    byte *body = new byte[message.getPayloadSize()];
-    srcPort->readBytes(body, message.getPayloadSize());
-    message.setBody(body);
+
+    if (hasIncoming(srcPort))
+    {
+        Serial.print(millis());
+        Serial.println(F(": rxmsg"));
+        srcPort->readBytes((byte *)&message, sizeof(Message));
+        byte *body = new byte[message.getPayloadSize()];
+        srcPort->readBytes(body, message.getPayloadSize());
+        message.setBody(body);
+    }
 
     return message;
 }
 
-void writeMessage(Stream *destPort, const Message &message)
+bool writeMessage(Stream *destPort, const Message &message, int maxWaitRetries)
 {
-    Serial.print(millis());
-    Serial.println(F(": txmsg"));
-    destPort->write(START_CODE);
-    destPort->write((char *)&message, sizeof(Message));
-    destPort->write(message.getBody(), message.getPayloadSize());
+    if (ackWait(destPort, maxWaitRetries))
+    {
+        Serial.print(millis());
+        Serial.println(F(": txmsg"));
+        destPort->write((char *)&message, sizeof(Message));
+        destPort->write(message.getBody(), message.getPayloadSize());
+        return true;
+    }
+    return false;
 }

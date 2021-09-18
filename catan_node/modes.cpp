@@ -55,11 +55,7 @@ bool sendIdRequest()
         NULL);
     myId = 0;
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, idRequest);
-    }
-    else
+    if (!writeMessage(&netPort, idRequest, MAX_NET_RETRIES))
     {
         disp.setChars("ID req Failure ");
         return false;
@@ -82,11 +78,7 @@ bool sendDiscoveryRequest()
         ROUTER_START_DISCOVERY,
         NULL);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, discoveryRequest);
-    }
-    else
+    if (!writeMessage(&netPort, discoveryRequest, MAX_NET_RETRIES))
     {
         disp.setChars("D req Failure ");
         return false;
@@ -104,11 +96,7 @@ bool sendDiscoveryStatsRequest()
         ROUTER_GET_DISCOVERY_STATUS,
         NULL);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, discoveryStatsRequest);
-    }
-    else
+    if (!writeMessage(&netPort, discoveryStatsRequest, MAX_NET_RETRIES))
     {
         disp.setChars("D stat Failure ");
         return false;
@@ -130,11 +118,7 @@ bool sendNeighborRequest(NodeId_t destination, bool useCache)
         ROUTER_GET_NEIGHBORS,
         NULL);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, neighborRequest);
-    }
-    else
+    if (!writeMessage(&netPort, neighborRequest, MAX_NET_RETRIES))
     {
         disp.setChars("N req Failure ");
         return false;
@@ -248,11 +232,7 @@ void handleNodeResponseNetworkTest(const Message &message)
 
             if (msg.getDest() != EMPTY)
             {
-                if (ackWait(&netPort, MAX_NET_RETRIES))
-                {
-                    writeMessage(&netPort, msg);
-                }
-                else
+                if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
                 {
                     Serial.println(F("Fail"));
                 }
@@ -595,11 +575,7 @@ void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 
         if (msg.getDest() != EMPTY)
         {
-            if (ackWait(&netPort, MAX_NET_RETRIES))
-            {
-                writeMessage(&netPort, msg);
-            }
-            else
+            if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
             {
                 Serial.println(F("Fail"));
             }
@@ -658,11 +634,7 @@ void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)
         0,
         (byte *)&request);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, msg);
-    }
-    else
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
     {
         Serial.println(F("Fail"));
     }
@@ -679,11 +651,7 @@ void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo)
         0,
         (byte *)&request);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, msg);
-    }
-    else
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
     {
         Serial.println(F("Fail"));
     }
@@ -700,11 +668,7 @@ void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo)
         0,
         (byte *)&response);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, msg);
-    }
-    else
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
     {
         Serial.println(F("Fail"));
     }
@@ -721,11 +685,7 @@ void sendSetCurrentPlayerRequest()
         0,
         (byte *)&request);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, msg);
-    }
-    else
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
     {
         Serial.println(F("Fail"));
     }
@@ -742,11 +702,7 @@ void sendClearRobberRequest()
         0,
         (byte *)&request);
 
-    if (ackWait(&netPort, MAX_NET_RETRIES))
-    {
-        writeMessage(&netPort, msg);
-    }
-    else
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
     {
         Serial.println(F("Fail"));
     }

@@ -88,6 +88,8 @@ public:
 
     void free();
 
+    bool isValid() { return source != EMPTY || dest != EMPTY || sysCommand == ROUTER_GET_ID; }
+
 private:
     NodeId_t source = EMPTY;
     NodeId_t dest = EMPTY;
@@ -97,12 +99,8 @@ private:
     const byte *body = NULL;
 };
 
-bool ackWait(Stream *port, int maxRetries = -1);
-
-bool hasIncoming(Stream *port);
-
 Message readMessage(Stream *srcPort);
 
-void writeMessage(Stream *destPort, const Message &message);
+bool writeMessage(Stream *destPort, const Message &message, int maxWaitRetries = -1);
 
 #endif // _COMMON_MESSAGING_H_

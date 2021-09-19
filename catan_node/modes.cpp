@@ -26,7 +26,6 @@ uint16_t previousState = 0;
 
 char displayMessage[50] = {0};
 
-NodeId_t myId = EMPTY;
 int btnDiscover = 0;
 
 unsigned long previousDiscoveryMillis = 0;
@@ -44,6 +43,9 @@ bool playerSelectMode = false;
 byte currentPlayer = 0;
 bool playStarted = false;
 
+DefaultMap<CatanLandType::Value, short> CatanLandType::landWeightOffsets(0);
+DefaultMap<CatanLandType::Value, short> CatanLandType::harborWeightOffsets(0);
+
 bool sendIdRequest()
 {
     Message idRequest(
@@ -53,7 +55,7 @@ bool sendIdRequest()
         0,
         ROUTER_GET_ID,
         NULL);
-    myId = 0;
+    catanState.id = 0;
 
     if (!writeMessage(&netPort, idRequest, MAX_NET_RETRIES))
     {
@@ -66,13 +68,13 @@ bool sendIdRequest()
 
 bool sendDiscoveryRequest()
 {
-    if (myId == EMPTY)
+    if (catanState.id == EMPTY)
     {
         return false;
     }
     Message discoveryRequest(
-        myId,
-        myId,
+        catanState.id,
+        catanState.id,
         0,
         0,
         ROUTER_START_DISCOVERY,
@@ -89,8 +91,8 @@ bool sendDiscoveryRequest()
 bool sendDiscoveryStatsRequest()
 {
     Message discoveryStatsRequest(
-        myId,
-        myId,
+        catanState.id,
+        catanState.id,
         0,
         0,
         ROUTER_GET_DISCOVERY_STATUS,
@@ -111,7 +113,7 @@ bool sendNeighborRequest(NodeId_t destination, bool useCache)
     Serial.print(F("Use Cache "));
     Serial.println(useCache);
     Message neighborRequest(
-        myId,
+        catanState.id,
         destination,
         0,
         useCache ? ROUTER_USE_CACHE : 0,
@@ -128,8 +130,8 @@ bool sendNeighborRequest(NodeId_t destination, bool useCache)
 
 void handleIdResponse(const Message &message)
 {
-    myId = *((NodeId_t *)message.getBody());
-    sprintf(displayMessage, "My ID: %04X ", myId);
+    catanState.id = *((NodeId_t *)message.getBody());
+    sprintf(displayMessage, "My ID: %04X ", catanState.id);
     disp.setChars(displayMessage);
     Serial.println(displayMessage);
 }
@@ -145,7 +147,7 @@ void handleDiscoveryStatsResponse(const Message &message)
     {
         pollDiscovery = false;
         postDiscovery = true;
-        sendNeighborRequest(myId, true);
+        sendNeighborRequest(catanState.id, true);
     }
 }
 
@@ -179,7 +181,7 @@ void handleNodeResponseNetworkTest(const Message &message)
             {
                 ledColors[EDGE_LED_POS[i]] = GREEN;
             }
-            if (message.getSource() == myId)
+            if (message.getSource() == catanState.id)
             {
                 neighborIds[i] = id;
             }
@@ -212,7 +214,7 @@ void handleNodeResponseNetworkTest(const Message &message)
             discoveryQueue.purge();
             discoveryVisited.purge();
             postDiscovery = false;
-            sendNeighborRequest(myId, true);
+            sendNeighborRequest(catanState.id, true);
         }
         else
         {
@@ -220,7 +222,7 @@ void handleNodeResponseNetworkTest(const Message &message)
 
             WakeNodeMessage command;
             Message msg(
-                myId,
+                catanState.id,
                 nextNode,
                 sizeof(WakeNodeMessage),
                 0,
@@ -245,10 +247,18 @@ void handleNodeResponseNetworkTest(const Message &message)
 CatanLandType CatanLandType::randomType(bool includeDesert)
 {
     int totalWeight = 0;
-    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+    while (totalWeight == 0)
     {
-        totalWeight += static_cast<CatanLandType>(i).toWeight(includeDesert);
+        for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+        {
+            totalWeight += static_cast<CatanLandType>(i).toWeight(includeDesert);
+        }
+        if (totalWeight == 0)
+        {
+            resetLandWeights();
+        }
     }
+
     Serial.print(F("Total weight "));
     Serial.println(totalWeight);
 
@@ -257,7 +267,9 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
     {
         if (rnd < static_cast<CatanLandType>(i).toWeight(includeDesert))
         {
-            return static_cast<CatanLandType>(i);
+            CatanLandType land = static_cast<CatanLandType>(i);
+            landWeightOffsets.put(land.value, *(landWeightOffsets.get(land.value)) + 1);
+            return land;
         }
         rnd -= static_cast<CatanLandType>(i).toWeight(includeDesert);
     }
@@ -268,10 +280,18 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
 CatanLandType CatanLandType::randomHarbor()
 {
     int totalWeight = 0;
-    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+    while (totalWeight == 0)
     {
-        totalWeight += static_cast<CatanLandType>(i).toHarborWeight();
+        for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+        {
+            totalWeight += static_cast<CatanLandType>(i).toHarborWeight();
+        }
+        if (totalWeight == 0)
+        {
+            resetHarborWeights();
+        }
     }
+
     Serial.print(F("Total weight "));
     Serial.println(totalWeight);
 
@@ -280,7 +300,9 @@ CatanLandType CatanLandType::randomHarbor()
     {
         if (rnd < static_cast<CatanLandType>(i).toHarborWeight())
         {
-            return static_cast<CatanLandType>(i);
+            CatanLandType harbor = static_cast<CatanLandType>(i);
+            harborWeightOffsets.put(harbor.value, *(harborWeightOffsets.get(harbor.value)) + 1);
+            return harbor;
         }
         rnd -= static_cast<CatanLandType>(i).toHarborWeight();
     }
@@ -296,6 +318,18 @@ int CatanLandType::numDessertTiles(int numLandTiles)
 int CatanLandType::numHarborTiles(int numOceanTiles)
 {
     return min(numOceanTiles, 11);
+}
+
+void CatanLandType::resetLandWeights()
+{
+    Serial.println(F("Reset Land WEights"));
+    landWeightOffsets.purge();
+}
+
+void CatanLandType::resetHarborWeights()
+{
+    Serial.println(F("Reset Harbor WEights"));
+    harborWeightOffsets.purge();
 }
 
 void handleNodeResponseCatan(const Message &message)
@@ -619,9 +653,8 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
 
     Serial.print(F("ID: "));
     Serial.println(catanState.id, HEX);
-    myId = catanState.id;
 
-    sendNeighborRequest(myId, true);
+    sendNeighborRequest(catanState.id, true);
 }
 
 void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)
@@ -693,7 +726,7 @@ void sendSetCurrentPlayerRequest()
 
 void sendClearRobberRequest()
 {
-    ClearRobberRequest request(myId);
+    ClearRobberRequest request(catanState.id);
     Message msg(
         catanState.id,
         catanState.id,
@@ -799,7 +832,7 @@ void setupBoard()
     Serial.println(F("Setup board"));
 
     int numLand = 0;
-    for (GraphIterator<NodeId_t> iter(topology, myId); iter.hasNext();)
+    for (GraphIterator<NodeId_t> iter(topology, catanState.id); iter.hasNext();)
     {
         NodeId_t curr = iter.next();
         Set<NodeId_t> adj;
@@ -835,7 +868,7 @@ void setupBoard()
 
     BaseCatanState myState;
 
-    for (GraphIterator<NodeId_t> iter(topology, myId); iter.hasNext();)
+    for (GraphIterator<NodeId_t> iter(topology, catanState.id); iter.hasNext();)
     {
         NodeId_t curr = iter.next();
 
@@ -881,7 +914,7 @@ void setupBoard()
         Serial.print(F("Roll Value "));
         Serial.println(initialState.rollValue);
 
-        if (curr == myId)
+        if (curr == catanState.id)
         {
             myState = initialState;
         }
@@ -892,7 +925,7 @@ void setupBoard()
         }
     }
     SetInitialStateRequest request(myState);
-    sendSetInitialStateRequest(myId, request);
+    sendSetInitialStateRequest(catanState.id, request);
 }
 
 int cityToNeighbor(int cityNumber)

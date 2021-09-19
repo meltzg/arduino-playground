@@ -137,7 +137,6 @@ struct WakeNodeMessage : public NetworkTestMessage
 
 // Mode State for networking
 
-extern NodeId_t myId;
 extern int btnDiscover;
 
 extern unsigned long previousDiscoveryMillis;
@@ -229,45 +228,61 @@ public:
 
     byte toWeight(bool includeDesert = false)
     {
+        byte weight = 0;
         switch (value)
         {
-        case OCEAN:
-            return 0;
         case DESERT:
-            return includeDesert ? NUM_DESERT_TILES : 0;
+            weight = includeDesert ? NUM_DESERT_TILES : 0;
+            break;
         case BRICK:
-            return NUM_BRICK_TILES;
+            weight = NUM_BRICK_TILES;
+            break;
         case SHEEP:
-            return NUM_SHEEP_TILES;
+            weight = NUM_SHEEP_TILES;
+            break;
         case WOOD:
-            return NUM_WOOD_TILES;
+            weight = NUM_WOOD_TILES;
+            break;
         case STONE:
-            return NUM_STONE_TILES;
+            weight = NUM_STONE_TILES;
+            break;
         case WHEAT:
-            return NUM_WHEAT_TILES;
+            weight = NUM_WHEAT_TILES;
+            break;
         default:
             return 0;
         }
+
+        return weight - *(landWeightOffsets.get(value));
     }
     byte toHarborWeight()
     {
+        byte weight = 0;
         switch (value)
         {
         case DESERT:
-            return 5;
+            weight = 5;
+            break;
         case BRICK:
-            return 1;
+            weight = 1;
+            break;
         case SHEEP:
-            return 2;
+            weight = 2;
+            break;
         case WOOD:
-            return 1;
+            weight = 1;
+            break;
         case STONE:
-            return 1;
+            weight = 1;
+            break;
         case WHEAT:
-            return 1;
+            weight = 1;
+            break;
         default:
             return 0;
         }
+
+        return weight - *(harborWeightOffsets.get(value));
     }
 
     static CatanLandType randomType(bool includeDesert = false);
@@ -277,6 +292,11 @@ public:
 
 private:
     Value value;
+    static DefaultMap<Value, short> landWeightOffsets;
+    static DefaultMap<Value, short> harborWeightOffsets;
+
+    static void resetLandWeights();
+    static void resetHarborWeights();
 };
 
 enum CatanCommand : byte

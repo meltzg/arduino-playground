@@ -200,7 +200,7 @@ struct Map
         values.pushBack(Pair<K, V>(key, value));
     }
 
-    V *get(K key)
+    virtual V *get(K key)
     {
         for (auto iter = values.front; iter != NULL; iter = iter->next)
         {
@@ -227,6 +227,23 @@ struct Map
     void purge()
     {
         values.purge();
+    }
+};
+
+template <typename K, typename V>
+struct DefaultMap : public Map<K, V>
+{
+    V defaultValue;
+
+    DefaultMap(V defaultValue) : defaultValue(defaultValue) {}
+
+    V *get(K key)
+    {
+        if (!this->containsKey(key))
+        {
+            this->put(key, defaultValue);
+        }
+        return Map<K, V>::get(key);
     }
 };
 

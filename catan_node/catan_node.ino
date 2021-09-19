@@ -156,7 +156,7 @@ void processState(unsigned long currentMillis, uint16_t state)
             }
             else if (((previousState >> BTN_NEIGHBORS) & 1) && ((state >> BTN_NEIGHBORS) & 1) == 0)
             {
-                sendNeighborRequest(myId);
+                sendNeighborRequest(catanState.id);
             }
             else
             {
@@ -230,7 +230,7 @@ void processState(unsigned long currentMillis, uint16_t state)
 
             previousState = state;
         }
-        if (myId != EMPTY && pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
+        if (catanState.id != EMPTY && pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
         {
             if (sendDiscoveryStatsRequest())
             {
@@ -290,7 +290,7 @@ void processMessage(const Message &message)
                 setCurrentPlayer(*(SetCurrentPlayerRequest *)command);
                 break;
             case CLEAR_ROBBER:
-                if (((ClearRobberRequest *)command)->robberId != myId)
+                if (((ClearRobberRequest *)command)->robberId != catanState.id)
                 {
                     catanState.hasRobber = false;
                     setTileValue(catanState.rollValue);
@@ -314,7 +314,7 @@ void processMessage(const Message &message)
                 }
                 else
                 {
-                    sendNeighborRequest(myId, true);
+                    sendNeighborRequest(catanState.id, true);
                 }
             }
             else if (modeIdx == MODE_CATAN)

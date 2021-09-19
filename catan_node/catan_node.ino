@@ -193,7 +193,11 @@ void processState(unsigned long currentMillis, uint16_t state)
                 playerSelectMode = false;
                 setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
                 skipRobber = true;
-                sendSetCurrentPlayerRequest();
+                if (newPlayer != currentPlayer)
+                {
+                    currentPlayer = newPlayer;
+                    sendSetCurrentPlayerRequest();
+                }
             }
             else if (state != previousState)
             {

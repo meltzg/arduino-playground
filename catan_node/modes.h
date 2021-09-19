@@ -432,6 +432,7 @@ extern Graph<NodeId_t> topology;
 extern CatanState catanState;
 extern bool playerSelectMode;
 extern byte currentPlayer;
+extern byte newPlayer;
 extern bool playStarted;
 
 // Methods for catan

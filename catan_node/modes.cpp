@@ -41,6 +41,7 @@ Graph<NodeId_t> topology = Graph<NodeId_t>(true, 0, EEPROM.length());
 CatanState catanState;
 bool playerSelectMode = false;
 byte currentPlayer = 0;
+byte newPlayer = 0;
 bool playStarted = false;
 
 DefaultMap<CatanLandType::Value, short> CatanLandType::landWeightOffsets(0);
@@ -468,7 +469,7 @@ void updateCurrentPlayer(uint16_t state)
 
         if (((previousState >> btnPos) & 1) && ((state >> btnPos) & 1) == 0)
         {
-            currentPlayer = i;
+            newPlayer = i;
             break;
         }
     }
@@ -491,7 +492,7 @@ void renderState()
             ledColors[ledPos[0]] = BLACK;
             ledColors[ledPos[1]] = BLACK;
         }
-        ledColors[LED_LAND] = getPlayerColor(currentPlayer);
+        ledColors[LED_LAND] = getPlayerColor(newPlayer);
     }
     else
     {

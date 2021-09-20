@@ -860,14 +860,14 @@ void setupBoard()
     Serial.println(numDesert);
 
     // get indicies for harbor tiles
-    // const int numHarbor = CatanLandType::numHarborTiles(topology.numNodes() - numLand);
-    // Set<int> harborTiles;
-    // while (harborTiles.count < numHarbor)
-    // {
-    //     harborTiles.pushBack(random(topology.numNodes() - numLand));
-    // }
-    // Serial.print(F("Num harbor "));
-    // Serial.println(numHarbor);
+    const int numHarbor = CatanLandType::numHarborTiles(topology.numNodes() - numLand);
+    Set<int> harborTiles;
+    while (harborTiles.count < numHarbor)
+    {
+        harborTiles.pushBack(random(topology.numNodes() - numLand));
+    }
+    Serial.print(F("Num harbor "));
+    Serial.println(numHarbor);
 
     bool robberAssigned = false;
     int landIndex = 0, oceanIndex = 0;
@@ -910,10 +910,11 @@ void setupBoard()
             // ocean tile
             initialState.landType = CatanLandType::OCEAN;
             initialState.rollValue = 0;
-            // if (harborTiles.contains(oceanIndex))
-            // {
-            //     // harbor tile
-            // }
+            if (harborTiles.contains(oceanIndex))
+            {
+                // harbor tile
+                initialState.portType = CatanLandType::randomHarbor();
+            }
             oceanIndex++;
         }
 

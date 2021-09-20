@@ -1,7 +1,7 @@
 #include "modes.h"
 
 // State information
-byte modeIdx = MODE_COMPONENT_TEST;
+byte modeIdx = MODE_CATAN;
 
 void setup()
 {

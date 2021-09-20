@@ -44,8 +44,8 @@ byte currentPlayer = 0;
 byte newPlayer = 0;
 bool playStarted = false;
 
-// DefaultMap<CatanLandType::Value, short> CatanLandType::landWeightOffsets(0);
-// DefaultMap<CatanLandType::Value, short> CatanLandType::harborWeightOffsets(0);
+static byte CatanLandType::landWeightOffsets[NONE] = {0};
+static byte CatanLandType::harborWeightOffsets[NONE] = {0};
 
 bool sendIdRequest()
 {
@@ -254,10 +254,10 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
         {
             totalWeight += static_cast<CatanLandType>(i).toWeight(includeDesert);
         }
-        // if (totalWeight == 0)
-        // {
-        //     resetLandWeights();
-        // }
+        if (totalWeight == 0)
+        {
+            resetLandWeights();
+        }
     }
 
     Serial.print(F("Total land weight "));
@@ -269,7 +269,7 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
         if (rnd < static_cast<CatanLandType>(i).toWeight(includeDesert))
         {
             CatanLandType land = static_cast<CatanLandType>(i);
-            // landWeightOffsets.put(land.value, *(landWeightOffsets.get(land.value)) + 1);
+            landWeightOffsets[land]++;
             return land;
         }
         rnd -= static_cast<CatanLandType>(i).toWeight(includeDesert);
@@ -287,10 +287,10 @@ CatanLandType CatanLandType::randomHarbor()
         {
             totalWeight += static_cast<CatanLandType>(i).toHarborWeight();
         }
-        // if (totalWeight == 0)
-        // {
-        //     resetHarborWeights();
-        // }
+        if (totalWeight == 0)
+        {
+            resetHarborWeights();
+        }
     }
 
     Serial.print(F("Total harbor weight "));
@@ -302,7 +302,7 @@ CatanLandType CatanLandType::randomHarbor()
         if (rnd < static_cast<CatanLandType>(i).toHarborWeight())
         {
             CatanLandType harbor = static_cast<CatanLandType>(i);
-            // harborWeightOffsets.put(harbor.value, *(harborWeightOffsets.get(harbor.value)) + 1);
+            harborWeightOffsets[harbor]++;
             return harbor;
         }
         rnd -= static_cast<CatanLandType>(i).toHarborWeight();
@@ -321,17 +321,23 @@ int CatanLandType::numHarborTiles(int numOceanTiles)
     return min(numOceanTiles, 11);
 }
 
-// void CatanLandType::resetLandWeights()
-// {
-//     Serial.println(F("Reset Lands"));
-//     landWeightOffsets.purge();
-// }
+void CatanLandType::resetLandWeights()
+{
+    Serial.println(F("Reset Lands"));
+    for (short i = 0; i < CatanLandType::NONE; i++)
+    {
+        landWeightOffsets[i] = 0;
+    }
+}
 
-// void CatanLandType::resetHarborWeights()
-// {
-//     Serial.println(F("Reset Harbors"));
-//     harborWeightOffsets.purge();
-// }
+void CatanLandType::resetHarborWeights()
+{
+    Serial.println(F("Reset Harbors"));
+    for (short i = 0; i < CatanLandType::NONE; i++)
+    {
+        harborWeightOffsets[i] = 0;
+    }
+}
 
 void handleNodeResponseCatan(const Message &message)
 {
@@ -549,7 +555,18 @@ void renderState()
 
 void setTileValue(byte val)
 {
-    if (val < MIN_ROLL)
+    if (catanState.portType != CatanLandType::NONE)
+    {
+        if (catanState.portType == CatanLandType::DESERT)
+        {
+            sprintf(displayMessage, "3/1  ");
+        }
+        else
+        {
+            sprintf(displayMessage, "2/1 %s ", catanState.portType.toString());
+        }
+    }
+    else if (val < MIN_ROLL)
     {
         sprintf(displayMessage, "  ");
     }
@@ -632,18 +649,6 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
     if (catanState.hasRobber)
     {
         setTileValue(0xFF);
-    }
-    else if (catanState.portType != CatanLandType::NONE)
-    {
-        if (catanState.portType == CatanLandType::DESERT)
-        {
-            disp.setChars("3/1  ");
-        }
-        else
-        {
-            sprintf(displayMessage, "2/1 %s ", catanState.portType.toString());
-            disp.setChars(displayMessage);
-        }
     }
     else
     {

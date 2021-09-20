@@ -253,8 +253,7 @@ public:
             return 0;
         }
 
-        // return weight - *(landWeightOffsets.get(value));
-        return weight;
+        return weight - landWeightOffsets[value];
     }
     byte toHarborWeight()
     {
@@ -283,8 +282,7 @@ public:
             return 0;
         }
 
-        // return weight - *(harborWeightOffsets.get(value));
-        return weight;
+        return weight - harborWeightOffsets[value];
     }
 
     static CatanLandType randomType(bool includeDesert = false);
@@ -294,11 +292,11 @@ public:
 
 private:
     Value value;
-    // static DefaultMap<Value, short> landWeightOffsets;
-    // static DefaultMap<Value, short> harborWeightOffsets;
+    static byte landWeightOffsets[NONE];
+    static byte harborWeightOffsets[NONE];
 
-    // static void resetLandWeights();
-    // static void resetHarborWeights();
+    static void resetLandWeights();
+    static void resetHarborWeights();
 };
 
 enum CatanCommand : byte

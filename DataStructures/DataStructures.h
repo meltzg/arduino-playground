@@ -424,6 +424,47 @@ public:
         }
     }
 
+    size_t numAdjacent(T node)
+    {
+        size_t size = 0;
+
+#ifdef __AVR__
+        if (useEeprom)
+        {
+            int sizeOfEdge = 2 * sizeof(T);
+            for (int i = 0; i < eepromCount; i++)
+            {
+                int eepromLocation = eepromOffset + (i * sizeOfEdge);
+                T src = 0, dest = 0;
+
+                for (int j = 0; j < sizeof(T); j++)
+                {
+                    src += EEPROM.read(eepromLocation + j) << (8 * j);
+                }
+                for (int j = 0; j < sizeof(T); j++)
+                {
+                    dest += EEPROM.read(eepromLocation + sizeof(T) + j) << (8 * j);
+                }
+                if (src == node || dest == node)
+                {
+                    size++;
+                }
+            }
+            return size;
+        }
+#endif
+        for (ListIterator<GraphEdge<T>> iter(edges); iter.hasNext();)
+        {
+            GraphEdge<T> edge = iter.next();
+            if (edge.left == node || edge.right == node)
+            {
+                size++;
+            }
+        }
+
+        return size;
+    }
+
     size_t numNodes()
     {
         Set<T> nodes;

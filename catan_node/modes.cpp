@@ -192,7 +192,7 @@ void handleNodeResponseNetworkTest(const Message &message)
     else
     {
         int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
-        Serial.print(F("Num nodes "));
+        Serial.print(F("# nodes "));
         Serial.println(numNodes);
         NodeId_t id = nodes[0];
         discoveryVisited.pushBack(id);
@@ -346,7 +346,7 @@ void handleNodeResponseCatan(const Message &message)
     if (!playStarted)
     {
         int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
-        Serial.print(F("Num nodes "));
+        Serial.print(F("# nodes "));
         Serial.println(numNodes);
         NodeId_t sourceId = nodes[0];
 
@@ -861,7 +861,7 @@ void setupBoard()
     {
         desertTiles.pushBack(random(numLand));
     }
-    Serial.print(F("Num desert "));
+    Serial.print(F("# desert "));
     Serial.println(numDesert);
 
     // get indicies for harbor tiles
@@ -871,7 +871,7 @@ void setupBoard()
     {
         harborTiles.pushBack(random(topology.numNodes() - numLand));
     }
-    Serial.print(F("Num harbor "));
+    Serial.print(F("# harbor "));
     Serial.println(numHarbor);
 
     bool robberAssigned = false;
@@ -881,7 +881,6 @@ void setupBoard()
 
     for (GraphIterator<NodeId_t> iter(topology, catanState.id); iter.hasNext();)
     {
-        Serial.println(F("TOP"));
         NodeId_t curr = iter.next();
 
         topology.getAdjacent(curr, adj);
@@ -918,7 +917,43 @@ void setupBoard()
             if (harborTiles.contains(oceanIndex))
             {
                 // harbor tile
-                initialState.portType = CatanLandType::randomHarbor();
+                int numPossiblePorts = 0;
+                for (ListIterator<NodeId_t> adjIter(adj); adjIter.hasNext();)
+                {
+                    NodeId_t possiblePort = adjIter.next();
+                    Serial.print(F("possible port "));
+                    Serial.print(possiblePort, HEX);
+                    size_t portNeighbors = topology.numAdjacent(possiblePort);
+                    Serial.print(F(" adj "));
+                    Serial.println(portNeighbors);
+                    if (portNeighbors == 6)
+                    {
+                        numPossiblePorts++;
+                    }
+                }
+                Serial.print(F("# Ports Locs "));
+                Serial.println(numPossiblePorts);
+                if (numPossiblePorts > 0)
+                {
+                    initialState.portType = CatanLandType::randomHarbor();
+                    NodeId_t possiblePorts[numPossiblePorts] = {EMPTY};
+                    int possiblePortIdx = 0;
+                    for (ListIterator<NodeId_t> adjIter(adj); adjIter.hasNext();)
+                    {
+                        NodeId_t possiblePort = adjIter.next();
+                        if (topology.numAdjacent(possiblePort) == 6)
+                        {
+                            possiblePorts[possiblePortIdx] = possiblePort;
+                            possiblePortIdx++;
+                        }
+                    }
+                    initialState.portNeighbor = possiblePorts[random(numPossiblePorts)];
+
+                    Serial.print(F("Port Type "));
+                    Serial.println(initialState.portType.toString());
+                    Serial.print(F("Roll Value "));
+                    Serial.println(initialState.portNeighbor, HEX);
+                }
             }
             oceanIndex++;
         }

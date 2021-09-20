@@ -44,8 +44,8 @@ byte currentPlayer = 0;
 byte newPlayer = 0;
 bool playStarted = false;
 
-DefaultMap<CatanLandType::Value, short> CatanLandType::landWeightOffsets(0);
-DefaultMap<CatanLandType::Value, short> CatanLandType::harborWeightOffsets(0);
+// DefaultMap<CatanLandType::Value, short> CatanLandType::landWeightOffsets(0);
+// DefaultMap<CatanLandType::Value, short> CatanLandType::harborWeightOffsets(0);
 
 bool sendIdRequest()
 {
@@ -109,7 +109,7 @@ bool sendDiscoveryStatsRequest()
 
 bool sendNeighborRequest(NodeId_t destination, bool useCache)
 {
-    Serial.print(F("Request neighbors "));
+    Serial.print(F("Req neighbors "));
     Serial.println(destination, HEX);
     Serial.print(F("Use Cache "));
     Serial.println(useCache);
@@ -139,7 +139,7 @@ void handleIdResponse(const Message &message)
 
 void handleDiscoveryStatsResponse(const Message &message)
 {
-    Serial.println(F("handle disc stat resp"));
+    Serial.println(F("disc stat resp"));
     DiscoveryStats *stats = (DiscoveryStats *)message.getBody();
     sprintf(displayMessage, "D: %d, N: %d, E: %d    ", stats->discoveryDone, stats->numNodes, stats->numEdges);
     disp.setChars(displayMessage);
@@ -211,7 +211,7 @@ void handleNodeResponseNetworkTest(const Message &message)
 
         if (discoveryQueue.isEmpty())
         {
-            Serial.println(F("Post Discovery Complete"));
+            Serial.println(F("crawl done"));
             discoveryQueue.purge();
             discoveryVisited.purge();
             postDiscovery = false;
@@ -230,7 +230,7 @@ void handleNodeResponseNetworkTest(const Message &message)
                 0,
                 (byte *)&command);
 
-            Serial.print(F("Waking next node "));
+            Serial.print(F("Wake "));
             Serial.println(nextNode, HEX);
 
             if (msg.getDest() != EMPTY)
@@ -254,13 +254,13 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
         {
             totalWeight += static_cast<CatanLandType>(i).toWeight(includeDesert);
         }
-        if (totalWeight == 0)
-        {
-            resetLandWeights();
-        }
+        // if (totalWeight == 0)
+        // {
+        //     resetLandWeights();
+        // }
     }
 
-    Serial.print(F("Total weight "));
+    Serial.print(F("Total land weight "));
     Serial.println(totalWeight);
 
     int rnd = random(totalWeight);
@@ -269,7 +269,7 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
         if (rnd < static_cast<CatanLandType>(i).toWeight(includeDesert))
         {
             CatanLandType land = static_cast<CatanLandType>(i);
-            landWeightOffsets.put(land.value, *(landWeightOffsets.get(land.value)) + 1);
+            // landWeightOffsets.put(land.value, *(landWeightOffsets.get(land.value)) + 1);
             return land;
         }
         rnd -= static_cast<CatanLandType>(i).toWeight(includeDesert);
@@ -287,13 +287,13 @@ CatanLandType CatanLandType::randomHarbor()
         {
             totalWeight += static_cast<CatanLandType>(i).toHarborWeight();
         }
-        if (totalWeight == 0)
-        {
-            resetHarborWeights();
-        }
+        // if (totalWeight == 0)
+        // {
+        //     resetHarborWeights();
+        // }
     }
 
-    Serial.print(F("Total weight "));
+    Serial.print(F("Total harbor weight "));
     Serial.println(totalWeight);
 
     int rnd = random(totalWeight);
@@ -302,7 +302,7 @@ CatanLandType CatanLandType::randomHarbor()
         if (rnd < static_cast<CatanLandType>(i).toHarborWeight())
         {
             CatanLandType harbor = static_cast<CatanLandType>(i);
-            harborWeightOffsets.put(harbor.value, *(harborWeightOffsets.get(harbor.value)) + 1);
+            // harborWeightOffsets.put(harbor.value, *(harborWeightOffsets.get(harbor.value)) + 1);
             return harbor;
         }
         rnd -= static_cast<CatanLandType>(i).toHarborWeight();
@@ -321,17 +321,17 @@ int CatanLandType::numHarborTiles(int numOceanTiles)
     return min(numOceanTiles, 11);
 }
 
-void CatanLandType::resetLandWeights()
-{
-    Serial.println(F("Reset Land WEights"));
-    landWeightOffsets.purge();
-}
+// void CatanLandType::resetLandWeights()
+// {
+//     Serial.println(F("Reset Lands"));
+//     landWeightOffsets.purge();
+// }
 
-void CatanLandType::resetHarborWeights()
-{
-    Serial.println(F("Reset Harbor WEights"));
-    harborWeightOffsets.purge();
-}
+// void CatanLandType::resetHarborWeights()
+// {
+//     Serial.println(F("Reset Harbors"));
+//     harborWeightOffsets.purge();
+// }
 
 void handleNodeResponseCatan(const Message &message)
 {
@@ -364,7 +364,7 @@ void handleNodeResponseCatan(const Message &message)
 
         if (discoveryQueue.isEmpty())
         {
-            Serial.println(F("Post Discovery Complete"));
+            Serial.println(F("Crawl Complete"));
             discoveryQueue.purge();
 
             setupBoard();
@@ -833,16 +833,21 @@ void setupBoard()
     Serial.println(F("Setup board"));
 
     int numLand = 0;
+    Set<NodeId_t> adj;
     for (GraphIterator<NodeId_t> iter(topology, catanState.id); iter.hasNext();)
     {
         NodeId_t curr = iter.next();
-        Set<NodeId_t> adj;
         topology.getAdjacent(curr, adj);
         if (ALL_LAND || adj.count == 0 || adj.count == 6)
         {
             numLand++;
         }
     }
+
+    Serial.print(F("# land "));
+    Serial.println(numLand);
+    Serial.print(F("# sea "));
+    Serial.println(topology.numNodes() - numLand);
 
     // get indicies for desert tiles
     const int numDesert = CatanLandType::numDessertTiles(numLand);
@@ -855,14 +860,14 @@ void setupBoard()
     Serial.println(numDesert);
 
     // get indicies for harbor tiles
-    const int numHarbor = CatanLandType::numHarborTiles(topology.numNodes() - numLand);
-    Set<int> harborTiles;
-    while (harborTiles.count < numHarbor)
-    {
-        harborTiles.pushBack(random(topology.numNodes() - numLand));
-    }
-    Serial.print(F("Num harbor "));
-    Serial.println(numHarbor);
+    // const int numHarbor = CatanLandType::numHarborTiles(topology.numNodes() - numLand);
+    // Set<int> harborTiles;
+    // while (harborTiles.count < numHarbor)
+    // {
+    //     harborTiles.pushBack(random(topology.numNodes() - numLand));
+    // }
+    // Serial.print(F("Num harbor "));
+    // Serial.println(numHarbor);
 
     bool robberAssigned = false;
     int landIndex = 0, oceanIndex = 0;
@@ -871,9 +876,9 @@ void setupBoard()
 
     for (GraphIterator<NodeId_t> iter(topology, catanState.id); iter.hasNext();)
     {
+        Serial.println(F("TOP"));
         NodeId_t curr = iter.next();
 
-        Set<NodeId_t> adj;
         topology.getAdjacent(curr, adj);
 
         BaseCatanState initialState;
@@ -904,10 +909,12 @@ void setupBoard()
         {
             // ocean tile
             initialState.landType = CatanLandType::OCEAN;
-            if (harborTiles.contains(oceanIndex))
-            {
-                // harbor tile
-            }
+            initialState.rollValue = 0;
+            // if (harborTiles.contains(oceanIndex))
+            // {
+            //     // harbor tile
+            // }
+            oceanIndex++;
         }
 
         Serial.print(F("Land Type "));

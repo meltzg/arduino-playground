@@ -40,7 +40,7 @@
 #define BTN_DISCOVER 3
 
 // Catan
-#define ALL_LAND true
+#define ALL_LAND false
 #define RENDER_PORTS true
 #define LED_LAND 10
 #define BTN_LAND 9
@@ -253,7 +253,8 @@ public:
             return 0;
         }
 
-        return weight - *(landWeightOffsets.get(value));
+        // return weight - *(landWeightOffsets.get(value));
+        return weight;
     }
     byte toHarborWeight()
     {
@@ -282,7 +283,8 @@ public:
             return 0;
         }
 
-        return weight - *(harborWeightOffsets.get(value));
+        // return weight - *(harborWeightOffsets.get(value));
+        return weight;
     }
 
     static CatanLandType randomType(bool includeDesert = false);
@@ -292,11 +294,11 @@ public:
 
 private:
     Value value;
-    static DefaultMap<Value, short> landWeightOffsets;
-    static DefaultMap<Value, short> harborWeightOffsets;
+    // static DefaultMap<Value, short> landWeightOffsets;
+    // static DefaultMap<Value, short> harborWeightOffsets;
 
-    static void resetLandWeights();
-    static void resetHarborWeights();
+    // static void resetLandWeights();
+    // static void resetHarborWeights();
 };
 
 enum CatanCommand : byte

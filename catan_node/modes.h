@@ -291,8 +291,8 @@ public:
 
 private:
     Value value;
-    static byte landWeightOffsets[WHEAT];
-    static byte harborWeightOffsets[WHEAT];
+    static byte landWeightOffsets[WHEAT + 1];
+    static byte harborWeightOffsets[WHEAT + 1];
 
     static void resetLandWeights();
     static void resetHarborWeights();
@@ -324,7 +324,13 @@ struct CatanState : public BaseCatanState
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
+};
+
+struct CatanPlayState : public CatanState
+{
+    bool playStarted;
     NodeId_t neighborIds[6] = {EMPTY};
+    byte currentPlayer;
 };
 
 struct CatanMessage : public ModeMessage
@@ -429,11 +435,9 @@ struct ClearRobberRequest : public CatanMessage
 
 extern Graph<NodeId_t> topology;
 
-extern CatanState catanState;
-extern bool playerSelectMode;
-extern byte currentPlayer;
+extern CatanPlayState catanState;
+extern bool playerSelectMode; 
 extern byte newPlayer;
-extern bool playStarted;
 
 // Methods for catan
 

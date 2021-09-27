@@ -86,7 +86,7 @@ void selectMode()
         btnDiscover = BTN_LAND;
         randomSeed(analogRead(SEED_PIN));
         disp.setRenderChars(true);
-        if (!playStarted)
+        if (!catanState.playStarted)
         {
             disp.setChars("Catan ");
             for (int i = 0; i < 6; i++)
@@ -172,7 +172,7 @@ void processState(unsigned long currentMillis, uint16_t state)
     }
     else if (modeIdx == MODE_CATAN)
     {
-        if (!playStarted)
+        if (!catanState.playStarted)
         {
             doDiscoveryProcessing = true;
         }
@@ -180,7 +180,7 @@ void processState(unsigned long currentMillis, uint16_t state)
         {
             bool skipRobber = false;
 
-            if (playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
+            if (catanState.playStarted && !playerSelectMode && btns.getOnDuration(BTN_LAND) >= PLAYER_SELECT_DELAY)
             {
                 playerSelectMode = true;
                 disp.setChars(catanState.landType.toString());
@@ -191,9 +191,9 @@ void processState(unsigned long currentMillis, uint16_t state)
                 playerSelectMode = false;
                 setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
                 skipRobber = true;
-                if (newPlayer != currentPlayer)
+                if (newPlayer != catanState.currentPlayer)
                 {
-                    currentPlayer = newPlayer;
+                    catanState.currentPlayer = newPlayer;
                     sendSetCurrentPlayerRequest();
                 }
             }

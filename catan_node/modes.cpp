@@ -32,20 +32,17 @@ unsigned long previousDiscoveryMillis = 0;
 bool pollDiscovery = false;
 bool postDiscovery = false;
 
-NodeId_t neighborIds[6];
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
 
 Graph<NodeId_t> topology = Graph<NodeId_t>(true, 0, EEPROM.length());
 
-CatanState catanState;
+CatanPlayState catanState;
 bool playerSelectMode = false;
-byte currentPlayer = 0;
 byte newPlayer = 0;
-bool playStarted = false;
 
-static byte CatanLandType::landWeightOffsets[WHEAT] = {0};
-static byte CatanLandType::harborWeightOffsets[WHEAT] = {0};
+static byte CatanLandType::landWeightOffsets[WHEAT + 1] = {0};
+static byte CatanLandType::harborWeightOffsets[WHEAT + 1] = {0};
 
 bool sendIdRequest()
 {
@@ -184,7 +181,7 @@ void handleNodeResponseNetworkTest(const Message &message)
             }
             if (message.getSource() == catanState.id)
             {
-                neighborIds[i] = id;
+                catanState.neighborIds[i] = id;
             }
         }
         leds.setState(ledColors);
@@ -343,7 +340,7 @@ void handleNodeResponseCatan(const Message &message)
 {
     NodeId_t *nodes = ((NodeId_t *)(message.getBody()));
 
-    if (!playStarted)
+    if (!catanState.playStarted)
     {
         int numNodes = message.getPayloadSize() / sizeof(NodeId_t);
         Serial.print(F("# nodes "));
@@ -386,7 +383,7 @@ void handleNodeResponseCatan(const Message &message)
         for (int i = 0; i < 6; i++)
         {
             NodeId_t id = ((NodeId_t *)(message.getBody()))[i + 1];
-            neighborIds[i] = id;
+            catanState.neighborIds[i] = id;
             Serial.println(id, HEX);
         }
     }
@@ -406,10 +403,10 @@ void updateRoads(uint16_t state)
             {
                 PlacementValidationInfo validation = PlacementValidationInfo::ROAD;
                 validation.toValidate = i;
-                validation.playerNumber = currentPlayer;
+                validation.playerNumber = catanState.currentPlayer;
                 reconcileRoadValidation(StateResponse(validation, catanState));
             }
-            else if (catanState.roadOwners[i] == currentPlayer)
+            else if (catanState.roadOwners[i] == catanState.currentPlayer)
             {
                 setRoadOwner(SetRoadRequest(i, UNOWNED));
             }
@@ -429,10 +426,10 @@ void updateSettlements(uint16_t state)
             {
                 PlacementValidationInfo validation = PlacementValidationInfo::SETTLEMENT;
                 validation.toValidate = i;
-                validation.playerNumber = currentPlayer;
+                validation.playerNumber = catanState.currentPlayer;
                 reconcileSettlementValidation(StateResponse(validation, catanState));
             }
-            else if (catanState.settlementOwners[i] == currentPlayer)
+            else if (catanState.settlementOwners[i] == catanState.currentPlayer)
             {
                 if (!catanState.isCity[i])
                 {
@@ -523,7 +520,7 @@ void renderState()
             Serial.println(catanState.portNeighbor, HEX);
             for (int i = 0; i < 6; i++)
             {
-                if (neighborIds[i] == catanState.portNeighbor)
+                if (catanState.neighborIds[i] == catanState.portNeighbor)
                 {
                     ledColors[EDGE_LED_POS[i]] = catanState.portType.toGRB();
                 }
@@ -616,7 +613,7 @@ void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
         SetRoadRequest command((request.roadNumber + NUM_ROADS / 2) % NUM_ROADS, request.playerNumber);
         Message msg(
             catanState.id,
-            neighborIds[request.roadNumber],
+            catanState.neighborIds[request.roadNumber],
             sizeof(SetRoadRequest),
             0,
             0,
@@ -655,7 +652,7 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
         setTileValue(catanState.rollValue);
     }
 
-    playStarted = true;
+    catanState.playStarted = true;
 
     Serial.print(F("ID: "));
     Serial.println(catanState.id, HEX);
@@ -715,7 +712,7 @@ void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo)
 
 void sendSetCurrentPlayerRequest()
 {
-    SetCurrentPlayerRequest request(currentPlayer);
+    SetCurrentPlayerRequest request(catanState.currentPlayer);
     Message msg(
         catanState.id,
         catanState.id,
@@ -749,9 +746,9 @@ void sendClearRobberRequest()
 
 void setCurrentPlayer(SetCurrentPlayerRequest request)
 {
-    currentPlayer = request.playerNumber;
+    catanState.currentPlayer = request.playerNumber;
     __int24 ledColors[leds.getNumLeds()] = {BLACK};
-    ledColors[LED_LAND] = getPlayerColor(currentPlayer);
+    ledColors[LED_LAND] = getPlayerColor(catanState.currentPlayer);
     leds.setState(ledColors);
     delay(500);
 }
@@ -784,8 +781,8 @@ void reconcileSettlementValidation(StateResponse response)
     Serial.print(F("validate settlement "));
     Serial.println(response.placementInfo.toValidate);
     if (response.state.id == catanState.id ||
-        response.state.id == neighborIds[response.placementInfo.toValidate] ||
-        response.state.id == neighborIds[response.placementInfo.toValidate + 1])
+        response.state.id == catanState.neighborIds[response.placementInfo.toValidate] ||
+        response.state.id == catanState.neighborIds[response.placementInfo.toValidate + 1])
     {
         response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
     }
@@ -802,8 +799,8 @@ void reconcileSettlementValidation(StateResponse response)
             Serial.print(F("nextTileIdx "));
             Serial.println(nextTileIdx);
             Serial.print(F("nextTileId "));
-            Serial.println(neighborIds[nextTileIdx], HEX);
-            if (neighborIds[nextTileIdx] != EMPTY)
+            Serial.println(catanState.neighborIds[nextTileIdx], HEX);
+            if (catanState.neighborIds[nextTileIdx] != EMPTY)
             {
                 hasNextTile = true;
             }
@@ -812,7 +809,7 @@ void reconcileSettlementValidation(StateResponse response)
         if (hasNextTile)
         {
             Serial.println(F("request next tile"));
-            sendStateRequest(neighborIds[nextTileIdx], response.placementInfo);
+            sendStateRequest(catanState.neighborIds[nextTileIdx], response.placementInfo);
         }
         else if (!response.placementInfo.onLand)
         {
@@ -1046,7 +1043,7 @@ void reconcileRoadValidation(StateResponse response)
                 }
                 else
                 {
-                    sendStateRequest(neighborIds[neighborTile1], response.placementInfo);
+                    sendStateRequest(catanState.neighborIds[neighborTile1], response.placementInfo);
                 }
             }
         }
@@ -1070,7 +1067,7 @@ void reconcileRoadValidation(StateResponse response)
             }
             else
             {
-                sendStateRequest(neighborIds[neighborTile2], response.placementInfo);
+                sendStateRequest(catanState.neighborIds[neighborTile2], response.placementInfo);
             }
         }
         break;
@@ -1082,7 +1079,7 @@ void reconcileRoadValidation(StateResponse response)
         else
         {
             response.placementInfo.validateStep++;
-            sendStateRequest(neighborIds[response.placementInfo.toValidate], response.placementInfo);
+            sendStateRequest(catanState.neighborIds[response.placementInfo.toValidate], response.placementInfo);
         }
         break;
     case 3: // check roads on adjacent tile

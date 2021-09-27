@@ -31,5 +31,8 @@ compile-eeprom-clear:
 upload-eeprom-clear: compile-eeprom-clear
 	arduino-cli upload -p ${PORT} -b arduino:avr:uno eeprom-clear/ -v
 
+eeprom-clear: upload-eeprom-clear
+	python tools/eeprom_clear_wait.py
+
 burn-bootloader:
 	arduino-cli burn-bootloader -b arduino:avr:uno -P arduinoasisp -p ${ISP_PORT} -v

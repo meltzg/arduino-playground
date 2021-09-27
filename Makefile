@@ -25,5 +25,11 @@ compile-pathfinder-tester:
 upload-pathfinder-tester: compile-pathfinder-tester
 	arduino-cli upload -p ${PORT} -b arduino:avr:uno pathfinder_tester/ -v
 
+compile-eeprom-clear:
+	arduino-cli compile -b arduino:avr:uno eeprom-clear/ -v
+
+upload-eeprom-clear: compile-eeprom-clear
+	arduino-cli upload -p ${PORT} -b arduino:avr:uno eeprom-clear/ -v
+
 burn-bootloader:
 	arduino-cli burn-bootloader -b arduino:avr:uno -P arduinoasisp -p ${ISP_PORT} -v

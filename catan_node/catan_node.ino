@@ -79,10 +79,6 @@ void selectMode()
         }
         leds.setState(ledColors);
         disp.setChars("Start ");
-        for (int i = 0; i < 6; i++)
-        {
-            neighborIds[i] = EMPTY;
-        }
     }
     else if (modeIdx == MODE_CATAN)
     {
@@ -95,7 +91,7 @@ void selectMode()
             disp.setChars("Catan ");
             for (int i = 0; i < 6; i++)
             {
-                neighborIds[i] = EMPTY;
+                catanState.neighborIds[i] = EMPTY;
             }
 
             for (int i = 0; i < NUM_ROADS; i++)
@@ -136,6 +132,8 @@ void processState(unsigned long currentMillis, uint16_t state)
             {
                 if (((1 << i) & state) > 0)
                 {
+                    Serial.print(F("btn "));
+                    Serial.println(i);
                     continue;
                 }
                 ledColors[i] = RAINBOW[(i + colorOffset) % 6];
@@ -162,9 +160,9 @@ void processState(unsigned long currentMillis, uint16_t state)
             {
                 for (int i = 0; i < 6; i++)
                 {
-                    if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((state >> EDGE_BTN_POS[i]) & 1) == 0 && neighborIds[i] != EMPTY)
+                    if (((previousState >> EDGE_BTN_POS[i]) & 1) && ((state >> EDGE_BTN_POS[i]) & 1) == 0 && catanState.neighborIds[i] != EMPTY)
                     {
-                        sendNeighborRequest(neighborIds[i]);
+                        sendNeighborRequest(catanState.neighborIds[i]);
                         break;
                     }
                 }

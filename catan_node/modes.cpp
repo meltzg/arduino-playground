@@ -44,8 +44,8 @@ byte currentPlayer = 0;
 byte newPlayer = 0;
 bool playStarted = false;
 
-static byte CatanLandType::landWeightOffsets[NONE] = {0};
-static byte CatanLandType::harborWeightOffsets[NONE] = {0};
+static byte CatanLandType::landWeightOffsets[WHEAT] = {0};
+static byte CatanLandType::harborWeightOffsets[WHEAT] = {0};
 
 bool sendIdRequest()
 {
@@ -250,7 +250,7 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
     int totalWeight = 0;
     while (totalWeight == 0)
     {
-        for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
         {
             totalWeight += static_cast<CatanLandType>(i).toWeight(includeDesert);
         }
@@ -264,7 +264,7 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
     Serial.println(totalWeight);
 
     int rnd = random(totalWeight);
-    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         if (rnd < static_cast<CatanLandType>(i).toWeight(includeDesert))
         {
@@ -283,7 +283,7 @@ CatanLandType CatanLandType::randomHarbor()
     int totalWeight = 0;
     while (totalWeight == 0)
     {
-        for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
         {
             totalWeight += static_cast<CatanLandType>(i).toHarborWeight();
         }
@@ -297,7 +297,7 @@ CatanLandType CatanLandType::randomHarbor()
     Serial.println(totalWeight);
 
     int rnd = random(totalWeight);
-    for (int i = CatanLandType::OCEAN; i < CatanLandType::NONE; i++)
+        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         if (rnd < static_cast<CatanLandType>(i).toHarborWeight())
         {
@@ -324,7 +324,7 @@ int CatanLandType::numHarborTiles(int numOceanTiles)
 void CatanLandType::resetLandWeights()
 {
     Serial.println(F("Reset Lands"));
-    for (short i = 0; i < CatanLandType::NONE; i++)
+        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         landWeightOffsets[i] = 0;
     }
@@ -333,7 +333,7 @@ void CatanLandType::resetLandWeights()
 void CatanLandType::resetHarborWeights()
 {
     Serial.println(F("Reset Harbors"));
-    for (short i = 0; i < CatanLandType::NONE; i++)
+        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         harborWeightOffsets[i] = 0;
     }

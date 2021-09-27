@@ -40,7 +40,7 @@
 #define BTN_DISCOVER 3
 
 // Catan
-#define ALL_LAND false
+#define ALL_LAND true
 #define RENDER_PORTS true
 #define LED_LAND 10
 #define BTN_LAND 9
@@ -143,7 +143,6 @@ extern unsigned long previousDiscoveryMillis;
 extern bool pollDiscovery;
 extern bool postDiscovery;
 
-extern NodeId_t neighborIds[6];
 extern Set<NodeId_t> discoveryVisited;
 extern LinkedList<NodeId_t> discoveryQueue;
 
@@ -164,6 +163,7 @@ class CatanLandType
 public:
     enum Value : byte
     {
+        NONE,
         OCEAN,
         DESERT,
         BRICK,
@@ -171,7 +171,6 @@ public:
         WOOD,
         STONE,
         WHEAT,
-        NONE,
     };
 
     CatanLandType() = default;
@@ -292,8 +291,8 @@ public:
 
 private:
     Value value;
-    static byte landWeightOffsets[NONE];
-    static byte harborWeightOffsets[NONE];
+    static byte landWeightOffsets[WHEAT];
+    static byte harborWeightOffsets[WHEAT];
 
     static void resetLandWeights();
     static void resetHarborWeights();
@@ -325,6 +324,7 @@ struct CatanState : public BaseCatanState
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
+    NodeId_t neighborIds[6] = {EMPTY};
 };
 
 struct CatanMessage : public ModeMessage

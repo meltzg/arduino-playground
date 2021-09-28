@@ -198,6 +198,27 @@ void processState(unsigned long currentMillis, uint16_t state)
                     sendSetCurrentPlayerRequest();
                 }
             }
+            if (btns.getOnDuration(BTN_LAND) >= START_OVER_DELAY)
+            {
+                playerSelectMode = false;
+                pollDiscovery = false;
+                postDiscovery = false;
+                disp.setChars("Catan ");
+                catanState.playStarted = false;
+                for (int i = 0; i < 6; i++)
+                {
+                    catanState.neighborIds[i] = EMPTY;
+                }
+
+                for (int i = 0; i < NUM_ROADS; i++)
+                {
+                    catanState.roadOwners[i] = UNOWNED;
+                }
+                for (int i = 0; i < NUM_SETTLEMENTS; i++)
+                {
+                    catanState.settlementOwners[i] = UNOWNED;
+                }
+            }
             else if (state != previousState)
             {
                 if (!playerSelectMode)

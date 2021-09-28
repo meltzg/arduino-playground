@@ -70,6 +70,7 @@ bool sendDiscoveryRequest()
     {
         return false;
     }
+    topology.purge();
     Message discoveryRequest(
         catanState.id,
         catanState.id,
@@ -261,7 +262,7 @@ CatanLandType CatanLandType::randomType(bool includeDesert)
     Serial.println(totalWeight);
 
     int rnd = random(totalWeight);
-        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
+    for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         if (rnd < static_cast<CatanLandType>(i).toWeight(includeDesert))
         {
@@ -294,7 +295,7 @@ CatanLandType CatanLandType::randomHarbor()
     Serial.println(totalWeight);
 
     int rnd = random(totalWeight);
-        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
+    for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         if (rnd < static_cast<CatanLandType>(i).toHarborWeight())
         {
@@ -321,7 +322,7 @@ int CatanLandType::numHarborTiles(int numOceanTiles)
 void CatanLandType::resetLandWeights()
 {
     Serial.println(F("Reset Lands"));
-        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
+    for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         landWeightOffsets[i] = 0;
     }
@@ -330,7 +331,7 @@ void CatanLandType::resetLandWeights()
 void CatanLandType::resetHarborWeights()
 {
     Serial.println(F("Reset Harbors"));
-        for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
+    for (int i = CatanLandType::NONE; i <= CatanLandType::WHEAT; i++)
     {
         harborWeightOffsets[i] = 0;
     }
@@ -369,7 +370,8 @@ void handleNodeResponseCatan(const Message &message)
         {
             Serial.println(F("Crawl Complete"));
             discoveryQueue.purge();
-
+            discoveryVisited.purge();
+            postDiscovery = false;
             setupBoard();
         }
         else
@@ -650,6 +652,15 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
     else
     {
         setTileValue(catanState.rollValue);
+    }
+
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        catanState.roadOwners[i] = UNOWNED;
+    }
+    for (int i = 0; i < NUM_SETTLEMENTS; i++)
+    {
+        catanState.settlementOwners[i] = UNOWNED;
     }
 
     catanState.playStarted = true;

@@ -266,12 +266,14 @@ private:
     bool useEeprom;
     int eepromOffset;
     int eepromMax;
-    int eepromCount = 0;
 
 public:
-    Graph(bool useEeprom = false, int eepromOffset = 0, int eepromMax = -1) : useEeprom(useEeprom), eepromOffset(eepromOffset), eepromMax(eepromMax)
+    Graph(bool useEeprom = false, int eepromOffset = 0, int eepromMax = -1, bool initPurge = true) : useEeprom(useEeprom), eepromOffset(eepromOffset), eepromMax(eepromMax)
     {
-        edges.purge();
+        if (initPurge)
+        {
+            edges.purge();
+        }
     }
 
     bool addEdge(T src, T dest)
@@ -281,9 +283,11 @@ public:
         {
             int sizeOfEdge = 2 * sizeof(T);
 
+            size_t eepromCount = 0;
+            EEPROM.get(eepromOffset, eepromCount);
             for (int i = 0; i < eepromCount; i++)
             {
-                int eepromLocation = eepromOffset + (i * sizeOfEdge);
+                int eepromLocation = eepromOffset + (i * sizeOfEdge) + sizeof(eepromCount);
                 T existingSrc = 0, existingDest = 0;
 
                 for (int j = 0; j < sizeof(T); j++)
@@ -301,19 +305,20 @@ public:
             }
 
             int maxLoc = eepromMax >= 0 ? eepromMax : EEPROM.length();
-            if (eepromOffset + (eepromCount * sizeOfEdge) > maxLoc)
+            if (eepromOffset + sizeof(eepromCount) + (eepromCount * sizeOfEdge) > maxLoc)
             {
                 return false;
             }
             for (int i = 0; i < sizeof(T); i++)
             {
-                EEPROM.update(eepromOffset + (eepromCount * sizeOfEdge) + i, (src >> (8 * i)));
+                EEPROM.update(eepromOffset + sizeof(eepromCount) + (eepromCount * sizeOfEdge) + i, (src >> (8 * i)));
             }
             for (int i = 0; i < sizeof(T); i++)
             {
-                EEPROM.update(eepromOffset + (eepromCount * sizeOfEdge) + sizeof(T) + i, (dest >> (8 * i)));
+                EEPROM.update(eepromOffset + sizeof(eepromCount) + (eepromCount * sizeOfEdge) + sizeof(T) + i, (dest >> (8 * i)));
             }
             eepromCount++;
+            EEPROM.put(eepromOffset, eepromCount);
             return true;
         }
 #endif
@@ -323,7 +328,8 @@ public:
 
     void purge()
     {
-        eepromCount = 0;
+        size_t eepromCount = 0;
+        EEPROM.put(eepromOffset, eepromCount);
         edges.purge();
     }
 
@@ -385,9 +391,11 @@ public:
         if (useEeprom)
         {
             int sizeOfEdge = 2 * sizeof(T);
+            size_t eepromCount = 0;
+            EEPROM.get(eepromOffset, eepromCount);
             for (int i = 0; i < eepromCount; i++)
             {
-                int eepromLocation = eepromOffset + (i * sizeOfEdge);
+                int eepromLocation = eepromOffset + sizeof(eepromCount) + (i * sizeOfEdge);
                 T src = 0, dest = 0;
 
                 for (int j = 0; j < sizeof(T); j++)
@@ -432,9 +440,11 @@ public:
         if (useEeprom)
         {
             int sizeOfEdge = 2 * sizeof(T);
+            size_t eepromCount = 0;
+            EEPROM.get(eepromOffset, eepromCount);
             for (int i = 0; i < eepromCount; i++)
             {
-                int eepromLocation = eepromOffset + (i * sizeOfEdge);
+                int eepromLocation = eepromOffset + sizeof(eepromCount) + (i * sizeOfEdge);
                 T src = 0, dest = 0;
 
                 for (int j = 0; j < sizeof(T); j++)
@@ -472,9 +482,11 @@ public:
         if (useEeprom)
         {
             int sizeOfEdge = 2 * sizeof(T);
+            size_t eepromCount = 0;
+            EEPROM.get(eepromOffset, eepromCount);
             for (int i = 0; i < eepromCount; i++)
             {
-                int eepromLocation = eepromOffset + (i * sizeOfEdge);
+                int eepromLocation = eepromOffset + sizeof(eepromCount) + (i * sizeOfEdge);
                 T src = 0, dest = 0;
 
                 for (int j = 0; j < sizeof(T); j++)
@@ -504,6 +516,8 @@ public:
 #ifdef __AVR__
         if (useEeprom)
         {
+            size_t eepromCount = 0;
+            EEPROM.get(eepromOffset, eepromCount);
             return eepromCount;
         }
 #endif

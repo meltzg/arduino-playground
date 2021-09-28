@@ -68,6 +68,15 @@ void setup()
     Serial.print(F("starting "));
     Serial.println(NODE_ID, HEX);
     logDiscoveryStats();
+    EEPROM.get(0, neighborIds);
+    for (int i = 0; i < 6; i++)
+    {
+
+        Serial.print(F("Neighbor "));
+        Serial.print(i);
+        Serial.print(F(": "));
+        Serial.println(neighborIds[i], HEX);
+    }
 }
 
 void loop()
@@ -193,6 +202,7 @@ void processMessage(Stream *srcPort, const Message &message)
                 Serial.println(neighborIds[i], HEX);
             }
         }
+        EEPROM.put(0, neighborIds);
         if (pendingIdRequests == 0)
         {
             int numNodes = 7;

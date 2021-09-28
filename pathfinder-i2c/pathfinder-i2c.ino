@@ -4,7 +4,7 @@
 #include "CommonMessaging.h"
 #include "PathFinder.h"
 
-Graph<NodeId_t> topology(true, 0, EEPROM.length());
+Graph<NodeId_t> topology(true, 0, EEPROM.length(), false);
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
 GraphIterator<NodeId_t> iterator;
@@ -20,6 +20,15 @@ void setup()
     Wire.onReceive(onReceive);
     Wire.onRequest(onRequest);
     Serial.println(F("Start"));
+    size_t numEdges;
+    size_t numNodes;
+    numNodes = topology.numNodes();
+    numEdges = topology.numEdges();
+
+    Serial.print(F("Es "));
+    Serial.println(numEdges);
+    Serial.print(F("Ns "));
+    Serial.println(numNodes);
 }
 
 void loop()

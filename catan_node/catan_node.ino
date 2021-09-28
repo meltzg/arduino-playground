@@ -86,6 +86,7 @@ void selectMode()
         btnDiscover = BTN_LAND;
         randomSeed(analogRead(SEED_PIN));
         disp.setRenderChars(true);
+        loadState();
         if (!catanState.playStarted)
         {
             disp.setChars("Catan ");
@@ -215,6 +216,7 @@ void processState(unsigned long currentMillis, uint16_t state)
             }
 
             renderState();
+            saveState();
             previousState = state;
             previousMillis = currentMillis;
         }
@@ -300,6 +302,7 @@ void processMessage(const Message &message)
             default:
                 break;
             }
+            saveState();
         }
     }
 

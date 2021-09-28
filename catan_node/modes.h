@@ -466,5 +466,7 @@ void reconcileSettlementValidation(StateResponse response);
 void reconcileRoadValidation(StateResponse response);
 
 void setupBoard();
+void saveState();
+void loadState();
 
 #endif // _MODES_H_

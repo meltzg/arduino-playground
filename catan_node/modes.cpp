@@ -974,6 +974,16 @@ void setupBoard()
     sendSetInitialStateRequest(catanState.id, request);
 }
 
+void saveState()
+{
+    EEPROM.put(0, catanState);
+}
+
+void loadState()
+{
+    EEPROM.get(0, catanState);
+}
+
 int cityToNeighbor(int cityNumber)
 {
     switch (cityNumber)

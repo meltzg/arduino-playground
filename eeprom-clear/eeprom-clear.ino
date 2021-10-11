@@ -23,10 +23,9 @@ void setup()
             Serial.println("\% Cleared");
         }
     }
-
-    Serial.println("Complete");
 }
 
 void loop()
 {
+    Serial.println("Complete");
 }

@@ -45,6 +45,7 @@
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5
+#define SAVE_STATE false
 
 #define CATAN_SETUP_NEIGHBORS 1
 
@@ -119,7 +120,8 @@ extern char displayMessage[50];
 
 enum NetworkTestCommand : byte
 {
-    START_NODE
+    START_NODE,
+    NODE_READY
 };
 
 struct NetworkTestMessage : public ModeMessage
@@ -129,10 +131,22 @@ struct NetworkTestMessage : public ModeMessage
 
 struct WakeNodeMessage : public NetworkTestMessage
 {
-    WakeNodeMessage()
+    NodeId_t masterNode = EMPTY;
+
+    WakeNodeMessage(NodeId_t masterNode)
     {
         modeId = MODE_NETWORK_TEST;
         command = START_NODE;
+        this->masterNode = masterNode;
+    }
+};
+
+struct NodeReadyMessage : public NetworkTestMessage
+{
+    NodeReadyMessage()
+    {
+        modeId = MODE_NETWORK_TEST;
+        command = NODE_READY;
     }
 };
 

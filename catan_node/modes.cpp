@@ -217,9 +217,9 @@ void handleNodeResponseNetworkTest(const Message &message)
         }
         else
         {
-            NodeId_t nextNode = discoveryQueue.popFront();
+            NodeId_t nextNode = discoveryQueue.peekFront();
 
-            WakeNodeMessage command;
+            WakeNodeMessage command(catanState.id);
             Message msg(
                 catanState.id,
                 nextNode,
@@ -238,7 +238,6 @@ void handleNodeResponseNetworkTest(const Message &message)
                     Serial.println(F("Fail"));
                 }
             }
-            sendNeighborRequest(nextNode, true);
         }
     }
 }
@@ -987,7 +986,10 @@ void setupBoard()
 
 void saveState()
 {
-    EEPROM.put(0, catanState);
+    if (SAVE_STATE)
+    {
+        EEPROM.put(0, catanState);
+    }
 }
 
 void loadState()

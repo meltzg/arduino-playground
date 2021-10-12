@@ -12,8 +12,10 @@
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   |   Start Code  |         Source Address        |Destination Ad.|
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |               |         Payload Length        | System Command|
+  |               |         Payload Length        | System Option |
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  | System Command|
+  +-+-+-+-+-+-+-+-+
 
    Start Code:  8 bits
      Used to indicate start of message
@@ -27,6 +29,9 @@
    Payload Length: 16 bits
      Size of the apyload after the header in bytes
 
+   System Option: 8 bits
+     Specifies system options to use
+   
    System Command: 8 bits
      Specifies network commands to perform
 */

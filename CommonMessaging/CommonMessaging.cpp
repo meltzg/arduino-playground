@@ -59,6 +59,17 @@ Message readMessage(Stream *srcPort)
         byte *body = new byte[message.getPayloadSize()];
         srcPort->readBytes(body, message.getPayloadSize());
         message.setBody(body);
+
+        Serial.print(F("src "));
+        Serial.println(message.getSource(), HEX);
+        Serial.print(F("dst "));
+        Serial.println(message.getDest(), HEX);
+        Serial.print(F("size "));
+        Serial.println(message.getPayloadSize());
+        Serial.print(F("op "));
+        Serial.println(message.getSysOption(), HEX);
+        Serial.print(F("cmd "));
+        Serial.println(message.getSysCommand(), HEX);
     }
 
     return message;
@@ -68,10 +79,10 @@ bool writeMessage(Stream *destPort, const Message &message, int maxWaitRetries)
 {
     if (ackWait(destPort, maxWaitRetries))
     {
-        Serial.print(millis());
-        Serial.println(F(": txmsg"));
         destPort->write((char *)&message, sizeof(Message));
         destPort->write(message.getBody(), message.getPayloadSize());
+        Serial.print(millis());
+        Serial.println(F(": txmsg"));
         return true;
     }
     return false;

@@ -84,6 +84,7 @@ void loop()
     // Loop through ports and process messages
     if (Serial.available() > 0)
     {
+        Serial.println(F("Serial available"));
         Message message = readMessage(&Serial);
         message.setSource(PORT_H);
         processMessage(&Serial, message);
@@ -232,7 +233,7 @@ void processMessage(Stream *srcPort, const Message &message)
             }
         }
     }
-    if (message.getSysCommand() == ROUTER_CLEAR_TOPOLOGY)
+    if (message.getSysOption() & ROUTER_CLEAR_TOPOLOGY)
     {
         Serial.println(F("Clear topology"));
         pathfinder.clearTopology();
@@ -514,7 +515,7 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
                 // clear destination's topology to ensure it always has the most correct graph
                 // Needed in the case of rediscovery
                 Serial.println(F("Destination will clear its topology"));
-                message.setSysCommand(message.getSysCommand() | ROUTER_CLEAR_TOPOLOGY);
+                message.setSysOption(message.getSysOption() | ROUTER_CLEAR_TOPOLOGY);
             }
             for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext();)
             {

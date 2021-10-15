@@ -45,7 +45,7 @@
 #define LED_LAND 10
 #define BTN_LAND 9
 #define SEED_PIN A5
-#define SAVE_STATE false
+#define SAVE_STATE true
 
 #define CATAN_SETUP_NEIGHBORS 1
 

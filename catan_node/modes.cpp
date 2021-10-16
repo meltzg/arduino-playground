@@ -757,6 +757,7 @@ void sendClearRobberRequest()
 void setCurrentPlayer(SetCurrentPlayerRequest request)
 {
     catanState.currentPlayer = request.playerNumber;
+    newPlayer = catanState.currentPlayer;
     __int24 ledColors[leds.getNumLeds()] = {BLACK};
     ledColors[LED_LAND] = getPlayerColor(catanState.currentPlayer);
     leds.setState(ledColors);
@@ -995,6 +996,7 @@ void saveState()
 void loadState()
 {
     EEPROM.get(0, catanState);
+    newPlayer = catanState.currentPlayer;
 }
 
 int cityToNeighbor(int cityNumber)

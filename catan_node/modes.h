@@ -302,7 +302,7 @@ public:
     static CatanLandType randomType(bool includeDesert = false);
     static CatanLandType randomHarbor();
     static int numDesertTiles(int numLandTiles);
-    static int numHarborTiles(int numLandTiles);
+    static int numHarborTiles(int numLandTiles, int numOceanTiles);
 
 private:
     Value value;

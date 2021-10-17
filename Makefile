@@ -25,6 +25,12 @@ compile-pathfinder-tester:
 upload-pathfinder-tester: compile-pathfinder-tester
 	arduino-cli upload -p ${PORT} -b arduino:avr:uno pathfinder_tester/ -v
 
+compile-controller-check:
+	arduino-cli compile -b arduino:avr:uno controller-check/ -v
+
+upload-controller-check: compile-controller-check
+	arduino-cli upload -p ${PORT} -b arduino:avr:uno controller-check/ -v
+
 compile-eeprom-clear:
 	arduino-cli compile -b arduino:avr:uno eeprom-clear/ -v
 

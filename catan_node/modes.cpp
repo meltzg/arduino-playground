@@ -308,14 +308,14 @@ CatanLandType CatanLandType::randomHarbor()
     return CatanLandType::NONE;
 }
 
-int CatanLandType::numDessertTiles(int numLandTiles)
+int CatanLandType::numDesertTiles(int numLandTiles)
 {
     return numLandTiles / 30 + 1;
 }
 
-int CatanLandType::numHarborTiles(int numOceanTiles)
+int CatanLandType::numHarborTiles(int numLandTiles)
 {
-    return min(numOceanTiles, 11);
+    return 2 * (numLandTiles / 30) + 9;
 }
 
 void CatanLandType::resetLandWeights()
@@ -863,7 +863,7 @@ void setupBoard()
     Serial.println(topology.numNodes() - numLand);
 
     // get indicies for desert tiles
-    const int numDesert = CatanLandType::numDessertTiles(numLand);
+    const int numDesert = CatanLandType::numDesertTiles(numLand);
     Set<int> desertTiles;
     while (desertTiles.count < numDesert)
     {
@@ -873,7 +873,7 @@ void setupBoard()
     Serial.println(numDesert);
 
     // get indicies for harbor tiles
-    const int numHarbor = CatanLandType::numHarborTiles(topology.numNodes() - numLand);
+    const int numHarbor = CatanLandType::numHarborTiles(numLand);
     Set<int> harborTiles;
     while (harborTiles.count < numHarbor)
     {

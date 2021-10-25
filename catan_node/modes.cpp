@@ -579,6 +579,27 @@ void setTileValue(byte val)
     disp.setChars(displayMessage);
 }
 
+byte randomRollValue()
+{
+    byte robberValue = 0;
+    if (NUM_DICE % 2 == 0 ^ DIE_SIDES % 2 != 0)
+    {
+        robberValue = (NUM_DICE * (DIE_SIDES + 1)) / 2;
+    }
+    else
+    {
+        robberValue = (NUM_DICE * (DIE_SIDES + 1) - 1) / 2;
+    }
+    Serial.print(F("Robber value: "));
+    Serial.println(robberValue, DEC);
+    byte rollValue = robberValue;
+    while (rollValue == robberValue)
+    {
+        rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+    }
+    return rollValue;
+}
+
 __int24 getPlayerColor(byte playerNumber)
 {
     switch (playerNumber)
@@ -913,7 +934,7 @@ void setupBoard()
             {
                 // land tile
                 initialState.landType = CatanLandType::randomType();
-                initialState.rollValue = random(NUM_DICE, NUM_DICE * DIE_SIDES);
+                initialState.rollValue = randomRollValue();
             }
             landIndex++;
         }

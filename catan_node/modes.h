@@ -467,6 +467,8 @@ void updateCurrentPlayer(uint16_t state);
 void renderState();
 void setTileValue(byte val);
 
+byte randomRollValue();
+
 void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
 void setInitialState(NodeId_t node, SetInitialStateRequest request);
 void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);

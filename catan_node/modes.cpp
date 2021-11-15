@@ -515,10 +515,7 @@ void renderState()
         }
         if (RENDER_PORTS && catanState.landType == CatanLandType::OCEAN && catanState.portType != CatanLandType::NONE)
         {
-            Serial.print(F("harbor type "));
-            Serial.println(catanState.portType.toString());
-            Serial.print(F("harbor port "));
-            Serial.println(catanState.portNeighbor, HEX);
+
             for (int i = 0; i < 6; i++)
             {
                 if (catanState.neighborIds[i] == catanState.portNeighbor)
@@ -701,9 +698,10 @@ void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)
         0,
         (byte *)&request);
 
-    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+    for (int i = 0; i < INITIAL_STATE_RETRIES && !writeMessage(&netPort, msg, MAX_NET_RETRIES); i++)
     {
         Serial.println(F("Fail"));
+        delay(INITIAL_STATE_RETRY_DELAY);
     }
 }
 

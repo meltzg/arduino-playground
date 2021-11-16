@@ -75,15 +75,27 @@ Message readMessage(Stream *srcPort)
     return message;
 }
 
-bool writeMessage(Stream *destPort, const Message &message, int maxWaitRetries)
+bool writeMessage(Stream *destPort, const Message &message, int maxWaitRetries, int maxCompleteRetries, int completeRetryDelay)
 {
-    if (ackWait(destPort, maxWaitRetries))
+    int retry = 0;
+    do
     {
-        destPort->write((char *)&message, sizeof(Message));
-        destPort->write(message.getBody(), message.getPayloadSize());
-        Serial.print(millis());
-        Serial.println(F(": txmsg"));
-        return true;
-    }
+        Serial.print(F("attempt: "));
+        Serial.println(retry);
+        if (ackWait(destPort, maxWaitRetries))
+        {
+            destPort->write((char *)&message, sizeof(Message));
+            destPort->write(message.getBody(), message.getPayloadSize());
+            Serial.print(millis());
+            Serial.print(F(": txmsg dst: "));
+            Serial.println(message.getDest(), HEX);
+            return true;
+        }
+        retry++;
+        if (retry < maxCompleteRetries)
+        {
+            delay(completeRetryDelay);
+        }
+    } while (retry < maxCompleteRetries);
     return false;
 }

@@ -106,6 +106,6 @@ private:
 
 Message readMessage(Stream *srcPort);
 
-bool writeMessage(Stream *destPort, const Message &message, int maxWaitRetries = -1);
+bool writeMessage(Stream *destPort, const Message &message, int maxWaitRetries = -1, int maxCompleteRetries = 0, int completeRetryDelay = 0);
 
 #endif // _COMMON_MESSAGING_H_

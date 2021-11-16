@@ -373,7 +373,7 @@ void processMessage(const Message &message)
                         0,
                         0,
                         (byte *)&command);
-                    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+                    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
                     {
                         Serial.println(F("Fail"));
                     }

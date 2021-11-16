@@ -55,7 +55,7 @@ bool sendIdRequest()
         NULL);
     catanState.id = 0;
 
-    if (!writeMessage(&netPort, idRequest, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, idRequest, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         disp.setChars("ID req Failure ");
         return false;
@@ -79,7 +79,7 @@ bool sendDiscoveryRequest()
         ROUTER_START_DISCOVERY,
         NULL);
 
-    if (!writeMessage(&netPort, discoveryRequest, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, discoveryRequest, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         disp.setChars("D req Failure ");
         return false;
@@ -97,7 +97,7 @@ bool sendDiscoveryStatsRequest()
         ROUTER_GET_DISCOVERY_STATUS,
         NULL);
 
-    if (!writeMessage(&netPort, discoveryStatsRequest, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, discoveryStatsRequest, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         disp.setChars("D stat Failure ");
         return false;
@@ -119,7 +119,7 @@ bool sendNeighborRequest(NodeId_t destination, bool useCache)
         ROUTER_GET_NEIGHBORS,
         NULL);
 
-    if (!writeMessage(&netPort, neighborRequest, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, neighborRequest, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         disp.setChars("N req Failure ");
         return false;
@@ -233,7 +233,7 @@ void handleNodeResponseNetworkTest(const Message &message)
 
             if (msg.getDest() != EMPTY)
             {
-                if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+                if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
                 {
                     Serial.println(F("Fail"));
                 }
@@ -643,7 +643,7 @@ void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true)
 
         if (msg.getDest() != EMPTY)
         {
-            if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+            if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
             {
                 Serial.println(F("Fail"));
             }
@@ -698,10 +698,9 @@ void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)
         0,
         (byte *)&request);
 
-    for (int i = 0; i < INITIAL_STATE_RETRIES && !writeMessage(&netPort, msg, MAX_NET_RETRIES); i++)
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         Serial.println(F("Fail"));
-        delay(INITIAL_STATE_RETRY_DELAY);
     }
 }
 
@@ -716,7 +715,7 @@ void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo)
         0,
         (byte *)&request);
 
-    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         Serial.println(F("Fail"));
     }
@@ -733,7 +732,7 @@ void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo)
         0,
         (byte *)&response);
 
-    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         Serial.println(F("Fail"));
     }
@@ -750,7 +749,7 @@ void sendSetCurrentPlayerRequest()
         0,
         (byte *)&request);
 
-    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         Serial.println(F("Fail"));
     }
@@ -767,7 +766,7 @@ void sendClearRobberRequest()
         0,
         (byte *)&request);
 
-    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES))
+    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
     {
         Serial.println(F("Fail"));
     }

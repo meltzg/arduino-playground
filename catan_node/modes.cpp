@@ -806,56 +806,166 @@ void reconcileSettlementValidation(StateResponse response)
         return;
     }
 
-    byte neighboringSettlement = (response.placementInfo.toValidate + 1) % NUM_SETTLEMENTS;
-    Serial.print(F("validate settlement "));
+    Serial.print(F("step "));
+    Serial.println(response.placementInfo.validateStep);
+
+    uint8_t otherCity = (response.placementInfo.toValidate + 1) % NUM_SETTLEMENTS;
+    bool isValid = true;
+    NodeId_t nextTile = EMPTY;
+
+    uint8_t otherCityTileIdx1 = response.placementInfo.toValidate * -3 + 5;
+    uint8_t otherCityTileIdx2 = response.placementInfo.toValidate * 3;
+    uint8_t landTileCheckIdx1 = response.placementInfo.toValidate;
+    uint8_t landTileCheckIdx2 = response.placementInfo.toValidate + 1 % NUM_ROADS;
+
+    Serial.print(F("to validate: "));
     Serial.println(response.placementInfo.toValidate);
-    if (response.state.id == catanState.id ||
-        response.state.id == catanState.neighborIds[response.placementInfo.toValidate] ||
-        response.state.id == catanState.neighborIds[response.placementInfo.toValidate + 1])
-    {
-        response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
-    }
+    Serial.print(F("other tile idx 1: "));
+    Serial.println(otherCityTileIdx1);
+    Serial.print(F("other tile idx 2: "));
+    Serial.println(otherCityTileIdx2);
+    Serial.print(F("land check 1: "));
+    Serial.println(landTileCheckIdx1);
+    Serial.print(F("land check 2: "));
+    Serial.println(landTileCheckIdx2);
 
-    if (response.placementInfo.validateStep == 3 || response.state.settlementOwners[neighboringSettlement] == UNOWNED)
+    switch (response.placementInfo.validateStep)
     {
-        bool hasNextTile = false;
-        byte nextTileIdx;
-        for (; response.placementInfo.validateStep < (3 - response.placementInfo.toValidate) && !hasNextTile; response.placementInfo.validateStep++)
+    case 0:
+        // Check local city
+        if (catanState.settlementOwners[otherCity] != UNOWNED)
         {
-            Serial.print(F("step "));
-            Serial.println(response.placementInfo.validateStep);
-            nextTileIdx = (response.placementInfo.validateStep + (response.placementInfo.toValidate * 2) + 5) % 6;
-            Serial.print(F("nextTileIdx "));
-            Serial.println(nextTileIdx);
-            Serial.print(F("nextTileId "));
-            Serial.println(catanState.neighborIds[nextTileIdx], HEX);
-            if (catanState.neighborIds[nextTileIdx] != EMPTY)
-            {
-                hasNextTile = true;
-            }
-        }
-
-        if (hasNextTile)
-        {
-            Serial.println(F("request next tile"));
-            sendStateRequest(catanState.neighborIds[nextTileIdx], response.placementInfo);
-        }
-        else if (!response.placementInfo.onLand)
-        {
-            Serial.println(F("cannot place settlement on ocean"));
+            isValid = false;
         }
         else
         {
-            Serial.println(F("Settlement place approved"));
-            catanState.settlementOwners[response.placementInfo.toValidate] = response.placementInfo.playerNumber;
+            response.placementInfo.onLand = response.placementInfo.onLand || catanState.landType != CatanLandType::OCEAN;
+            if (catanState.neighborIds[otherCityTileIdx1] != EMPTY)
+            {
+                response.placementInfo.validateStep = 1;
+                nextTile = catanState.neighborIds[otherCityTileIdx1];
+            }
+            else if (catanState.neighborIds[otherCityTileIdx2] != EMPTY)
+            {
+                response.placementInfo.validateStep = 2;
+                nextTile = catanState.neighborIds[otherCityTileIdx2];
+            }
+            else if (!response.placementInfo.onLand)
+            {
+                if (catanState.neighborIds[landTileCheckIdx1] != EMPTY)
+                {
+                    response.placementInfo.validateStep = 3;
+                    nextTile = catanState.neighborIds[landTileCheckIdx1];
+                }
+                else if (catanState.neighborIds[landTileCheckIdx2] != EMPTY)
+                {
+                    response.placementInfo.validateStep = 4;
+                    nextTile = catanState.neighborIds[landTileCheckIdx2];
+                }
+                else
+                {
+                    isValid = false;
+                }
+            }
         }
+        break;
+    case 1:
+        // Check other city 1
+        if (response.state.settlementOwners[otherCity] != UNOWNED)
+        {
+            isValid = false;
+        }
+        else
+        {
+            if (catanState.neighborIds[otherCityTileIdx2] != EMPTY)
+            {
+                response.placementInfo.validateStep = 2;
+                nextTile = catanState.neighborIds[otherCityTileIdx2];
+            }
+            else if (!response.placementInfo.onLand)
+            {
+                if (catanState.neighborIds[landTileCheckIdx1] != EMPTY)
+                {
+                    response.placementInfo.validateStep = 3;
+                    nextTile = catanState.neighborIds[landTileCheckIdx1];
+                }
+                else if (catanState.neighborIds[landTileCheckIdx2] != EMPTY)
+                {
+                    response.placementInfo.validateStep = 4;
+                    nextTile = catanState.neighborIds[landTileCheckIdx2];
+                }
+                else
+                {
+                    isValid = false;
+                }
+            }
+        }
+        break;
+    case 2:
+        // Check other city 2
+        if (response.state.settlementOwners[otherCity] != UNOWNED)
+        {
+            isValid = false;
+        }
+        else
+        {
+            if (!response.placementInfo.onLand)
+            {
+                if (catanState.neighborIds[landTileCheckIdx1] != EMPTY)
+                {
+                    response.placementInfo.validateStep = 3;
+                    nextTile = catanState.neighborIds[landTileCheckIdx1];
+                }
+                else if (catanState.neighborIds[landTileCheckIdx2] != EMPTY)
+                {
+                    response.placementInfo.validateStep = 4;
+                    nextTile = catanState.neighborIds[landTileCheckIdx2];
+                }
+                else
+                {
+                    isValid = false;
+                }
+            }
+        }
+        break;
+    case 3:
+        // Check land 1
+        response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
+        if (!response.placementInfo.onLand)
+        {
+            if (catanState.neighborIds[landTileCheckIdx2] != EMPTY)
+            {
+                response.placementInfo.validateStep = 4;
+                nextTile = catanState.neighborIds[landTileCheckIdx2];
+            }
+            else
+            {
+                isValid = false;
+            }
+        }
+        break;
+    case 4:
+        // check land 2
+        response.placementInfo.onLand = response.placementInfo.onLand || response.state.landType != CatanLandType::OCEAN;
+        if (!response.placementInfo.onLand)
+        {
+            isValid = false;
+        }
+        break;
+    }
+
+    if (!isValid)
+    {
+        Serial.println(F("Invalid settlment"));
+    }
+    else if (nextTile != EMPTY)
+    {
+        sendStateRequest(nextTile, response.placementInfo);
     }
     else
     {
-        Serial.print(F("Invalid settlment neighbor "));
-        Serial.println(response.state.settlementOwners[neighboringSettlement]);
-        Serial.print(F("step "));
-        Serial.println(response.placementInfo.validateStep);
+        Serial.println(F("Settlement place approved"));
+        catanState.settlementOwners[response.placementInfo.toValidate] = response.placementInfo.playerNumber;
     }
 }
 

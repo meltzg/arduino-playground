@@ -3,6 +3,8 @@
 // State information
 byte modeIdx = MODE_CATAN;
 
+CatanResetType resetType = CatanResetType::NONE;
+
 void setup()
 {
     Serial.begin(9600);
@@ -90,6 +92,7 @@ void selectMode()
         if (!catanState.playStarted)
         {
             disp.setChars("Catan ");
+            resetType = CatanResetType::REDISCOVER;
             for (int i = 0; i < 6; i++)
             {
                 catanState.neighborIds[i] = EMPTY;
@@ -198,12 +201,13 @@ void processState(unsigned long currentMillis, uint16_t state)
                     sendSetCurrentPlayerRequest();
                 }
             }
-            if (btns.getOnDuration(BTN_LAND) >= START_OVER_DELAY)
+            if (resetType != CatanResetType::NEW_GAME && btns.getOnDuration(BTN_LAND) >= NEW_GAME_DELAY && btns.getOnDuration(BTN_LAND) < REDISCOVER_DELAY)
             {
+                resetType = CatanResetType::NEW_GAME;
                 playerSelectMode = false;
                 pollDiscovery = false;
                 postDiscovery = false;
-                disp.setChars("Catan ");
+                disp.setChars("New Game ");
                 catanState.playStarted = false;
                 for (int i = 0; i < 6; i++)
                 {
@@ -218,6 +222,10 @@ void processState(unsigned long currentMillis, uint16_t state)
                 {
                     catanState.settlementOwners[i] = UNOWNED;
                 }
+            }
+            if (resetType != CatanResetType::REDISCOVER && btns.getOnDuration(BTN_LAND) >= REDISCOVER_DELAY)
+            {
+                resetType = CatanResetType::REDISCOVER;
             }
             else if (state != previousState)
             {
@@ -338,7 +346,14 @@ void processMessage(const Message &message)
             }
             else if (modeIdx == MODE_CATAN)
             {
-                pollDiscovery = sendDiscoveryRequest();
+                if (resetType == CatanResetType::REDISCOVER)
+                {
+                    pollDiscovery = sendDiscoveryRequest();
+                }
+                else if (resetType == CatanResetType::NEW_GAME)
+                {
+                    sendDiscoveryStatsRequest();
+                }
             }
         }
         else if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)

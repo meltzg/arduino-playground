@@ -352,6 +352,8 @@ void processMessage(const Message &message)
                 }
                 else if (resetType == CatanResetType::NEW_GAME)
                 {
+                    pollDiscovery = true;
+                    topology.purge();
                     sendDiscoveryStatsRequest();
                 }
             }

@@ -347,7 +347,7 @@ struct CatanPlayState : public CatanState
 {
     bool playStarted;
     NodeId_t neighborIds[6] = {EMPTY};
-    byte currentPlayer;
+    byte currentPlayer = 0;
 };
 
 struct CatanMessage : public ModeMessage

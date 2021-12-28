@@ -449,6 +449,8 @@ extern CatanPlayState catanState;
 extern bool playerSelectMode; 
 extern byte newPlayer;
 
+extern CatanResetType resetType;
+
 // Methods for catan
 
 void handleNodeResponseCatan(const Message &message);

@@ -30,6 +30,7 @@ int btnDiscover = 0;
 
 bool pollDiscovery = false;
 bool postDiscovery = false;
+CatanResetType resetType = CatanResetType::NONE;
 
 Set<NodeId_t> discoveryVisited;
 LinkedList<NodeId_t> discoveryQueue;
@@ -145,6 +146,7 @@ void handleDiscoveryStatsResponse(const Message &message)
     {
         pollDiscovery = false;
         postDiscovery = true;
+        resetType = CatanResetType::NONE;
         sendNeighborRequest(catanState.id, true);
     }
 }

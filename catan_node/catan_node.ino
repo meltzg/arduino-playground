@@ -90,6 +90,7 @@ void selectMode()
         if (!catanState.playStarted)
         {
             disp.setChars("Catan ");
+            resetType = CatanResetType::REDISCOVER;
             for (int i = 0; i < 6; i++)
             {
                 catanState.neighborIds[i] = EMPTY;
@@ -173,6 +174,34 @@ void processState(unsigned long currentMillis, uint16_t state)
     }
     else if (modeIdx == MODE_CATAN)
     {
+        if (resetType != CatanResetType::NEW_GAME && btns.getOnDuration(BTN_LAND) >= NEW_GAME_DELAY && btns.getOnDuration(BTN_LAND) < REDISCOVER_DELAY)
+        {
+            resetType = CatanResetType::NEW_GAME;
+            playerSelectMode = false;
+            pollDiscovery = false;
+            postDiscovery = false;
+            disp.setChars("New Game ");
+            catanState.playStarted = false;
+            for (int i = 0; i < 6; i++)
+            {
+                catanState.neighborIds[i] = EMPTY;
+            }
+
+            for (int i = 0; i < NUM_ROADS; i++)
+            {
+                catanState.roadOwners[i] = UNOWNED;
+            }
+            for (int i = 0; i < NUM_SETTLEMENTS; i++)
+            {
+                catanState.settlementOwners[i] = UNOWNED;
+            }
+        }
+        if (resetType != CatanResetType::REDISCOVER && btns.getOnDuration(BTN_LAND) >= REDISCOVER_DELAY)
+        {
+            disp.setChars("Rediscover ");
+            resetType = CatanResetType::REDISCOVER;
+        }
+
         if (!catanState.playStarted)
         {
             doDiscoveryProcessing = true;
@@ -198,28 +227,7 @@ void processState(unsigned long currentMillis, uint16_t state)
                     sendSetCurrentPlayerRequest();
                 }
             }
-            if (btns.getOnDuration(BTN_LAND) >= START_OVER_DELAY)
-            {
-                playerSelectMode = false;
-                pollDiscovery = false;
-                postDiscovery = false;
-                disp.setChars("Catan ");
-                catanState.playStarted = false;
-                for (int i = 0; i < 6; i++)
-                {
-                    catanState.neighborIds[i] = EMPTY;
-                }
-
-                for (int i = 0; i < NUM_ROADS; i++)
-                {
-                    catanState.roadOwners[i] = UNOWNED;
-                }
-                for (int i = 0; i < NUM_SETTLEMENTS; i++)
-                {
-                    catanState.settlementOwners[i] = UNOWNED;
-                }
-            }
-            else if (state != previousState)
+            if (state != previousState)
             {
                 if (!playerSelectMode)
                 {
@@ -338,7 +346,16 @@ void processMessage(const Message &message)
             }
             else if (modeIdx == MODE_CATAN)
             {
-                pollDiscovery = sendDiscoveryRequest();
+                if (resetType == CatanResetType::REDISCOVER)
+                {
+                    pollDiscovery = sendDiscoveryRequest();
+                }
+                else if (resetType == CatanResetType::NEW_GAME)
+                {
+                    pollDiscovery = true;
+                    topology.purge();
+                    sendDiscoveryStatsRequest();
+                }
             }
         }
         else if (message.getSysCommand() == ROUTER_RESPONSE_DISCOVERY_STATUS)

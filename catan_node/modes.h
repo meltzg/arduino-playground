@@ -51,7 +51,8 @@
 #define CATAN_SETUP_NEIGHBORS 1
 
 #define PLAYER_SELECT_DELAY 500
-#define START_OVER_DELAY 5000
+#define NEW_GAME_DELAY 5000
+#define REDISCOVER_DELAY 10000
 
 #define NUM_ROADS 6
 #define NUM_SETTLEMENTS 2
@@ -159,6 +160,13 @@ void handleDiscoveryStatsResponse(const Message &message);
 void handleNodeResponseNetworkTest(const Message &message);
 
 // Catan types
+
+enum CatanResetType : byte
+{
+    NONE,
+    NEW_GAME,
+    REDISCOVER,
+};
 
 class CatanLandType
 {
@@ -440,6 +448,8 @@ extern Graph<NodeId_t> topology;
 extern CatanPlayState catanState;
 extern bool playerSelectMode; 
 extern byte newPlayer;
+
+extern CatanResetType resetType;
 
 // Methods for catan
 

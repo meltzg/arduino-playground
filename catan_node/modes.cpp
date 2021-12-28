@@ -155,18 +155,6 @@ void handleNodeResponseNetworkTest(const Message &message)
     if (!postDiscovery)
     {
         __int24 ledColors[leds.getNumLeds()] = {BLACK};
-        sprintf(
-            displayMessage,
-            "Neighbors [%04X, %04X, %04X, %04X, %04X, %04X] ",
-            nodes[1],
-            nodes[2],
-            nodes[3],
-            nodes[4],
-            nodes[5],
-            nodes[6]);
-
-        disp.setChars(displayMessage);
-        Serial.println(displayMessage);
         for (int i = 0; i < 6; i++)
         {
             NodeId_t id = nodes[i + 1];

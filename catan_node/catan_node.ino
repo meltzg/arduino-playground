@@ -3,8 +3,6 @@
 // State information
 byte modeIdx = MODE_CATAN;
 
-NodeId_t setupResponse = EMPTY;
-
 void setup()
 {
     Serial.begin(9600);
@@ -275,11 +273,7 @@ void processMessage(const Message &message)
             switch (command->command)
             {
             case START_NODE:
-                setupResponse = ((WakeNodeMessage *)command)->masterNode;
                 sendIdRequest();
-            case NODE_READY:
-                NodeId_t nextNode = discoveryQueue.popFront();
-                sendNeighborRequest(nextNode, true);
             }
         }
         else
@@ -356,22 +350,6 @@ void processMessage(const Message &message)
             if (modeIdx == MODE_NETWORK_TEST)
             {
                 handleNodeResponseNetworkTest(message);
-                if (setupResponse != EMPTY)
-                {
-                    NodeReadyMessage command;
-                    Message msg(
-                        catanState.id,
-                        setupResponse,
-                        sizeof(WakeNodeMessage),
-                        0,
-                        0,
-                        (byte *)&command);
-                    if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
-                    {
-                        Serial.println(F("Fail"));
-                    }
-                    setupResponse = EMPTY;
-                }
             }
             else if (modeIdx == MODE_CATAN)
             {

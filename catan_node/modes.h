@@ -42,7 +42,7 @@
 #define BTN_DISCOVER 3
 
 // Catan
-#define ALL_LAND false
+#define ALL_LAND true
 #define RENDER_PORTS true
 #define LED_LAND 10
 #define BTN_LAND 9
@@ -156,7 +156,6 @@ struct NodeReadyMessage : public NetworkTestMessage
 
 extern int btnDiscover;
 
-extern unsigned long previousDiscoveryMillis;
 extern bool pollDiscovery;
 extern bool postDiscovery;
 

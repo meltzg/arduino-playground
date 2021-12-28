@@ -257,13 +257,6 @@ void processState(unsigned long currentMillis, uint16_t state)
 
             previousState = state;
         }
-        if (catanState.id != EMPTY && pollDiscovery && currentMillis - previousDiscoveryMillis > 10000)
-        {
-            if (sendDiscoveryStatsRequest())
-            {
-                previousDiscoveryMillis = currentMillis;
-            }
-        }
     }
 }
 

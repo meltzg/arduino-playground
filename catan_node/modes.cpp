@@ -28,7 +28,6 @@ char displayMessage[50] = {0};
 
 int btnDiscover = 0;
 
-unsigned long previousDiscoveryMillis = 0;
 bool pollDiscovery = false;
 bool postDiscovery = false;
 
@@ -75,7 +74,7 @@ bool sendDiscoveryRequest()
         catanState.id,
         catanState.id,
         0,
-        0,
+        ROUTER_ENABLE_DISCOVERY_UPDATES,
         ROUTER_START_DISCOVERY,
         NULL);
 

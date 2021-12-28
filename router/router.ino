@@ -8,6 +8,7 @@
 #define PRINT_BUF_SIZE 100
 
 #define NEIGHBOR_RETRIES 500
+#define DISCOVERER_UPDATE_FREQUENCY 10000
 
 /*
    Each node has a SoftwareSerial connection to its neighbor and another to the
@@ -56,6 +57,8 @@ PathFinder pathfinder(6);
 Set<NodeId_t> pendingNeighborRequests;
 unsigned char pendingIdRequests = 0;
 bool pendingDiscovery = false;
+unsigned long previousDiscoveryStatsUpdate = 0;
+NodeId_t discoverId = EMPTY;
 
 void setup()
 {
@@ -149,6 +152,17 @@ void logDiscoveryStats()
     char buf[50];
     sprintf(buf, "D: %d, N: %d, E: %d    ", stats.discoveryDone, stats.numNodes, stats.numEdges);
     Serial.println(buf);
+    if (discoverId != EMPTY && (stats.discoveryDone || (millis() - previousDiscoveryStatsUpdate > DISCOVERER_UPDATE_FREQUENCY)))
+    {
+        Serial.print(F("Send status to discoverId "));
+        Serial.println(discoverId, HEX);
+        sendDiscoveryStats(discoverId);
+        previousDiscoveryStatsUpdate = millis();
+        if (stats.discoveryDone)
+        {
+            discoverId = EMPTY;
+        }
+    }
 }
 
 void processMessage(Stream *srcPort, const Message &message)
@@ -306,28 +320,13 @@ void processMessage(Stream *srcPort, const Message &message)
     if (message.getSysCommand() == ROUTER_START_DISCOVERY)
     {
         Serial.println(F("Start Discovery"));
-        startDiscovery();
+        startDiscovery(message.getSource(), message.getSysOption() & ROUTER_ENABLE_DISCOVERY_UPDATES);
         return;
     }
     if (message.getSysCommand() == ROUTER_GET_DISCOVERY_STATUS)
     {
         Serial.println(F("Get discovery stats"));
-
-        DiscoveryStats stats = pathfinder.getDiscoveryStats();
-        bool discoveryDone = stats.discoveryDone;
-        size_t numNodes = stats.numNodes;
-        size_t numEdges = stats.numEdges;
-
-        Serial.print(F("sizeof discover stat "));
-        Serial.println(sizeof(stats));
-        Message response(
-            NODE_ID,
-            message.getSource(),
-            sizeof(DiscoveryStats),
-            0,
-            ROUTER_RESPONSE_DISCOVERY_STATUS,
-            (char *)(&stats));
-        routeMessage(response);
+        sendDiscoveryStats(message.getSource());
         return;
     }
     if (message.getSysOption() & ROUTER_SYS_COMMAND)
@@ -549,12 +548,39 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     logDiscoveryStats();
 }
 
-void startDiscovery()
+void startDiscovery(NodeId_t src, bool enableDiscoveryUpdates)
 {
     pathfinder.startDiscovery();
 
     resetNeighbors();
     pendingDiscovery = true;
+    if (enableDiscoveryUpdates)
+    {
+        discoverId = src;
+    }
+    else
+    {
+        discoverId = EMPTY;
+    }
+}
+
+void sendDiscoveryStats(NodeId_t dst)
+{
+    DiscoveryStats stats = pathfinder.getDiscoveryStats();
+    bool discoveryDone = stats.discoveryDone;
+    size_t numNodes = stats.numNodes;
+    size_t numEdges = stats.numEdges;
+
+    Serial.print(F("sizeof discover stat "));
+    Serial.println(sizeof(stats));
+    Message response(
+        NODE_ID,
+        dst,
+        sizeof(DiscoveryStats),
+        0,
+        ROUTER_RESPONSE_DISCOVERY_STATUS,
+        (char *)(&stats));
+    routeMessage(response);
 }
 
 int strcicmp(char const *a, char const *b)

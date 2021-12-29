@@ -42,7 +42,7 @@
 #define BTN_DISCOVER 3
 
 // Catan
-#define ALL_LAND true
+#define ALL_LAND false
 #define RENDER_PORTS true
 #define LED_LAND 10
 #define BTN_LAND 9

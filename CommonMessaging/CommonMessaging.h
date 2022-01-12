@@ -36,7 +36,7 @@
      Specifies network commands to perform
 */
 
-#define SOFT_BAUD 4800
+#define SOFT_BAUD 1200
 
 #define PING_BYTE byte(0xAA)
 #define ACK_BYTE byte(0xAB)

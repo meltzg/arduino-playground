@@ -217,35 +217,7 @@ void processMessage(Stream *srcPort, const Message &message)
                 Serial.println(neighborIds[i], HEX);
             }
         }
-        EEPROM.put(0, neighborIds);
-        if (pendingIdRequests == 0)
-        {
-            int numNodes = 7;
-            NodeId_t nodeMessage[numNodes];
-            nodeMessage[0] = NODE_ID;
-            for (int i = 0; i < 6; i++)
-            {
-                nodeMessage[i + 1] = neighborIds[i];
-            }
-            Message response(
-                NODE_ID,
-                message.getSource(),
-                sizeof(NodeId_t) * numNodes,
-                message.getSysOption() & ROUTER_SYS_COMMAND,
-                ROUTER_ADD_NODE,
-                (byte *)nodeMessage);
-
-            while (!pendingNeighborRequests.isEmpty())
-            {
-                response.setDest(pendingNeighborRequests.popFront());
-                routeMessage(response);
-            }
-            if (pendingDiscovery)
-            {
-                pendingDiscovery = false;
-                updateNeighbors(NODE_ID, neighborIds, 6);
-            }
-        }
+        updateNeighborIds(message.getSysOption() & ROUTER_SYS_COMMAND);
     }
     if (message.getSysOption() & ROUTER_CLEAR_TOPOLOGY)
     {
@@ -272,8 +244,8 @@ void processMessage(Stream *srcPort, const Message &message)
             }
             if (!(message.getSysOption() & ROUTER_USE_CACHE) || numNodes < adj.count)
             {
-                resetNeighbors();
                 pendingNeighborRequests.pushBack(message.getSource());
+                resetNeighbors(message.getSysOption() & ROUTER_SYS_COMMAND);
                 return;
             }
             numNodes = 7;
@@ -399,7 +371,7 @@ void routeMessage(const Message &message)
     }
 }
 
-void resetNeighbors()
+void resetNeighbors(bool isSysCommand)
 {
     Serial.println(F("Reset Edges"));
     pendingIdRequests = 0;
@@ -417,6 +389,42 @@ void resetNeighbors()
         if (writeMessage(NEIGHBORS[i], idRequest, NEIGHBOR_RETRIES))
         {
             pendingIdRequests++;
+        }
+    }
+    updateNeighborIds(isSysCommand);
+}
+
+void updateNeighborIds(bool isSysCommand)
+{
+    EEPROM.put(0, neighborIds);
+    Serial.print(F("pending "));
+    Serial.println(pendingIdRequests);
+    if (pendingIdRequests == 0)
+    {
+        int numNodes = 7;
+        NodeId_t nodeMessage[numNodes];
+        nodeMessage[0] = NODE_ID;
+        for (int i = 0; i < 6; i++)
+        {
+            nodeMessage[i + 1] = neighborIds[i];
+        }
+        Message response(
+            NODE_ID,
+            NODE_ID,
+            sizeof(NodeId_t) * numNodes,
+            isSysCommand ? ROUTER_SYS_COMMAND : 0,
+            ROUTER_ADD_NODE,
+            (byte *)nodeMessage);
+
+        while (!pendingNeighborRequests.isEmpty())
+        {
+            response.setDest(pendingNeighborRequests.popFront());
+            routeMessage(response);
+        }
+        if (pendingDiscovery)
+        {
+            pendingDiscovery = false;
+            updateNeighbors(NODE_ID, neighborIds, 6);
         }
     }
 }
@@ -552,7 +560,7 @@ void startDiscovery(NodeId_t src, bool enableDiscoveryUpdates)
 {
     pathfinder.startDiscovery();
 
-    resetNeighbors();
+    resetNeighbors(true);
     pendingDiscovery = true;
     if (enableDiscoveryUpdates)
     {

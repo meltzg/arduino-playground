@@ -982,20 +982,60 @@ void setupBoard()
 
     // get indicies for desert tiles
     const int numDesert = CatanLandType::numDesertTiles(numLand);
-    Set<int> desertTiles;
-    while (desertTiles.count < numDesert)
+    int desertTiles[numDesert];
+    for (int i = 0; i < numDesert; i++)
     {
-        desertTiles.pushBack(random(numLand));
+        desertTiles[i] = -1;
+    }
+    for (int i = 0; i < numDesert; i++)
+    {
+        while (desertTiles[i] < 0)
+        {
+            int val = random(numLand);
+            bool valid = true;
+            for (int j = 0; j < numDesert; j++)
+            {
+                if (desertTiles[j] == val)
+                {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid)
+            {
+                desertTiles[i] = val;
+            }
+        }
     }
     Serial.print(F("# desert "));
     Serial.println(numDesert);
 
     // get indicies for harbor tiles
     const int numHarbor = CatanLandType::numHarborTiles(numLand, topology.numNodes() - numLand);
-    Set<int> harborTiles;
-    while (harborTiles.count < numHarbor)
+    int harborTiles[numHarbor];
+    for (int i = 0; i < numHarbor; i++)
     {
-        harborTiles.pushBack(random(topology.numNodes() - numLand));
+        harborTiles[i] = -1;
+    }
+    for (int i = 0; i < numHarbor; i++)
+    {
+        while (harborTiles[i] < 0)
+        {
+            int val = random(topology.numNodes() - numLand);
+            bool valid = true;
+            for (int j = 0; j < numHarbor; j++)
+            {
+                if (harborTiles[j] == val)
+                {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid)
+            {
+                harborTiles[i] = val;
+            }
+        }
     }
     Serial.print(F("# harbor "));
     Serial.println(numHarbor);
@@ -1016,7 +1056,15 @@ void setupBoard()
 
         if (ALL_LAND || adj.count == 6 || adj.count == 0)
         {
-            if (desertTiles.contains(landIndex))
+            bool isDesert = false;
+            for (int i = 0; i < numDesert; i++)
+            {
+                if (desertTiles[i] == landIndex)
+                {
+                    isDesert = true;
+                }
+            }
+            if (isDesert)
             {
                 // desert tile
                 initialState.landType = CatanLandType::DESERT;
@@ -1040,7 +1088,15 @@ void setupBoard()
             // ocean tile
             initialState.landType = CatanLandType::OCEAN;
             initialState.rollValue = 0;
-            if (harborTiles.contains(oceanIndex))
+            bool isHarbor = false;
+            for (int i = 0; i < numHarbor; i++)
+            {
+                if (harborTiles[i] == oceanIndex)
+                {
+                    isHarbor = true;
+                }
+            }
+            if (isHarbor)
             {
                 // harbor tile
                 int numPossiblePorts = 0;

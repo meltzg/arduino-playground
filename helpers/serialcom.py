@@ -11,6 +11,13 @@ ID_SIZE = 2
 HARD_PORT = b"\xff" * ID_SIZE
 
 
+class DiscoveryStats(object):
+    def __init__(self, resp_bytes):
+        self.done = bool(resp_bytes[0])
+        self.nodes = int.from_bytes(resp_bytes[1:3], 'little')
+        self.edges = int.from_bytes(resp_bytes[3:], 'little')
+
+
 class Router(object):
     def __init__(self, conn: serial.Serial):
         self._conn = conn
@@ -62,10 +69,9 @@ class Router(object):
     @property
     def discover_stats(self):
         self.send_message(self.id, 0x06, b"")
-        sleep(0.25)
-        resp = self._conn.read_all()
+        resp = self.read_response()
         print(resp)
-        return resp[-ID_SIZE:]
+        return DiscoveryStats(resp[-5:])
 
     def get_neighbors(self, dest):
         self.send_message(dest, 0x03, b"")
@@ -76,14 +82,6 @@ class Router(object):
 
     def start_discovery(self):
         self.send_message(self.id, 0x05, b"")
-        sleep(0.25)
-        whole = b""
-        resp = self._conn.read_all()
-        while resp:
-            whole += resp
-            resp = self._conn.read_all()
-
-        print(resp.split(b"\r\n"))
 
 
 if __name__ == '__main__':

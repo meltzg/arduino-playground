@@ -72,7 +72,7 @@ def neighbors(ctx, node, cache):
             int.from_bytes(resp.payload[i : i + ID_SIZE], "little")
             for i in range(ID_SIZE, len(resp.payload), ID_SIZE)
         ]
-        click.echo(f"Neighbors for {requested_id}")
+        click.echo(f"Neighbors for {hex(requested_id)}")
         for n in neighbor_ids:
             click.echo(hex(n))
 

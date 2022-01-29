@@ -60,13 +60,14 @@ bool pendingDiscovery = false;
 unsigned long previousDiscoveryStatsUpdate = 0;
 NodeId_t discoverId = EMPTY;
 
+void routeMessage(const Message &message, NodeId_t nextStep = EMPTY);
+
 void setup()
 {
     delay(2000);
     NODE_ID = getNodeId();
     Serial.begin(9600);
     Wire.begin();
-    Wire.setClock(10000);
     startPorts();
 
     Serial.print(F("starting "));
@@ -311,7 +312,7 @@ void processMessage(Stream *srcPort, const Message &message)
     routeMessage(message);
 }
 
-void routeMessage(const Message &message)
+void routeMessage(const Message &message, NodeId_t nextStep)
 {
     char buf[PRINT_BUF_SIZE];
     sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", message.getSource(), message.getDest(), NODE_ID, message.getPayloadSize());
@@ -322,25 +323,27 @@ void routeMessage(const Message &message)
         return;
     }
 
-    NodeId_t nextStep = EMPTY;
-    for (int i = 0; i < 6; i++)
-    {
-        if (neighborIds[i] == message.getDest())
-        {
-            nextStep = message.getDest();
-            break;
-        }
-    }
-
     if (nextStep == EMPTY)
     {
-        if (message.getDest() == NODE_ID)
+        for (int i = 0; i < 6; i++)
         {
-            nextStep = NODE_ID;
+            if (neighborIds[i] == message.getDest())
+            {
+                nextStep = message.getDest();
+                break;
+            }
         }
-        else
+
+        if (nextStep == EMPTY)
         {
-            nextStep = pathfinder.getNextStep(NODE_ID, message.getDest());
+            if (message.getDest() == NODE_ID)
+            {
+                nextStep = NODE_ID;
+            }
+            else
+            {
+                nextStep = pathfinder.getNextStep(NODE_ID, message.getDest());
+            }
         }
     }
 
@@ -495,6 +498,12 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
     pathfinder.resetIterator(NODE_ID);
     if (!uninitialized.isEmpty())
     {
+        NodeId_t nextSteps[uninitialized.count];
+        int i = 0;
+        for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext(); i++)
+        {
+            nextSteps[i] = pathfinder.getNextStep(NODE_ID, iter.next());
+        }
         for (NodeId_t distribId = pathfinder.getIteratorNext(); distribId != EMPTY; distribId = pathfinder.getIteratorNext())
         {
             sprintf(buf, "creating add node message for %hx: ", distribId);
@@ -529,10 +538,11 @@ void updateNeighbors(NodeId_t src, NodeId_t *neighbors, int numNeighbors)
                 Serial.println(F("Destination will clear its topology"));
                 message.setSysOption(message.getSysOption() | ROUTER_CLEAR_TOPOLOGY);
             }
-            for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext();)
+            i = 0;
+            for (ListIterator<NodeId_t> iter(uninitialized); iter.hasNext(); i++)
             {
                 message.setDest(iter.next());
-                routeMessage(message);
+                routeMessage(message, nextSteps[i]);
             }
         }
     }

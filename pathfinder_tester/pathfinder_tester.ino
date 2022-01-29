@@ -10,7 +10,6 @@ void setup()
     long startTs = millis();
     Serial.begin(9600);
     Wire.begin();
-    Wire.setClock(10000);
     Serial.print(F("Start: "));
     Serial.println(startTs);
     Graph<NodeId_t> g(true, 0, EEPROM.length());

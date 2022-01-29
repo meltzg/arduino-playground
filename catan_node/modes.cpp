@@ -147,7 +147,7 @@ void handleDiscoveryStatsResponse(const Message &message)
         pollDiscovery = false;
         postDiscovery = true;
         resetType = CatanResetType::NONE;
-        sendNeighborRequest(catanState.id, true);
+        // sendNeighborRequest(catanState.id, true);
     }
 }
 

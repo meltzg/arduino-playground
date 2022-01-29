@@ -354,6 +354,7 @@ void routeMessage(const Message &message)
 
     if (nextStep == NODE_ID)
     {
+        Serial.print(F("Route to actor"));
         PORT_A.listen();
         writeMessage(&PORT_A, message);
     }
@@ -363,12 +364,15 @@ void routeMessage(const Message &message)
         {
             if (neighborIds[i] == nextStep)
             {
+                Serial.print(F("route through "));
+                Serial.println(i);
                 NEIGHBORS[i]->listen();
                 writeMessage(NEIGHBORS[i], message);
                 break;
             }
         }
     }
+    Serial.println(F("route complete"));
 }
 
 void resetNeighbors(bool isSysCommand)

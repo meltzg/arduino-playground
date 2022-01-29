@@ -17,7 +17,6 @@ void setup()
 {
     Serial.begin(9600);
     Wire.begin(FINDER_I2C_ADDR);
-    Wire.setClock(10000);
     Wire.onReceive(onReceive);
     Wire.onRequest(onRequest);
     Serial.println(F("Start"));

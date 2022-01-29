@@ -31,9 +31,6 @@ NodeId_t PathFinder::getNextStep(NodeId_t src, NodeId_t dest)
     }
     NodeId_t nextStep = 0;
     Wire.readBytes((byte *)&nextStep, sizeof(nextStep));
-    while (Wire.available() < 1)
-    {
-    }
     return nextStep;
 }
 
@@ -67,10 +64,7 @@ DiscoveryStats PathFinder::getDiscoveryStats()
     Wire.readBytes((byte *)&discoveryDone, sizeof(discoveryDone));
     Wire.readBytes((byte *)&numNodes, sizeof(numNodes));
     Wire.readBytes((byte *)&numEdges, sizeof(numEdges));
-      
-    while (Wire.available() < 1)
-    {
-    }
+
     return DiscoveryStats(discoveryDone, numNodes, numEdges);
 }
 
@@ -86,9 +80,6 @@ NodeId_t PathFinder::getNextNeighborRequest()
     }
     NodeId_t neighborRequest = 0;
     Wire.readBytes((byte *)&neighborRequest, sizeof(neighborRequest));
-    while (Wire.available() < 1)
-    {
-    }
     return neighborRequest;
 }
 
@@ -129,9 +120,6 @@ NodeId_t PathFinder::getIteratorNext()
     }
     NodeId_t nodeId = 0;
     Wire.readBytes((byte *)&nodeId, sizeof(nodeId));
-    while (Wire.available() < 1)
-    {
-    }
     return nodeId;
 }
 
@@ -163,9 +151,6 @@ void PathFinder::getAdjacent(NodeId_t node, Set<NodeId_t> &adjacent)
 
     NodeId_t neighbors[numNeighbors] = {0};
     Wire.readBytes((byte *)neighbors, sizeof(NodeId_t) * numNeighbors);
-    while (Wire.available() < 1)
-    {
-    }
 
     adjacent.purge();
     for (int i = 0; i < numNeighbors; i++)

@@ -66,6 +66,7 @@ void setup()
     NODE_ID = getNodeId();
     Serial.begin(9600);
     Wire.begin();
+    Wire.setClock(10000);
     startPorts();
 
     Serial.print(F("starting "));

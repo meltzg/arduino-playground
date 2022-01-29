@@ -10,6 +10,7 @@ void setup()
     long startTs = millis();
     Serial.begin(9600);
     Wire.begin();
+    Wire.setClock(10000);
     Serial.print(F("Start: "));
     Serial.println(startTs);
     Graph<NodeId_t> g(true, 0, EEPROM.length());
@@ -178,12 +179,34 @@ void setup()
         {
             neiArr[i] = iter.next();
         }
-        Serial.print(F("Init "));
-        Serial.println(p.getInitialized(currNode));
-        p.setInitialized(currNode);
-        Serial.print(F("Init "));
-        Serial.println(p.getInitialized(currNode));
         p.addNode(currNode, neiArr, neighbors.count);
+        p.resetIterator(1);
+        for (NodeId_t distribId = p.getIteratorNext(); distribId != EMPTY; distribId = p.getIteratorNext())
+        {
+            Serial.print(F("sim update existing "));
+            Serial.println(p.getNextStep(1, distribId));
+        }
+        p.resetIterator(1);
+        for (NodeId_t distribId = p.getIteratorNext(); distribId != EMPTY; distribId = p.getIteratorNext())
+        {
+            Serial.print(F("sim initialize new "));
+            Serial.print(distribId);
+            Serial.print(F(" "));
+            Set<NodeId_t> adj;
+            p.getAdjacent(distribId, adj);
+            ListIterator<NodeId_t> adjIter(adj);
+            for (int i = 1; adjIter.hasNext(); i++)
+            {
+                NodeId_t a = adjIter.next();
+                Serial.print(a);
+                Serial.print(F(", "));
+            }
+            Serial.println();
+            for (int i = 0; i < neighbors.count; i++)
+            {
+                Serial.println(p.getNextStep(1, neiArr[i]));
+            }
+        }
         currNode = p.getNextNeighborRequest();
     } while (!p.getDiscoveryStats().discoveryDone && currNode != EMPTY);
 
@@ -204,59 +227,6 @@ void setup()
             Serial.print(F(", "));
         }
         Serial.println();
-    }
-
-    Serial.println(F("Validate pathfinding"));
-    int progress = 0;
-    int total = 52 * 51;
-    bool error = false;
-    p.resetIterator(1);
-    for (NodeId_t i = p.getIteratorNext(); i != EMPTY; i = p.getIteratorNext())
-    {
-        NodeId_t nextStep = EMPTY;
-        for (NodeId_t j = 1; j < 53; j++)
-        {
-            if (i == j)
-            {
-                continue;
-            }
-            LinkedList<NodeId_t> path;
-            g.getShortestPath(i, j, path);
-            NodeId_t expected = EMPTY;
-            if (!path.isEmpty())
-            {
-                ListIterator<NodeId_t> iter(path);
-                iter.next();
-                expected = iter.next();
-            }
-            NodeId_t nextStep = p.getNextStep(i, j);
-            Serial.print(F("Progress: "));
-            Serial.print(++progress);
-            Serial.print(F("/"));
-            Serial.print(total);
-            Serial.print(F(" "));
-            Serial.print(i);
-            Serial.print(F(" to "));
-            Serial.print(j);
-            Serial.print(F(" via "));
-            Serial.println(nextStep);
-
-            if (nextStep == EMPTY)
-            {
-                Serial.print(F("Path not found from "));
-                Serial.print(i);
-                Serial.print(F(" to "));
-                Serial.print(j);
-                Serial.print(F(". expected "));
-                Serial.println(expected);
-                error = true;
-                break;
-            }
-        }
-        if (error)
-        {
-            break;
-        }
     }
 
     Serial.println(F("Done: "));

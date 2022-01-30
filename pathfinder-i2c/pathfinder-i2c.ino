@@ -43,8 +43,11 @@ void onReceive(int numBytes)
     Serial.print(F("In expect "));
     Serial.print(numBytes);
     Serial.print(F(" bytes "));
+    delay(150);
     while (Wire.available() < numBytes)
-        ;
+    {
+        Serial.println(F("no bytes"));
+    }
     message = new byte[numBytes];
     Wire.readBytes(message, numBytes);
     receivedLen = numBytes;

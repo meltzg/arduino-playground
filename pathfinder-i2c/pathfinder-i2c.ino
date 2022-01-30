@@ -247,7 +247,12 @@ void writeNextStep(NodeId_t src, NodeId_t dest)
     LinkedList<NodeId_t> path;
     NodeId_t nextStep = EMPTY;
 
+    Serial.println(F("Get shortest path"));
+    Serial.flush();
     topology.getShortestPath(src, dest, path);
+    Serial.print(F("Path len "));
+    Serial.println(path.count);
+    Serial.flush();
     if (!path.isEmpty())
     {
         int i = 0;

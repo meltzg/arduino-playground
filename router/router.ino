@@ -68,7 +68,7 @@ void setup()
     NODE_ID = getNodeId();
     Serial.begin(9600);
     Wire.begin();
-    Wire.setWireTimeout(25000, true);
+    Wire.setWireTimeout(1000000, true);
     startPorts();
 
     Serial.print(F("starting "));

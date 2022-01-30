@@ -7,6 +7,7 @@ void PathFinder::addNode(NodeId_t node, NodeId_t *neighbors, size_t numNeighbors
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -48,6 +49,7 @@ NodeId_t PathFinder::getNextStep(NodeId_t src, NodeId_t dest)
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -91,6 +93,7 @@ void PathFinder::startDiscovery()
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -130,6 +133,7 @@ DiscoveryStats PathFinder::getDiscoveryStats()
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -177,6 +181,7 @@ NodeId_t PathFinder::getNextNeighborRequest()
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -218,6 +223,7 @@ void PathFinder::resetIterator(NodeId_t start)
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -257,6 +263,7 @@ void clearIterator()
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -295,6 +302,7 @@ NodeId_t PathFinder::getIteratorNext()
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -336,6 +344,7 @@ void PathFinder::clearTopology()
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;
@@ -374,6 +383,7 @@ void PathFinder::getAdjacent(NodeId_t node, Set<NodeId_t> &adjacent)
     int retries = 0;
     do
     {
+        retries = 0;
         do
         {
             retries++;

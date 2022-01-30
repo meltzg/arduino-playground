@@ -43,8 +43,6 @@ void onReceive(int numBytes)
     Serial.print(F("In expect "));
     Serial.print(numBytes);
     Serial.print(F(" bytes "));
-    Serial.flush();
-    delay(150);
     while (Wire.available() < numBytes)
     {
         Serial.print(F("available"));
@@ -62,6 +60,7 @@ void onReceive(int numBytes)
         Serial.print(F(","));
     }
     Serial.println();
+    Serial.flush();
 }
 
 void onRequest()
@@ -311,4 +310,3 @@ int freeMemory()
     return __brkval ? &top - __brkval : &top - __malloc_heap_start;
 #endif // __arm__
 }
-

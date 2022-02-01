@@ -1,4 +1,9 @@
 #include <EEPROM.h>
+#include "CommonMessaging.h"
+
+#ifndef EEPROM_OFFSET
+#define EEPROM_OFFSET 0
+#endif
 
 #define PROGRESS_STEP 5
 
@@ -12,7 +17,7 @@ void setup()
     int total = EEPROM.length();
     Serial.print("EEPROM size: ");
     Serial.println(total);
-    for (int i = 0; i < total; i++)
+    for (int i = EEPROM_OFFSET; i < total; i++)
     {
         EEPROM.update(i, 0);
         int currentPercent = (((float)i) / total) * 100;

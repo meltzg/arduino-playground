@@ -404,7 +404,7 @@ void resetNeighbors(bool isSysCommand)
 
 void updateNeighborIds(bool isSysCommand)
 {
-    EEPROM.put(0, neighborIds);
+    EEPROM.put(sizeof(NodeId_t), neighborIds);
     Serial.print(F("pending "));
     Serial.println(pendingIdRequests);
     if (pendingIdRequests == 0)

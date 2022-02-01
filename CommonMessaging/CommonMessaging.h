@@ -7,23 +7,21 @@
    Protocol
    --------
 
-   0                   1                   2                   3
+   0                   1                   2                   3  
    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |   Start Code  |         Source Address        |Destination Ad.|
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |               |         Payload Length        | System Option |
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  | System Command|
-  +-+-+-+-+-+-+-+-+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |   Start Code  | Source Address|Destination Ad.| Payload Length|
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |               | System Option | System Command|
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Start Code:  8 bits
      Used to indicate start of message
 
-   Source Address:  16 bits
+   Source Address:  8 bits
      The source address
 
-   Destination Address: 16 bits
+   Destination Address: 8 bits
      The destination address
 
    Payload Length: 16 bits
@@ -44,8 +42,8 @@
 #define LISTEN_WAIT 5
 
 // Hardware serial has a special case address
-#define PORT_H 0xffff
-#define EMPTY 0x0000
+#define PORT_H 0xff
+#define EMPTY 0x00
 
 // System options
 #define ROUTER_SYS_COMMAND 0x01
@@ -64,7 +62,7 @@
 #define ROUTER_RESPONSE_DISCOVERY_STATUS 0x07
 
 typedef uint8_t StartCode_t;
-typedef uint16_t NodeId_t;
+typedef uint8_t NodeId_t;
 typedef uint16_t MessageSize_t;
 typedef uint8_t SysOption_t;
 typedef uint8_t SysCommand_t;

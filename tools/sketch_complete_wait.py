@@ -11,7 +11,7 @@ def __main__(conn: serial.Serial):
         print(line)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Wait for eeprom-clear to complete')
+    parser = argparse.ArgumentParser(description='Wait for sketch to complete')
     parser.add_argument('--port', default='/dev/ttyUSB0')
     parser.add_argument('--baud', default=9600, type=int)
     args = parser.parse_args()

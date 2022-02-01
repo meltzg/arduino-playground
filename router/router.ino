@@ -65,15 +65,15 @@ void routeMessage(const Message &message, NodeId_t nextStep = EMPTY);
 void setup()
 {
     delay(2000);
-    NODE_ID = getNodeId();
     Serial.begin(9600);
     Wire.begin();
     startPorts();
 
+    logDiscoveryStats();
+    EEPROM.get(0, NODE_ID);
+    EEPROM.get(sizeof(NodeId_t), neighborIds);
     Serial.print(F("starting "));
     Serial.println(NODE_ID, HEX);
-    logDiscoveryStats();
-    EEPROM.get(0, neighborIds);
     for (int i = 0; i < 6; i++)
     {
 
@@ -604,101 +604,6 @@ void sendDiscoveryStats(NodeId_t dst)
         ROUTER_RESPONSE_DISCOVERY_STATUS,
         (char *)(&stats));
     routeMessage(response);
-}
-
-int strcicmp(char const *a, char const *b)
-{
-    for (;; a++, b++)
-    {
-        int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
-        if (d != 0 || !*a)
-            return d;
-    }
-}
-
-NodeId_t getNodeId()
-{
-    NodeId_t nodeId = 0;
-
-    int datelen = strlen(__DATE__);
-    int timelen = strlen(__TIME__);
-    char date[datelen + 1] = {0};
-    char time_[timelen + 1] = {0};
-    strncpy(date, __DATE__, datelen);
-    strncpy(time_, __TIME__, timelen);
-    char *token;
-
-    // add date to node ID
-    int year, month, day;
-    token = strtok(date, " :");
-    day = atoi(strtok(NULL, " :"));
-    year = atoi(strtok(NULL, " :"));
-
-    nodeId += year;
-
-    nodeId = nodeId << 4;
-    if (strcicmp(token, "jan") == 0)
-    {
-        nodeId += 1;
-    }
-    else if (strcicmp(token, "feb") == 0)
-    {
-        nodeId += 2;
-    }
-    else if (strcicmp(token, "mar") == 0)
-    {
-        nodeId += 3;
-    }
-    else if (strcicmp(token, "apr") == 0)
-    {
-        nodeId += 4;
-    }
-    else if (strcicmp(token, "may") == 0)
-    {
-        nodeId += 5;
-    }
-    else if (strcicmp(token, "jun") == 0)
-    {
-        nodeId += 6;
-    }
-    else if (strcicmp(token, "jul") == 0)
-    {
-        nodeId += 7;
-    }
-    else if (strcicmp(token, "aug") == 0)
-    {
-        nodeId += 8;
-    }
-    else if (strcicmp(token, "sep") == 0)
-    {
-        nodeId += 9;
-    }
-    else if (strcicmp(token, "oct") == 0)
-    {
-        nodeId += 10;
-    }
-    else if (strcicmp(token, "nov") == 0)
-    {
-        nodeId += 11;
-    }
-    else if (strcicmp(token, "dec") == 0)
-    {
-        nodeId += 12;
-    }
-
-    nodeId = nodeId << 5;
-    nodeId += day;
-
-    // add time to node ID
-    token = strtok(time_, " :");
-    for (int i = 0; i < 3 && token != NULL; i++)
-    {
-        nodeId = nodeId << 6;
-        nodeId += atoi(token);
-        token = strtok(NULL, " :");
-    }
-
-    return nodeId;
 }
 
 #ifdef __arm__

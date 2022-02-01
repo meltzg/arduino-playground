@@ -12,17 +12,17 @@ __LOGGER = logging.getLogger(__name__)
 
 
 START_CODE = bytes([0xAC])
-ID_SIZE = 2
+ID_SIZE = 1
 HARD_PORT = b"\xff" * ID_SIZE
 
 
 class Message(object):
     def __init__(self, header_bytes: bytes, conn: serial.Serial) -> None:
-        self.source = int.from_bytes(header_bytes[0:2], "little")
-        self.dest = int.from_bytes(header_bytes[2:4], "little")
-        self.payload_size = int.from_bytes(header_bytes[4:6], "little")
-        self.sys_options = header_bytes[6]
-        self.sys_command = header_bytes[7]
+        self.source = header_bytes[0]
+        self.dest = header_bytes[1]
+        self.payload_size = int.from_bytes(header_bytes[2:4], "little")
+        self.sys_options = header_bytes[4]
+        self.sys_command = header_bytes[5]
         self.payload = conn.read(self.payload_size)
 
 
@@ -143,7 +143,7 @@ def read_response(conn: serial.Serial) -> Message:
     conn.write(b"\xab")
     while b != b"\xac":
         b = conn.read()
-    header = conn.read(10)
+    header = conn.read(8)
     message = Message(header, conn)
     return message
 

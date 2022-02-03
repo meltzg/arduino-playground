@@ -130,7 +130,7 @@ bool sendNeighborRequest(NodeId_t destination, bool useCache)
 void handleIdResponse(const Message &message)
 {
     catanState.id = *((NodeId_t *)message.getBody());
-    sprintf(displayMessage, "My ID: %04X ", catanState.id);
+    sprintf(displayMessage, "My ID: %02X ", catanState.id);
     disp.setChars(displayMessage);
     Serial.println(displayMessage);
 }

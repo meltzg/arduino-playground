@@ -147,7 +147,7 @@ void handleDiscoveryStatsResponse(const Message &message)
         pollDiscovery = false;
         postDiscovery = true;
         resetType = CatanResetType::NONE;
-        // sendNeighborRequest(catanState.id, true);
+        sendNeighborRequest(catanState.id, true);
     }
 }
 
@@ -674,6 +674,8 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
 
     Serial.print(F("ID: "));
     Serial.println(catanState.id, HEX);
+
+    setCurrentPlayer(SetCurrentPlayerRequest(0));
 
     sendNeighborRequest(catanState.id, true);
 }

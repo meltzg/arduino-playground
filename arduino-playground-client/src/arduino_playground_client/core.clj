@@ -26,19 +26,30 @@
 (defn calculate-neighbors [min-width max-width vertex-id]
   (let [row-num (vertex-row min-width max-width vertex-id)
         row-offset (- vertex-id (id-offset min-width max-width row-num))
-        current-row-len (row-length min-width max-width row-num)]
+        current-row-len (row-length min-width max-width row-num)
+        increasing? (or (= row-num 0)
+                        (and (> current-row-len (row-length min-width max-width (dec row-num)))
+                             (not (zero? (- current-row-len max-width)))))]
     [(when (> row-offset 0) (dec vertex-id))
      (when (and (pos? row-offset) (> row-num 0))
-       (dec (+ row-offset (id-offset min-width max-width (dec row-num)))))
+       (+ row-offset
+          (id-offset min-width max-width (dec row-num))
+          (if increasing? -1 0)))
      (when (and (not= row-offset (dec current-row-len)) (> row-num 0))
-       (+ row-offset (id-offset min-width max-width (dec row-num))))
+       (+ row-offset
+          (id-offset min-width max-width (dec row-num))
+          (if increasing? 0 1)))
      (when (< row-offset (dec current-row-len)) (inc vertex-id))
      (when (or (< current-row-len (row-length min-width max-width (inc row-num)))
                (not= row-offset (dec current-row-len)))
-       (inc (+ row-offset (id-offset min-width max-width (inc row-num)))))
+       (+ row-offset
+          (id-offset min-width max-width (inc row-num))
+          (if increasing? 1 0)))
      (when (or (< current-row-len (row-length min-width max-width (inc row-num)))
                (pos? row-offset))
-       (+ row-offset (id-offset min-width max-width (inc row-num))))]))
+       (+ row-offset
+          (id-offset min-width max-width (inc row-num))
+          (if increasing? 0 -1)))]))
 
 (defn draw-row [min-width max-width row-num]
   (str (apply str (repeat (distance-from-max-row min-width max-width row-num) "  "))
@@ -47,5 +58,5 @@
 
 (defn -main
   "I don't do a whole lot ... yet."
-  [& args]
+  [& _]
   (println "Hello, World!"))

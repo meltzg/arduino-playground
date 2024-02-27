@@ -23,7 +23,8 @@
     (if (seq queue)
       (let [{curr-id :id
              :keys   [neighbors row col]
-             :as tile} (first queue)]
+             :as     tile} (first queue)]
+        (println curr-id neighbors [col row])
         (recur (conj visited curr-id)
                (pop (apply (partial conj queue)
                            (remove #(or (nil? (:id %))
@@ -32,15 +33,15 @@
                                    [(assoc (get graph-map (get neighbors 0))
                                       :row row :col (dec col))
                                     (assoc (get graph-map (get neighbors 1))
-                                      :row (dec row) :col col)
+                                      :row (dec row) :col (dec col))
                                     (assoc (get graph-map (get neighbors 2))
-                                      :row (dec row) :col (inc col))
+                                      :row (dec row) :col col)
                                     (assoc (get graph-map (get neighbors 3))
                                       :row row :col (inc col))
                                     (assoc (get graph-map (get neighbors 4))
-                                      :row (inc row) :col (inc col))
+                                      :row (inc row) :col col)
                                     (assoc (get graph-map (get neighbors 5))
-                                      :row (inc row) :col col)])))
+                                      :row (inc row) :col (dec col))])))
                graph-map
                (conj diags (draw-tile tile))))
       diags)))

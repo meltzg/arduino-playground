@@ -1,5 +1,4 @@
-(ns arduino-playground-client.hex-graph
-  (:require [mindra.diagrams :as md]))
+(ns arduino-playground-client.hex-graph)
 
 (def hex-side-len 5.0)
 
@@ -79,12 +78,12 @@
                                          (calculate-neighbors min-width max-width vertex-id))})
        (range (num-vertices min-width max-width))))
 
-(defn diagram-row [min-width max-width row-num]
-  {:pre [(valid-widths min-width max-width)]}
-  (md/translate (* (distance-from-max-row min-width max-width row-num) hex-side-len (/ (Math/sqrt 3) 2))
-                0
-                (md/hsep 0 (repeat (row-length min-width max-width row-num) (md/rotate 30 (md/polygon-regular 6 hex-side-len))))))
-
-(defn diagram-hex-grid [min-width max-width]
-  (md/vsep (/ hex-side-len -2)
-           (map (partial diagram-row min-width max-width) (range (num-rows min-width max-width)))))
+(defn neighbor-coordinates
+  "Calculate the coordinates of a vertex's neighbors using the doubled coordinate system"
+  [{:keys [col row]}]
+  [{:col (- col 2) :row row}
+   {:col (dec col) :row (dec row)}
+   {:col (inc col) :row (dec row)}
+   {:col (+ col 2) :row row}
+   {:col (inc col) :row (inc row)}
+   {:col (dec col) :row (inc row)}])

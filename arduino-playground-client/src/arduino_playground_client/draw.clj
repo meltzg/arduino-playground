@@ -13,22 +13,28 @@
              :wheat  {:r 0xff :g 0xff :b 0x00}
              :wild   {:r 0xff :g 0xff :b 0xff}})
 
-(defn draw-tile [{tile-id :id land-type :type :keys [row col roll robber? port]}]
+(defn draw-port [{:keys [port]}]
+  (when port
+    (let [{port-type :type :keys [side]} port
+          {:keys [r g b]} (port-type colors)
+          side-angle (* -1 (/ side 6) 2 Math/PI)
+          side-radius (* -1 hex-side-len (/ (Math/sqrt 3) 3))]
+      (md/translate
+        (* side-radius (Math/cos side-angle))
+        (* side-radius (Math/sin side-angle))
+        (md/rotate (+ 30 (* 60 side))
+                   (md/fill-color
+                     r g b 255
+                     (md/triangle hex-side-len)))))))
+
+(defn draw-tile [{tile-id :id land-type :type :keys [row col roll robber?] :as tile}]
   (let [{:keys [r g b]} (if land-type (land-type colors)
-                                      (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))
-        {pr :r pg :g pb :b} (when port ((:type port) colors))]
+                                      (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))]
     (md/translate
       (* col hex-side-len (/ (Math/sqrt 3) 2))
       (* row -1.5 hex-side-len)
       (md/superimpose'
-        (when port
-          (md/translate
-            (* -1 hex-side-len (/ (Math/sqrt 3) 3) (Math/cos (* -1 (/ (:side port) 6) 2 Math/PI)))
-            (* -1 hex-side-len (/ (Math/sqrt 3) 3) (Math/sin (* -1 (/ (:side port) 6) 2 Math/PI)))
-            (md/rotate (+ 30 (* 60 (:side port)))
-                       (md/fill-color
-                         pr pg pb 255
-                         (md/triangle hex-side-len)))))
+        (draw-port tile)
         (md/text (str tile-id ": "
                       (cond
                         robber? "Robber"

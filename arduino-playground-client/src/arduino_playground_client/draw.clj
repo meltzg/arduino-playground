@@ -23,9 +23,14 @@
         (* side-radius (Math/cos side-angle))
         (* side-radius (Math/sin side-angle))
         (md/rotate (+ 30 (* 60 side))
-                   (md/fill-color
-                     r g b 255
-                     (md/triangle hex-side-len)))))))
+                   (md/superimpose'
+                     (md/vsep'
+                       1
+                       (md/text (name port-type))
+                       (md/text (str (if (= port-type :wild) 3 2) ":1")))
+                     (md/fill-color
+                       r g b 255
+                       (md/triangle hex-side-len))))))))
 
 (defn draw-tile [{tile-id :id land-type :type :keys [row col roll robber?] :as tile}]
   (let [{:keys [r g b]} (if land-type (land-type colors)

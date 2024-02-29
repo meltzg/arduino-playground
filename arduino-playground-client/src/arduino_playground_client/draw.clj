@@ -32,24 +32,28 @@
                        r g b 255
                        (md/triangle hex-side-len))))))))
 
-(defn draw-tile [{tile-id :id land-type :type :keys [row col roll robber?] :as tile}]
+(defn draw-base [{tile-id :id land-type :type :keys [roll robber?]}]
   (let [{:keys [r g b]} (if land-type (land-type colors)
-                                      (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))]
-    (md/translate
-      (* col hex-side-len (/ (Math/sqrt 3) 2))
-      (* row -1.5 hex-side-len)
-      (md/superimpose'
-        (draw-port tile)
-        (md/text (str tile-id ": "
-                      (cond
-                        robber? "Robber"
-                        (nil? roll) ""
-                        :else (format "%02d" roll))))
-        (md/rotate
-          30
-          (md/fill-color
-            r g b 255
-            (md/polygon-regular 6 hex-side-len)))))))
+                                  (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))]
+   (md/superimpose'
+     (md/text (str tile-id ": "
+                   (cond
+                     robber? "Robber"
+                     (nil? roll) ""
+                     :else (format "%02d" roll))))
+     (md/rotate
+       30
+       (md/fill-color
+         r g b 255
+         (md/polygon-regular 6 hex-side-len))))))
+
+(defn draw-tile [{:keys [row col] :as tile}]
+  (md/translate
+    (* col hex-side-len (/ (Math/sqrt 3) 2))
+    (* row -1.5 hex-side-len)
+    (md/superimpose'
+      (draw-port tile)
+      (draw-base tile))))
 
 (defn draw-board [graph]
   (loop [visited #{}

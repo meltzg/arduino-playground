@@ -74,4 +74,4 @@
                                                 (hex/neighbor-coordinates tile)))))
                graph-map
                (conj diags (draw-tile tile))))
-      diags)))
+      (md/superimpose diags))))

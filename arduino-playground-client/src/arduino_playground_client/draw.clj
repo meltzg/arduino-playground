@@ -32,15 +32,28 @@
                        r g b 255
                        (md/triangle hex-side-len))))))))
 
-(defn draw-base [{tile-id :id land-type :type :keys [roll robber?]}]
+(defn draw-robber []
+  (let [{:keys [r g b]} (:stone colors)]
+    (md/fill-color
+      r g b 255
+      (md/superimpose'
+        (md/translate 0 1.5 (md/circle 0.6))
+        (md/translate 0 -1.5 (md/rounded-rectangle 2 0.6 0.6))
+        (md/ellipse-xy 0.6 1.5)))))
+
+(defn draw-base [{land-type :type :keys [roll robber?]}]
   (let [{:keys [r g b]} (if land-type (land-type colors)
                                   (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))]
    (md/superimpose'
-     (md/text (str tile-id ": "
-                   (cond
-                     robber? "Robber"
-                     (nil? roll) ""
-                     :else (format "%02d" roll))))
+     (when robber? (draw-robber))
+     (when-not (nil? roll)
+       (md/text (format "%02d" roll)))
+     (md/fill-color
+       (-> colors :desert :r)
+       (-> colors :desert :g)
+       (-> colors :desert :b)
+       255
+       (md/circle 1))
      (md/rotate
        30
        (md/fill-color

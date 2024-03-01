@@ -43,22 +43,22 @@
 
 (defn draw-base [{land-type :type :keys [roll robber?]}]
   (let [{:keys [r g b]} (if land-type (land-type colors)
-                                  (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))]
-   (md/superimpose'
-     (when robber? (draw-robber))
-     (when-not (nil? roll)
-       (md/text (format "%02d" roll)))
-     (md/fill-color
-       (-> colors :desert :r)
-       (-> colors :desert :g)
-       (-> colors :desert :b)
-       255
-       (md/circle 1))
-     (md/rotate
-       30
-       (md/fill-color
-         r g b 255
-         (md/polygon-regular 6 hex-side-len))))))
+                                      (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))]
+    (md/superimpose'
+      (when robber? (draw-robber))
+      (when-not (nil? roll)
+        (md/text (format "%02d" roll)))
+      (md/fill-color
+        (-> colors :desert :r)
+        (-> colors :desert :g)
+        (-> colors :desert :b)
+        255
+        (md/circle 1))
+      (md/rotate
+        30
+        (md/fill-color
+          r g b 255
+          (md/polygon-regular 6 hex-side-len))))))
 
 (defn draw-tile [{:keys [row col] :as tile}]
   (md/translate

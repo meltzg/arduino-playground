@@ -72,8 +72,8 @@
   {:pre [(< player-num (count player-colors))]}
   (let [{:keys [r g b]} (get player-colors player-num)
         side-angle (* -1 (/ side 6) 2 Math/PI)
-        road-width 0.25
-        side-radius (* -1 (- hex-side-len (/ road-width 2)) (/ (Math/sqrt 3) 2))]
+        road-width 0.5
+        side-radius (* -1 hex-side-len (/ (Math/sqrt 3) 2))]
     (md/translate
       (* side-radius (Math/cos side-angle))
       (* side-radius (Math/sin side-angle))

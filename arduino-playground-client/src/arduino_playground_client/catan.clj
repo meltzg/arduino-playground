@@ -8,11 +8,40 @@
                    :stone 1
                    :wheat 1})
 
+(def land-weights {:desert 2
+                   :brick  5
+                   :sheep  6
+                   :wood   6
+                   :stone  5
+                   :wheat  6})
+
 (defn weights->selection-order [weights]
   (shuffle (apply concat (map #(repeat (second %) (first %)) weights))))
 
 (defn setup-land [land-tiles]
-  land-tiles)
+  (loop [remaining-tiles land-tiles
+         current-weights land-weights
+         final-lands '()
+         robber-assigned? false]
+    (if (seq remaining-tiles)
+      (let [land-type (rand-nth (weights->selection-order current-weights))
+            updated-weights (update current-weights land-type dec)]
+        (recur (rest remaining-tiles)
+               (if (zero? (apply + (vals updated-weights)))
+                 land-weights
+                 updated-weights)
+               (conj final-lands
+                     (-> remaining-tiles
+                         first
+                         (assoc :type land-type
+                                :robber? (and (not robber-assigned?) (= land-type :desert))
+                                :roll (when-not
+                                        (= land-type :desert)
+                                        (first
+                                          (filter #(not= 7 %)
+                                                  (repeatedly #(+ 2 (apply + (repeatedly 2 (partial rand-int 6)))))))))))
+               (or robber-assigned? (= land-type :desert))))
+      final-lands)))
 
 (defn num-ports [num-ocean num-land]
   (min (/ num-ocean 3) (+ 9 (* 2 (/ num-land 30)))))
@@ -31,7 +60,7 @@
                current-weights port-weights
                final-ports '()]
           (if (seq remaining-ports)
-            (let [port-type (rand-nth (weights->selection-order port-weights))
+            (let [port-type (rand-nth (weights->selection-order current-weights))
                   updated-weights (update current-weights port-type dec)]
               (recur (rest remaining-ports)
                      (if (zero? (apply + (vals updated-weights)))
@@ -48,6 +77,6 @@
 
 (defn setup-board [graph]
   (let [{ocean-tiles true
-         land-tiles  false :as m} (group-by #(boolean (some nil? (:neighbors %))) graph)]
+         land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
     (concat (setup-land land-tiles)
             (setup-ocean ocean-tiles land-tiles))))

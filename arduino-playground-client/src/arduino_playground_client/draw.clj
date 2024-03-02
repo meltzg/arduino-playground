@@ -68,7 +68,7 @@
 (defn draw-settlements [{:keys [settlements]}]
   (md/superimpose (map draw-settlement settlements)))
 
-(defn draw-road [side player-num]
+(defn draw-road [{:keys [side player-num]}]
   {:pre [(< player-num (count player-colors))]}
   (let [{:keys [r g b]} (get player-colors player-num)
         side-angle (* -1 (/ side 6) 2 Math/PI)
@@ -84,7 +84,7 @@
           (md/rectangle road-width hex-side-len))))))
 
 (defn draw-roads [{:keys [roads]}]
-  (md/superimpose (map-indexed #(when %2 (draw-road %1 %2)) roads)))
+  (md/superimpose (map #(draw-road %) roads)))
 
 (defn draw-base [{land-type :type :keys [roll robber?]}]
   (let [{:keys [r g b]} (if land-type (land-type land-colors)

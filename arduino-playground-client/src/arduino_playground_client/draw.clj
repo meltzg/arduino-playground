@@ -47,13 +47,14 @@
     (md/superimpose'
       (when robber? (draw-robber))
       (when-not (nil? roll)
-        (md/text (format "%02d" roll)))
-      (md/fill-color
-        (-> colors :desert :r)
-        (-> colors :desert :g)
-        (-> colors :desert :b)
-        255
-        (md/circle 1))
+        (md/superimpose'
+          (md/text (format "%02d" roll))
+          (md/fill-color
+            (-> colors :desert :r)
+            (-> colors :desert :g)
+            (-> colors :desert :b)
+            255
+            (md/circle 1))))
       (md/rotate
         30
         (md/fill-color

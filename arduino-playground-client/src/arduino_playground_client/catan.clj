@@ -27,12 +27,24 @@
       #(assoc % :type :ocean)
       (concat
         (remove port-ids ocean-tiles)
-        (map #(-> %1
-                  (assoc-in [:port :type] %2)
-                  (assoc-in [:port :side] (first (rand-nth (filter (comp land-ids second)
-                                                                   (map-indexed list (:neighbors %1)))))))
-             ports
-             (take (count ports) (weights->selection-order port-weights)))))))
+        (loop [remaining-ports ports
+               current-weights port-weights
+               final-ports '()]
+          (if (seq remaining-ports)
+            (let [port-type (rand-nth (weights->selection-order port-weights))
+                  updated-weights (update current-weights port-type dec)]
+              (recur (rest remaining-ports)
+                     (if (zero? (apply + (vals updated-weights)))
+                       port-weights
+                       updated-weights)
+                     (conj final-ports
+                           (-> remaining-ports
+                               first
+                               (assoc-in [:port :type] port-type)
+                               (assoc-in [:port :side]
+                                         (first (rand-nth (filter (comp land-ids second)
+                                                                  (map-indexed list (:neighbors (first remaining-ports)))))))))))
+            final-ports))))))
 
 (defn setup-board [graph]
   (let [{ocean-tiles true

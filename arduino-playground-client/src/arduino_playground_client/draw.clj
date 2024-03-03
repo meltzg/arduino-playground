@@ -107,14 +107,18 @@
           (md/polygon-regular 6 hex-side-len))))))
 
 (defn draw-tile [{:keys [row col] :as tile}]
-  (md/translate
-    (* col hex-side-len (/ (Math/sqrt 3) 2))
-    (* row -1.5 hex-side-len)
-    (md/superimpose'
-      (draw-settlements tile)
-      (draw-roads tile)
-      (draw-port tile)
-      (draw-base tile))))
+  (let [x (* col hex-side-len (/ (Math/sqrt 3) 2))
+        y (* row -1.5 hex-side-len)]
+    {:base (md/translate
+             x y
+             (md/superimpose'
+               (draw-port tile)
+               (draw-base tile)))
+     :pieces (md/translate
+               x y
+               (md/superimpose'
+                 (draw-settlements tile)
+                 (draw-roads tile)))}))
 
 (defn draw-board [graph]
   (loop [visited #{}
@@ -135,4 +139,6 @@
                                                 (hex/neighbor-coordinates tile)))))
                graph-map
                (conj diags (draw-tile tile))))
-      (md/superimpose diags))))
+      (md/superimpose
+        (concat (map :pieces diags)
+                (map :base diags))))))

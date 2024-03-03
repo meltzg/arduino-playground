@@ -55,7 +55,7 @@
     (map
       #(assoc % :type :ocean)
       (concat
-        (remove port-ids ocean-tiles)
+        (remove #(port-ids (:id %)) ocean-tiles)
         (loop [remaining-ports ports
                current-weights port-weights
                final-ports '()]
@@ -80,6 +80,50 @@
   (let [{ocean-tiles true
          land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
     {:current-player 0
-     :setup-phase? true
+     :setup-phase?   true
      :board          (concat (setup-land land-tiles)
                              (setup-ocean ocean-tiles land-tiles))}))
+
+(defn get-settlement [{:keys [board]} tile-id side]
+  (->> board
+       (filter #(= tile-id (:id %)))
+       first
+       :settlements
+       (filter #(= side (:side %)))
+       first))
+
+(defn valid-settlement?
+  "Validates settlement/city placement. Only positions 0 and 1 are valid to simplify logic"
+  [{:keys [setup-phase? board] :as game-state} tile-id {:keys [player-num city? side] :as settlement}]
+  (let [board-map (into {} (map #(do [(:id %) %]) board))
+        tile (get board-map tile-id)
+        current-settlement (get-settlement game-state tile-id side)
+        neighboring-settlements [(get-settlement game-state tile-id (mod (inc side) 2))
+                                 (get-settlement game-state
+                                                 (get (:neighbors tile) (+ (* side -3) 5))
+                                                 (mod (inc side) 2))
+                                 (get-settlement game-state
+                                                 (get (:neighbors tile) (* side 3))
+                                                 (mod (inc side) 2))]
+        possible-land-tiles [tile
+                             (get board-map (get (:neighbors tile) side))
+                             (get board-map (get (:neighbors tile) (inc side)))]]
+    (when (and (#{0 1} side)                                ; only side 0 and 1 are valid
+               (if city?
+                 (and (= (:player-num current-settlement) player-num) ; settlement must be owned by the player-num to be a city
+                      (false? (:city? current-settlement))) ; settlement can't already be city
+                 (not current-settlement))                  ; settlement can't already be claimed
+               (every? nil? neighboring-settlements)        ; no immediate neighbors
+               (some #(and % (not= :ocean (:type %))) possible-land-tiles) ; one of the relevant tiles is land
+               (or setup-phase?                             ; setup phase does not require roads
+                   false)                                   ; settlement needs to be connected to a valid road
+               )
+      settlement)))
+
+(defn set-settlement [game-state tile-id settlement]
+  (if (valid-settlement? game-state tile-id settlement)
+    (update game-state :board (fn [board]
+                                (map #(if (= tile-id (:id %))
+                                        (update % :settlements conj settlement)
+                                        %) board)))
+    game-state))

@@ -111,7 +111,7 @@
     (when (and (#{0 1} side)                                ; only side 0 and 1 are valid
                (if city?
                  (and (= (:player-num current-settlement) player-num) ; settlement must be owned by the player-num to be a city
-                      (false? (:city? current-settlement))) ; settlement can't already be city
+                      (false? (boolean (:city? current-settlement)))) ; settlement can't already be city
                  (not current-settlement))                  ; settlement can't already be claimed
                (every? nil? neighboring-settlements)        ; no immediate neighbors
                (some #(and % (not= :ocean (:type %))) possible-land-tiles) ; one of the relevant tiles is land

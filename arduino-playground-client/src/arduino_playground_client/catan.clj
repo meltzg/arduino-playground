@@ -75,8 +75,11 @@
                                                                   (map-indexed list (:neighbors (first remaining-ports)))))))))))
             final-ports))))))
 
-(defn setup-board [graph]
+(defn setup-game [graph num-players]
+  {:pre [(pos-int? num-players)]}
   (let [{ocean-tiles true
          land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
-    (concat (setup-land land-tiles)
-            (setup-ocean ocean-tiles land-tiles))))
+    {:current-player 0
+     :setup-phase? true
+     :board          (concat (setup-land land-tiles)
+                             (setup-ocean ocean-tiles land-tiles))}))

@@ -127,3 +127,21 @@
                                         (update % :settlements conj settlement)
                                         %) board)))
     game-state))
+
+(defn get-available-settlements
+  ([game-state player-num]
+   (get-available-settlements game-state player-num false))
+  ([game-state player-num city?]
+   (mapcat
+     (fn [[tile-id settlements]]
+       (map #(do [tile-id %]) settlements))
+     (filter #(seq (second %))
+             (map #(do [(:id %)
+                        (remove nil? (map (fn [side]
+                                            (valid-settlement?
+                                              game-state (:id %)
+                                              {:player-num player-num
+                                               :city? city?
+                                               :side       side}))
+                                          (range 2)))])
+                  (:board game-state))))))

@@ -76,18 +76,14 @@
             final-ports))))))
 
 (defn get-settlement [{:keys [board]} tile-id side]
-  (->> board
-       (filter #(= tile-id (:id %)))
-       first
-       :settlements
+  (->> (get-in board [tile-id :settlements])
        (filter #(= side (:side %)))
        first))
 
 (defn valid-settlement?
   "Validates settlement/city placement. Only positions 0 and 1 are valid to simplify logic"
   [{:keys [setup-phase? board] :as game-state} tile-id {:keys [player-num city? side] :as settlement}]
-  (let [board-map (into {} (map #(do [(:id %) %]) board))
-        tile (get board-map tile-id)
+  (let [tile (get board tile-id)
         current-settlement (get-settlement game-state tile-id side)
         neighboring-settlements [(get-settlement game-state tile-id (mod (inc side) 2))
                                  (get-settlement game-state
@@ -97,8 +93,8 @@
                                                  (get (:neighbors tile) (* side 3))
                                                  (mod (inc side) 2))]
         possible-land-tiles [tile
-                             (get board-map (get (:neighbors tile) side))
-                             (get board-map (get (:neighbors tile) (inc side)))]]
+                             (get board (get (:neighbors tile) side))
+                             (get board (get (:neighbors tile) (inc side)))]]
     (when (and (#{0 1} side)                                ; only side 0 and 1 are valid
                (if city?
                  (and (= (:player-num current-settlement) player-num) ; settlement must be owned by the player-num to be a city
@@ -112,10 +108,7 @@
 
 (defn set-settlement [game-state tile-id settlement]
   (if (valid-settlement? game-state tile-id settlement)
-    (update game-state :board (fn [board]
-                                (map #(if (= tile-id (:id %))
-                                        (update % :settlements conj settlement)
-                                        %) board)))
+    (update-in game-state [:board tile-id :settlements] conj settlement)
     game-state))
 
 (defn get-available-settlements
@@ -134,7 +127,7 @@
                                                :city?      city?
                                                :side       side}))
                                           (range 2)))])
-                  (:board game-state))))))
+                  (-> game-state :board vals))))))
 
 (defn setup-board [graph num-players]
   {:pre [(pos-int? num-players)]}
@@ -148,8 +141,9 @@
                                                :stone 0
                                                :wheat 0
                                                :wood  0}))
-     :board          (concat (setup-land land-tiles)
-                             (setup-ocean ocean-tiles land-tiles))}))
+     :board          (into {} (map #(do [(:id %) %])
+                                   (concat (setup-land land-tiles)
+                                           (setup-ocean ocean-tiles land-tiles))))}))
 
 (defn select-initial-settlements [{:keys [num-players] :as game-state}]
   (as-> game-state gs

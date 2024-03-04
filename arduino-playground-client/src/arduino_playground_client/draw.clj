@@ -120,11 +120,10 @@
                  (draw-settlements tile)
                  (draw-roads tile)))}))
 
-(defn draw-board [graph]
+(defn draw-board [game-state]
   (loop [visited #{}
          queue (conj clojure.lang.PersistentQueue/EMPTY
-                     (assoc (first graph) :row 0 :col 0))
-         graph-map (into {} (map #(vec [(:id %) %]) graph))
+                     (assoc (-> game-state :board vals first) :row 0 :col 0))
          diags []]
     (if (seq queue)
       (let [{curr-id :id
@@ -135,9 +134,8 @@
                            (remove #(or (nil? (:id %))
                                         (visited (:id %))
                                         (some #{(:id %)} (map :id queue)))
-                                   (map-indexed #(merge (get graph-map (get neighbors %1)) %2)
+                                   (map-indexed #(merge (get-in game-state [:board (get neighbors %1)]) %2)
                                                 (hex/neighbor-coordinates tile)))))
-               graph-map
                (conj diags (draw-tile tile))))
       (md/superimpose
         (concat (map :pieces diags)

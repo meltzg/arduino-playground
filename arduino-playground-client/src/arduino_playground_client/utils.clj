@@ -3,7 +3,7 @@
 (defn- shuffle'
   [seed coll]
   (let [rng (java.util.Random. seed)
-        rnd #(do % (.nextInt rng))]
+        rnd (fn [_] (.nextInt rng))]
     (sort-by rnd coll)))
 
 (defn take-rand'

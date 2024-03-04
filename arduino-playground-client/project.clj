@@ -5,7 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojars.rorokimdim/mindra "0.0.4"]]
-  :plugins [[lein-ancient "0.7.0"]]
+  :plugins [[lein-ancient "0.7.0"]
+            [com.github.clj-kondo/lein-clj-kondo "2024.02.12"]]
   :main ^:skip-aot arduino-playground-client.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

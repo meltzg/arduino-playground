@@ -75,15 +75,6 @@
                                                                   (map-indexed list (:neighbors (first remaining-ports)))))))))))
             final-ports))))))
 
-(defn setup-game [graph num-players]
-  {:pre [(pos-int? num-players)]}
-  (let [{ocean-tiles true
-         land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
-    {:current-player 0
-     :setup-phase?   true
-     :board          (concat (setup-land land-tiles)
-                             (setup-ocean ocean-tiles land-tiles))}))
-
 (defn get-settlement [{:keys [board]} tile-id side]
   (->> board
        (filter #(= tile-id (:id %)))
@@ -116,8 +107,7 @@
                (every? nil? neighboring-settlements)        ; no immediate neighbors
                (some #(and % (not= :ocean (:type %))) possible-land-tiles) ; one of the relevant tiles is land
                (or setup-phase?                             ; setup phase does not require roads
-                   false)                                   ; settlement needs to be connected to a valid road
-               )
+                   false))                                  ; settlement needs to be connected to a valid road
       settlement)))
 
 (defn set-settlement [game-state tile-id settlement]
@@ -141,7 +131,16 @@
                                             (valid-settlement?
                                               game-state (:id %)
                                               {:player-num player-num
-                                               :city? city?
+                                               :city?      city?
                                                :side       side}))
                                           (range 2)))])
                   (:board game-state))))))
+
+(defn setup-game [graph num-players]
+  {:pre [(pos-int? num-players)]}
+  (let [{ocean-tiles true
+         land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
+    {:current-player 0
+     :setup-phase?   true
+     :board          (concat (setup-land land-tiles)
+                             (setup-ocean ocean-tiles land-tiles))}))

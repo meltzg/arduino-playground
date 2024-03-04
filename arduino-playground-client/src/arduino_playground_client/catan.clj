@@ -136,11 +136,26 @@
                                           (range 2)))])
                   (:board game-state))))))
 
-(defn setup-game [graph num-players]
+(defn setup-board [graph num-players]
   {:pre [(pos-int? num-players)]}
   (let [{ocean-tiles true
          land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
     {:current-player 0
+     :num-players    num-players
      :setup-phase?   true
+     :player-stats   (vec (repeat num-players {:brick 0
+                                               :sheep 0
+                                               :stone 0
+                                               :wheat 0
+                                               :wood  0}))
      :board          (concat (setup-land land-tiles)
                              (setup-ocean ocean-tiles land-tiles))}))
+
+(defn select-initial-settlements [{:keys [num-players] :as game-state}]
+  (as-> game-state gs
+        (reduce
+          (fn [state player-num]
+            (apply (partial set-settlement state)
+                   (rand-nth (get-available-settlements state player-num))))
+          gs
+          (range num-players))))

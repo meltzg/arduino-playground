@@ -80,6 +80,11 @@
        (filter #(= side (:side %)))
        first))
 
+(defn get-settlement-tiles [{:keys [board]} tile-id {:keys [side]}]
+  [(get board tile-id)
+   (get board (get (:neighbors (get board tile-id)) side))
+   (get board (get (:neighbors (get board tile-id)) (inc side)))])
+
 (defn valid-settlement?
   "Validates settlement/city placement. Only positions 0 and 1 are valid to simplify logic"
   [{:keys [setup-phase? board] :as game-state} tile-id {:keys [player-num city? side] :as settlement}]
@@ -92,9 +97,7 @@
                                  (get-settlement game-state
                                                  (get (:neighbors tile) (* side 3))
                                                  (mod (inc side) 2))]
-        possible-land-tiles [tile
-                             (get board (get (:neighbors tile) side))
-                             (get board (get (:neighbors tile) (inc side)))]]
+        possible-land-tiles (get-settlement-tiles game-state tile-id settlement)]
     (when (and (#{0 1} side)                                ; only side 0 and 1 are valid
                (if city?
                  (and (= (:player-num current-settlement) player-num) ; settlement must be owned by the player-num to be a city
@@ -152,4 +155,14 @@
             (apply (partial set-settlement state)
                    (rand-nth (get-available-settlements state player-num))))
           gs
-          (range num-players))))
+          (range num-players))
+        (reduce
+          (fn [state player-num]
+            (let [[tile-id settlement] (rand-nth (get-available-settlements state player-num))
+                  resource-tiles (remove #(#{:ocean :desert} (:type %))
+                                         (get-settlement-tiles state tile-id settlement))]
+              (reduce #(update-in %1 [:player-stats player-num (:type %2)] inc)
+                      (set-settlement state tile-id settlement) resource-tiles)))
+          gs
+          (range (dec num-players) -1 -1))
+        (assoc gs :setup-phase? false)))

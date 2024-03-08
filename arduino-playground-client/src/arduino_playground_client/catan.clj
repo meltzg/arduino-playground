@@ -24,6 +24,13 @@
                       {:neighbor 3 :side 0}
                       {:neighbor 3 :side 1}]])
 
+(def settlement-roads [[{:neighbor -1 :side 0}
+                        {:neighbor 0 :side 2}
+                        {:neighbor -1 :side 1}]
+                       [{:neighbor -1 :side 1}
+                        {:neighbor 2 :side 0}
+                        {:neighbor -1 :side 2}]])
+
 (defn weights->selection-order [weights]
   (shuffle (apply concat (map #(repeat (second %) (first %)) weights))))
 
@@ -228,6 +235,13 @@
                                 (get-settlement-tiles game-state tile-id settlement))]
      (as-> game-state gs
            (set-settlement gs tile-id settlement)
+           (apply (partial set-road gs)
+                  (rand-nth (filter #(valid-road? gs (first %) (second %))
+                                    (map #(do [(if (neg? (:neighbor %))
+                                                 tile-id
+                                                 (get-in gs [:board tile-id :neighbors (:neighbor %)]))
+                                               {:player-num player-num :side (:side %)}])
+                                         (get settlement-roads (:side settlement))))))
            (reduce #(update-in %1 [:player-stats player-num (:type %2)] (if collect-resources? inc identity))
                    gs
                    resource-tiles)))))

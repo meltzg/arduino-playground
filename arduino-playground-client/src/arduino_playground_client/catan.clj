@@ -15,6 +15,15 @@
                    :stone  5
                    :wheat  6})
 
+(def roads-to-check [[{:neighbor 0 :side 2}
+                      {:neighbor 5 :side 1}
+                      {:neighbor 5 :side 2}]
+                     [{:neighbor 0 :side 2}
+                      {:neighbor 2 :side 0}]
+                     [{:neighbor 2 :side 0}
+                      {:neighbor 3 :side 0}
+                      {:neighbor 3 :side 1}]])
+
 (defn weights->selection-order [weights]
   (shuffle (apply concat (map #(repeat (second %) (first %)) weights))))
 
@@ -132,6 +141,67 @@
                                           (range 2)))])
                   (-> game-state :board vals))))))
 
+(defn settlement->neighbor
+  "Given a city side number [0-5], return the neighbor the city is on since we only use side 0 and 1. -1 for on tile"
+  [side]
+  (case side
+    (0 1) -1
+    2 3
+    (3 4) 4
+    5 5))
+
+(defn get-road [{:keys [board]} tile-id side]
+  (->> (get-in board [tile-id :roads])
+       (filter #(= side (:side %)))
+       first))
+
+(defn valid-road?
+  "Validates road placement. Only positions 0, 1, and 2 are valid to simplify logic"
+  [{:keys [board] :as game-state} tile-id {:keys [player-num side] :as road}]
+  (let [{:keys [roads] :as tile} (get board tile-id)
+        settlement-behind (mod (+ side 5) 6)
+        settlement-behind-neighbor (settlement->neighbor settlement-behind)
+        settlement-ahead (mod side 6)
+        settlement-ahead-neighbor (settlement->neighbor settlement-ahead)]
+    (when (and (#{0 1 2} side)
+               (or (not= :ocean (:type tile))
+                   (not= :ocean (:type (get board (get (:neighbors tile) side))))) ; the road is on land
+               (or (seq (filter #(and (= player-num (:player-num %))
+                                      (#{(mod (inc side) 6) (mod (dec side) 6)} (:side %)))
+                                roads))                     ; neighboring roads on this tile are owned by the player
+                   (= player-num (:player-num (get-settlement
+                                                game-state
+                                                (if (neg? settlement-behind-neighbor) tile-id (get (:neighbors tile) settlement-behind-neighbor))
+                                                (mod settlement-behind 2)))) ; the settlement behind is owned by the player
+                   (= player-num (:player-num (get-settlement
+                                                game-state
+                                                (if (neg? settlement-ahead-neighbor) tile-id (get (:neighbors tile) settlement-ahead-neighbor))
+                                                (mod settlement-ahead 2)))) ; the settlement ahead is owned by the player
+                   (seq (filter #(= player-num (:player-num %)) ; a relevant road is owned by the player on a neighboring tile
+                                (map #(get-road board (get-in tile [:neighbors (:neighbor %)]) (:side %))
+                                     (get roads-to-check side))))))
+      road)))
+
+(defn set-road [game-state tile-id road]
+  (if (valid-road? game-state tile-id road)
+    (update-in game-state [:board tile-id :roads] conj road)
+    game-state))
+
+(defn get-available-roads
+  [game-state player-num]
+  (mapcat
+    (fn [[tile-id roads]]
+      (map #(do [tile-id %]) roads))
+    (filter #(seq (second %))
+            (map #(do [(:id %)
+                       (remove nil? (map (fn [side]
+                                           (valid-road?
+                                             game-state (:id %)
+                                             {:player-num player-num
+                                              :side       side}))
+                                         (range 3)))])
+                 (-> game-state :board vals)))))
+
 (defn setup-board [graph num-players]
   {:pre [(pos-int? num-players)]}
   (let [{ocean-tiles true
@@ -158,6 +228,12 @@
           (range num-players))
         (reduce
           (fn [state player-num]
+            (apply (partial set-road state)
+                   (rand-nth (get-available-roads state player-num))))
+          gs
+          (range num-players))
+        (reduce
+          (fn [state player-num]
             (let [[tile-id settlement] (rand-nth (get-available-settlements state player-num))
                   resource-tiles (remove #(#{:ocean :desert} (:type %))
                                          (get-settlement-tiles state tile-id settlement))]
@@ -165,4 +241,10 @@
                       (set-settlement state tile-id settlement) resource-tiles)))
           gs
           (range (dec num-players) -1 -1))
+        (reduce
+          (fn [state player-num]
+            (apply (partial set-road state)
+                   (rand-nth (get-available-roads state player-num))))
+          gs
+          (range num-players))
         (assoc gs :setup-phase? false)))

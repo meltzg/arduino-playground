@@ -81,7 +81,7 @@
         r g b 255
         (md/rotate
           (* -60 side)
-          (md/rectangle road-width hex-side-len))))))
+          (md/rectangle road-width (dec hex-side-len)))))))
 
 (defn draw-roads [{:keys [roads]}]
   (md/superimpose (map #(draw-road %) roads)))

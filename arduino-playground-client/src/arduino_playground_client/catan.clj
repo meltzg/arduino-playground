@@ -219,33 +219,27 @@
                                    (concat (setup-land land-tiles)
                                            (setup-ocean ocean-tiles land-tiles))))}))
 
+(defn set-initial-settlement
+  ([game-state player-num]
+   (set-initial-settlement game-state player-num false))
+  ([game-state player-num collect-resources?]
+   (let [[tile-id settlement] (rand-nth (get-available-settlements game-state player-num))
+         resource-tiles (remove #(#{:ocean :desert} (:type %))
+                                (get-settlement-tiles game-state tile-id settlement))]
+     (as-> game-state gs
+           (set-settlement gs tile-id settlement)
+           (reduce #(update-in %1 [:player-stats player-num (:type %2)] (if collect-resources? inc identity))
+                   gs
+                   resource-tiles)))))
+
 (defn select-initial-settlements [{:keys [num-players] :as game-state}]
   (as-> game-state gs
         (reduce
-          (fn [state player-num]
-            (apply (partial set-settlement state)
-                   (rand-nth (get-available-settlements state player-num))))
+          #(set-initial-settlement %1 %2)
           gs
           (range num-players))
         (reduce
-          (fn [state player-num]
-            (apply (partial set-road state)
-                   (rand-nth (get-available-roads state player-num))))
-          gs
-          (range num-players))
-        (reduce
-          (fn [state player-num]
-            (let [[tile-id settlement] (rand-nth (get-available-settlements state player-num))
-                  resource-tiles (remove #(#{:ocean :desert} (:type %))
-                                         (get-settlement-tiles state tile-id settlement))]
-              (reduce #(update-in %1 [:player-stats player-num (:type %2)] inc)
-                      (set-settlement state tile-id settlement) resource-tiles)))
+          #(set-initial-settlement %1 %2 true)
           gs
           (range (dec num-players) -1 -1))
-        (reduce
-          (fn [state player-num]
-            (apply (partial set-road state)
-                   (rand-nth (get-available-roads state player-num))))
-          gs
-          (range num-players))
         (assoc gs :setup-phase? false)))

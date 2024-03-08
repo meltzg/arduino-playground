@@ -109,16 +109,36 @@
 (defn draw-tile [{:keys [row col] :as tile}]
   (let [x (* col hex-side-len (/ (Math/sqrt 3) 2))
         y (* row -1.5 hex-side-len)]
-    {:base (md/translate
-             x y
-             (md/superimpose'
-               (draw-port tile)
-               (draw-base tile)))
+    {:base   (md/translate
+               x y
+               (md/superimpose'
+                 (draw-port tile)
+                 (draw-base tile)))
      :pieces (md/translate
                x y
                (md/superimpose'
                  (draw-settlements tile)
                  (draw-roads tile)))}))
+
+(defn draw-player-stats [player-num player-stats]
+  (md/background-frame
+    1
+    0xff 0xff 0xff
+    (md/vsep 0
+             (concat [(md/hsep' 2
+                                (md/text (str "Player " player-num))
+                                (md/fill-color (-> player-colors (get player-num) :r)
+                                               (-> player-colors (get player-num) :g)
+                                               (-> player-colors (get player-num) :b)
+                                               255
+                                               (md/polygon-regular 6 1)))]
+                     (map #(md/superimpose' (md/text (str (% player-stats)))
+                                            (md/fill-color (-> land-colors % :r)
+                                                           (-> land-colors % :g)
+                                                           (-> land-colors % :b)
+                                                           255
+                                                           (md/polygon-regular 6 1)))
+                          [:brick :sheep :stone :wheat :wood])))))
 
 (defn draw-board [game-state]
   (loop [visited #{}
@@ -137,6 +157,8 @@
                                    (map-indexed #(merge (get-in game-state [:board (get neighbors %1)]) %2)
                                                 (hex/neighbor-coordinates tile)))))
                (conj diags (draw-tile tile))))
-      (md/superimpose
-        (concat (map :pieces diags)
-                (map :base diags))))))
+      (md/vsep' 1
+                (md/hsep 0 (map-indexed #(draw-player-stats %1 %2) (:player-stats game-state)))
+                (md/superimpose
+                  (concat (map :pieces diags)
+                          (map :base diags)))))))

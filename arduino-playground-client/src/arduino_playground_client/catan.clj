@@ -164,6 +164,7 @@
         settlement-ahead (mod side 6)
         settlement-ahead-neighbor (settlement->neighbor settlement-ahead)]
     (when (and (#{0 1 2} side)
+               (not (seq (filter #(= side (:side %)) roads)))
                (or (not= :ocean (:type tile))
                    (not= :ocean (:type (get board (get (:neighbors tile) side))))) ; the road is on land
                (or (seq (filter #(and (= player-num (:player-num %))

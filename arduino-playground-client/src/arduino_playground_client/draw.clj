@@ -48,43 +48,49 @@
         (md/translate 0 -1.5 (md/rounded-rectangle 2 0.6 0.6))
         (md/ellipse-xy 0.6 1.5)))))
 
-(defn draw-settlement [{:keys [player-num city? side]}]
+(defn draw-settlement [{:keys [player-num city?]}]
   {:pre [(< player-num (count player-colors))]}
   (let [{:keys [r g b]} (get player-colors player-num)
-        side-angle (* -1 (+ (/ 1.0 12) (/ side 6)) 2 Math/PI)
         settlement-len 1.0
         cross-len (/ settlement-len (Math/sqrt 2))]
+    (md/fill-color
+      r g b 255
+      (md/superimpose'
+        (if city?
+          (md/translate (/ settlement-len 2) 0 (md/rectangle (* 2 settlement-len) settlement-len))
+          (md/square settlement-len))
+        (md/translate 0 (/ settlement-len 2) (md/rotate 45 (md/square cross-len)))))))
+
+(defn draw-placed-settlement [{:keys [side] :as settlement}]
+  (let [side-angle (* -1 (+ (/ 1.0 12) (/ side 6)) 2 Math/PI)]
     (md/translate
       (* -1 hex-side-len (Math/cos side-angle))
       (* -1 hex-side-len (Math/sin side-angle))
-      (md/fill-color
-        r g b 255
-        (md/superimpose'
-          (if city?
-            (md/translate (/ settlement-len 2) 0 (md/rectangle (* 2 settlement-len) settlement-len))
-            (md/square settlement-len))
-          (md/translate 0 (/ settlement-len 2) (md/rotate 45 (md/square cross-len))))))))
+      (draw-settlement settlement))))
 
 (defn draw-settlements [{:keys [settlements]}]
-  (md/superimpose (map draw-settlement settlements)))
+  (md/superimpose (map draw-placed-settlement settlements)))
 
 (defn draw-road [{:keys [side player-num]}]
   {:pre [(< player-num (count player-colors))]}
   (let [{:keys [r g b]} (get player-colors player-num)
-        side-angle (* -1 (/ side 6) 2 Math/PI)
-        road-width 0.5
+        road-width 0.5]
+    (md/fill-color
+      r g b 255
+      (md/rotate
+        (* -60 side)
+        (md/rectangle road-width (dec hex-side-len))))))
+
+(defn draw-placed-road [{:keys [side] :as road}]
+  (let [side-angle (* -1 (/ side 6) 2 Math/PI)
         side-radius (* -1 hex-side-len (/ (Math/sqrt 3) 2))]
     (md/translate
       (* side-radius (Math/cos side-angle))
       (* side-radius (Math/sin side-angle))
-      (md/fill-color
-        r g b 255
-        (md/rotate
-          (* -60 side)
-          (md/rectangle road-width (dec hex-side-len)))))))
+      (draw-road road))))
 
 (defn draw-roads [{:keys [roads]}]
-  (md/superimpose (map #(draw-road %) roads)))
+  (md/superimpose (map #(draw-placed-road %) roads)))
 
 (defn draw-base [{land-type :type :keys [roll robber?]}]
   (let [{:keys [r g b]} (if land-type (land-type land-colors)
@@ -120,25 +126,50 @@
                  (draw-settlements tile)
                  (draw-roads tile)))}))
 
-(defn draw-player-stats [player-num player-stats]
-  (md/background-frame
-    1
-    0xff 0xff 0xff
-    (md/vsep 0
-             (concat [(md/hsep' 2
-                                (md/text (str "Player " player-num))
-                                (md/fill-color (-> player-colors (get player-num) :r)
-                                               (-> player-colors (get player-num) :g)
-                                               (-> player-colors (get player-num) :b)
-                                               255
-                                               (md/polygon-regular 6 1)))]
-                     (map #(md/superimpose' (md/text (str (% player-stats)))
-                                            (md/fill-color (-> land-colors % :r)
-                                                           (-> land-colors % :g)
-                                                           (-> land-colors % :b)
-                                                           255
-                                                           (md/polygon-regular 6 1)))
-                          [:brick :sheep :stone :wheat :wood])))))
+(defn draw-player-stats [{:keys [player-stats board]} player-num]
+  (let [num-roads (count (mapcat #(filter (fn [{pn :player-num}]
+                                            (= player-num pn))
+                                          (:roads %))
+                                 (vals board)))
+        num-settlements (count (mapcat #(filter (fn [{pn :player-num :keys [city?]}]
+                                                  (and (= player-num pn)
+                                                       (not city?)))
+                                                (:settlements %))
+                                       (vals board)))
+        num-cities (count (mapcat #(filter (fn [{pn :player-num :keys [city?]}]
+                                             (and (= player-num pn)
+                                                  city?))
+                                           (:settlements %))
+                                  (vals board)))]
+    (md/background-frame
+      1
+      0xff 0xff 0xff
+      (md/vsep' 2
+                (md/hsep' 2
+                          (md/text (str "Player " player-num))
+                          (md/fill-color (-> player-colors (get player-num) :r)
+                                         (-> player-colors (get player-num) :g)
+                                         (-> player-colors (get player-num) :b)
+                                         255
+                                         (md/polygon-regular 6 1)))
+                (md/hsep' 2
+                          (md/vsep 0 (map #(md/superimpose' (md/text (str (get-in player-stats [player-num %])))
+                                                            (md/fill-color (-> land-colors % :r)
+                                                                           (-> land-colors % :g)
+                                                                           (-> land-colors % :b)
+                                                                           255
+                                                                           (md/polygon-regular 6 1)))
+                                          [:brick :sheep :stone :wheat :wood]))
+                          (md/vsep' 0.5
+                                    (md/hsep' 0.75
+                                              (md/scale 1 0.5 (draw-road {:player-num player-num :side 0}))
+                                              (md/text (str num-roads)))
+                                    (md/hsep' 0.75
+                                              (draw-settlement {:player-num player-num})
+                                              (md/text (str num-settlements)))
+                                    (md/hsep' 0.75
+                                              (draw-settlement {:player-num player-num :city? true})
+                                              (md/text (str num-cities)))))))))
 
 (defn draw-board [game-state]
   (loop [visited #{}
@@ -158,7 +189,7 @@
                                                 (hex/neighbor-coordinates tile)))))
                (conj diags (draw-tile tile))))
       (md/vsep' 1
-                (md/hsep 0 (map-indexed #(draw-player-stats %1 %2) (:player-stats game-state)))
+                (md/hsep 0 (map (partial draw-player-stats game-state) (range (:num-players game-state))))
                 (md/superimpose
                   (concat (map :pieces diags)
                           (map :base diags)))))))

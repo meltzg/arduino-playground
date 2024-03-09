@@ -1,35 +1,38 @@
 (ns arduino-playground-client.catan
   (:require [arduino-playground-client.utils :refer [take-rand']]))
 
-(def port-weights {:wild  5
-                   :brick 1
-                   :sheep 2
-                   :wood  1
-                   :stone 1
-                   :wheat 1})
+(defonce port-weights {:wild  5
+                       :brick 1
+                       :sheep 2
+                       :wood  1
+                       :stone 1
+                       :wheat 1})
 
-(def land-weights {:desert 2
-                   :brick  5
-                   :sheep  6
-                   :wood   6
-                   :stone  5
-                   :wheat  6})
+(defonce land-weights {:desert 2
+                       :brick  5
+                       :sheep  6
+                       :wood   6
+                       :stone  5
+                       :wheat  6})
 
-(def roads-to-check [[{:neighbor 0 :side 2}
-                      {:neighbor 5 :side 1}
-                      {:neighbor 5 :side 2}]
-                     [{:neighbor 0 :side 2}
-                      {:neighbor 2 :side 0}]
-                     [{:neighbor 2 :side 0}
-                      {:neighbor 3 :side 0}
-                      {:neighbor 3 :side 1}]])
+(defonce VALID-SETTLEMENTS #{0 1})
+(defonce VALID-ROADS #{0 1 2})
 
-(def settlement-roads [[{:neighbor -1 :side 0}
-                        {:neighbor 0 :side 2}
-                        {:neighbor -1 :side 1}]
-                       [{:neighbor -1 :side 1}
-                        {:neighbor 2 :side 0}
-                        {:neighbor -1 :side 2}]])
+(defonce roads-to-check [[{:neighbor 0 :side 2}
+                          {:neighbor 5 :side 1}
+                          {:neighbor 5 :side 2}]
+                         [{:neighbor 0 :side 2}
+                          {:neighbor 2 :side 0}]
+                         [{:neighbor 2 :side 0}
+                          {:neighbor 3 :side 0}
+                          {:neighbor 3 :side 1}]])
+
+(defonce settlement-roads [[{:neighbor -1 :side 0}
+                            {:neighbor 0 :side 2}
+                            {:neighbor -1 :side 1}]
+                           [{:neighbor -1 :side 1}
+                            {:neighbor 2 :side 0}
+                            {:neighbor -1 :side 2}]])
 
 (defn weights->selection-order [weights]
   (shuffle (apply concat (map #(repeat (second %) (first %)) weights))))
@@ -114,7 +117,7 @@
                                                  (get (:neighbors tile) (* side 3))
                                                  (mod (inc side) 2))]
         possible-land-tiles (get-settlement-tiles game-state tile-id settlement)]
-    (when (and (#{0 1} side)                                ; only side 0 and 1 are valid
+    (when (and (VALID-SETTLEMENTS side)                     ; only side 0 and 1 are valid
                (if city?
                  (and (= (:player-num current-settlement) player-num) ; settlement must be owned by the player-num to be a city
                       (false? (boolean (:city? current-settlement)))) ; settlement can't already be city
@@ -170,7 +173,7 @@
         settlement-behind-neighbor (settlement->neighbor settlement-behind)
         settlement-ahead (mod side 6)
         settlement-ahead-neighbor (settlement->neighbor settlement-ahead)]
-    (when (and (#{0 1 2} side)
+    (when (and (VALID-ROADS side)
                (not (seq (filter #(= side (:side %)) roads)))
                (or (not= :ocean (:type tile))
                    (not= :ocean (:type (get board (get (:neighbors tile) side))))) ; the road is on land
@@ -214,7 +217,7 @@
   {:pre [(pos-int? num-players)]}
   (let [{ocean-tiles true
          land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
-    {:current-player 0
+    {:current-player -1
      :num-players    num-players
      :setup-phase?   true
      :player-stats   (vec (repeat num-players {:brick 0
@@ -226,34 +229,53 @@
                                    (concat (setup-land land-tiles)
                                            (setup-ocean ocean-tiles land-tiles))))}))
 
-(defn set-initial-settlement
-  ([game-state player-num]
-   (set-initial-settlement game-state player-num false))
-  ([game-state player-num collect-resources?]
-   (let [[tile-id settlement] (rand-nth (get-available-settlements game-state player-num))
-         resource-tiles (remove #(#{:ocean :desert} (:type %))
-                                (get-settlement-tiles game-state tile-id settlement))]
-     (as-> game-state gs
-           (set-settlement gs tile-id settlement)
-           (apply (partial set-road gs)
-                  (rand-nth (filter #(valid-road? gs (first %) (second %))
-                                    (map #(do [(if (neg? (:neighbor %))
-                                                 tile-id
-                                                 (get-in gs [:board tile-id :neighbors (:neighbor %)]))
-                                               {:player-num player-num :side (:side %)}])
-                                         (get settlement-roads (:side settlement))))))
-           (reduce #(update-in %1 [:player-stats player-num (:type %2)] (if collect-resources? inc identity))
-                   gs
-                   resource-tiles)))))
+(defn select-initial-settlement [{:keys [board current-player] :as game-state}]
+  (let [num-settlements (count (filter #(= (:player-num %) current-player) (mapcat :settlements (vals board))))
+        [tile-id settlement] (rand-nth (get-available-settlements game-state current-player))
+        resource-tiles (remove #(#{:ocean :desert} (:type %))
+                               (get-settlement-tiles game-state tile-id settlement))]
+    (as-> game-state gs
+          (set-settlement gs tile-id settlement)
+          (apply (partial set-road gs)
+                 (rand-nth (filter #(valid-road? gs (first %) (second %))
+                                   (map #(do [(if (neg? (:neighbor %))
+                                                tile-id
+                                                (get-in gs [:board tile-id :neighbors (:neighbor %)]))
+                                              {:player-num current-player :side (:side %)}])
+                                        (get settlement-roads (:side settlement))))))
+          (reduce #(update-in %1 [:player-stats current-player (:type %2)] (if (>= num-settlements 1) inc identity))
+                  gs
+                  resource-tiles))))
 
-(defn select-initial-settlements [{:keys [num-players] :as game-state}]
-  (as-> game-state gs
-        (reduce
-          #(set-initial-settlement %1 %2)
-          gs
-          (range num-players))
-        (reduce
-          #(set-initial-settlement %1 %2 true)
-          gs
-          (range (dec num-players) -1 -1))
-        (assoc gs :setup-phase? false)))
+(defn update-setup-phase [{:keys [board num-players setup-phase?] :as game-state}]
+  (if (and setup-phase?
+           (= (count (mapcat :settlements (vals board))) (* num-players 2)))
+    (assoc game-state :setup-phase? false :current-player -1)
+    game-state))
+
+(defn update-current-player [{:keys [board setup-phase? num-players] :as game-state}]
+  (let [num-settlements (count (mapcat :settlements (vals board)))
+        updater (cond (or (not setup-phase?)
+                          (< num-settlements num-players)) inc
+                      (> num-settlements num-players) dec
+                      :else identity)]
+    (update game-state :current-player #(mod (updater %) num-players))))
+
+(defn roll-dice [game-state n d]
+  (assoc game-state :dice-roll (repeatedly n #(rand-int d))))
+(defn collect-resources [game-state]
+  game-state)
+
+(defn find-available-structures [game-state]
+  game-state)
+
+(defn find-affordable-actions
+  "sequence of all actions that can currently be afforded"
+  [{:keys [board current-player] :as game-state}]
+  game-state)
+
+(defn do-turn [game-state]
+  (cond-> (update-current-player game-state)
+          (:setup-phase? game-state) (#(-> %
+                                           select-initial-settlement
+                                           update-setup-phase))))

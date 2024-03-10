@@ -104,6 +104,12 @@
    (get board (get (:neighbors (get board tile-id)) side))
    (get board (get (:neighbors (get board tile-id)) (inc side)))])
 
+(defn get-tile-settlements [{:keys [board] :as game-state} {:keys [settlements neighbors]}]
+  (concat settlements
+          (filter #(#{0} (:side %)) (get-in board [(get neighbors 3) :settlements]))
+          (filter #(#{0 1} (:side %)) (get-in board [(get neighbors 4) :settlements]))
+          (filter #(#{1} (:side %)) (get-in board [(get neighbors 5) :settlements]))))
+
 (defn valid-settlement?
   "Validates settlement/city placement. Only positions 0 and 1 are valid to simplify logic"
   [{:keys [setup-phase? board] :as game-state} tile-id {:keys [player-num city? side] :as settlement}]
@@ -263,8 +269,14 @@
 
 (defn roll-dice [game-state n d]
   (assoc game-state :dice-roll (repeatedly n #(rand-int d))))
-(defn collect-resources [game-state]
-  game-state)
+(defn collect-resources [{:keys [dice-roll board] :as game-state}]
+  (->> board
+       vals
+       (filter #(and (not (:robber? %))
+                     (= (:roll %) (apply + dice-roll))))
+       (map #(do [(:type %) (get-tile-settlements game-state %)]))
+       (mapcat #(map (fn [settlement] (assoc settlement :type (first %))) (second %)))
+       (reduce #(update-in %1 [:player-stats (:player-num %2) (:type %2)] + (if (:city? %2) 2 1)) game-state)))
 
 (defn find-available-structures [game-state]
   game-state)
@@ -274,8 +286,16 @@
   [{:keys [board current-player] :as game-state}]
   game-state)
 
+(defn take-actions [game-state]
+  game-state)
+
 (defn do-turn [game-state]
   (cond-> (update-current-player game-state)
           (:setup-phase? game-state) (#(-> %
                                            select-initial-settlement
-                                           update-setup-phase))))
+                                           update-setup-phase))
+          (not (:setup-phase? game-state)) (#(-> %
+                                                 (roll-dice 2 6)
+                                                 collect-resources
+                                                 find-available-structures
+                                                 take-actions))))

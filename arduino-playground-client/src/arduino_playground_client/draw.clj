@@ -20,6 +20,8 @@
                     {:r 0xff :g 0xff :b 0xff}
                     {:r 0x96 :g 0x4b :b 0x00}])
 
+(def active-color {:r 0x66 :g 0xb2 :b 0xb2})
+
 (defn draw-port [{:keys [port]}]
   (when port
     (let [{port-type :type :keys [side]} port
@@ -49,8 +51,7 @@
         (md/ellipse-xy 0.6 1.5)))))
 
 (defn draw-settlement [{:keys [player-num city?]}]
-  {:pre [(< player-num (count player-colors))]}
-  (let [{:keys [r g b]} (get player-colors player-num)
+  (let [{:keys [r g b]} (or (get player-colors player-num) active-color)
         settlement-len 1.0
         cross-len (/ settlement-len (Math/sqrt 2))]
     (md/fill-color
@@ -72,8 +73,7 @@
   (md/superimpose (map draw-placed-settlement settlements)))
 
 (defn draw-road [{:keys [side player-num]}]
-  {:pre [(< player-num (count player-colors))]}
-  (let [{:keys [r g b]} (get player-colors player-num)
+  (let [{:keys [r g b]} (or (get player-colors player-num) active-color)
         road-width 0.5]
     (md/fill-color
       r g b 255
@@ -92,18 +92,19 @@
 (defn draw-roads [{:keys [roads]}]
   (md/superimpose (map #(draw-placed-road %) roads)))
 
-(defn draw-base [{land-type :type :keys [roll robber?]}]
+(defn draw-base [{land-type :type :keys [roll robber? active?]}]
   (let [{:keys [r g b]} (if land-type (land-type land-colors)
-                                      (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))]
+                                      (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))
+        roll-color (if active? active-color (:desert land-colors))]
     (md/superimpose'
       (when robber? (draw-robber))
       (when-not (nil? roll)
         (md/superimpose'
           (md/text (format "%02d" roll))
           (md/fill-color
-            (-> land-colors :desert :r)
-            (-> land-colors :desert :g)
-            (-> land-colors :desert :b)
+            (:r roll-color)
+            (:g roll-color)
+            (:b roll-color)
             255
             (md/circle 1))))
       (md/rotate
@@ -126,50 +127,57 @@
                  (draw-settlements tile)
                  (draw-roads tile)))}))
 
-(defn draw-player-stats [{:keys [player-stats board]} player-num]
-  (let [num-roads (count (mapcat #(filter (fn [{pn :player-num}]
-                                            (= player-num pn))
-                                          (:roads %))
-                                 (vals board)))
-        num-settlements (count (mapcat #(filter (fn [{pn :player-num :keys [city?]}]
-                                                  (and (= player-num pn)
-                                                       (not city?)))
-                                                (:settlements %))
-                                       (vals board)))
-        num-cities (count (mapcat #(filter (fn [{pn :player-num :keys [city?]}]
-                                             (and (= player-num pn)
-                                                  city?))
-                                           (:settlements %))
-                                  (vals board)))]
-    (md/background-frame
-      1
-      0xff 0xff 0xff
-      (md/vsep' 2
-                (md/hsep' 2
-                          (md/text (str "Player " player-num))
-                          (md/fill-color (-> player-colors (get player-num) :r)
-                                         (-> player-colors (get player-num) :g)
-                                         (-> player-colors (get player-num) :b)
-                                         255
-                                         (md/polygon-regular 6 1)))
-                (md/hsep' 2
-                          (md/vsep 0 (map #(md/superimpose' (md/text (str (get-in player-stats [player-num %])))
-                                                            (md/fill-color (-> land-colors % :r)
-                                                                           (-> land-colors % :g)
-                                                                           (-> land-colors % :b)
-                                                                           255
-                                                                           (md/polygon-regular 6 1)))
-                                          [:brick :sheep :stone :wheat :wood]))
-                          (md/vsep' 0.5
-                                    (md/hsep' 0.75
-                                              (md/scale 1 0.5 (draw-road {:player-num player-num :side 0}))
-                                              (md/text (str num-roads)))
-                                    (md/hsep' 0.75
-                                              (draw-settlement {:player-num player-num})
-                                              (md/text (str num-settlements)))
-                                    (md/hsep' 0.75
-                                              (draw-settlement {:player-num player-num :city? true})
-                                              (md/text (str num-cities)))))))))
+(defn draw-player-stats
+  ([game-state]
+   (draw-player-stats game-state nil))
+  ([{:keys [player-stats board dice-roll]} player-num]
+   (let [num-roads (count (mapcat #(filter (fn [{pn :player-num}]
+                                             (or (nil? player-num) (= player-num pn)))
+                                           (:roads %))
+                                  (vals board)))
+         num-settlements (count (mapcat #(filter (fn [{pn :player-num :keys [city?]}]
+                                                   (and (or (nil? player-num) (= player-num pn))
+                                                        (not city?)))
+                                                 (:settlements %))
+                                        (vals board)))
+         num-cities (count (mapcat #(filter (fn [{pn :player-num :keys [city?]}]
+                                              (and (or (nil? player-num) (= player-num pn))
+                                                   city?))
+                                            (:settlements %))
+                                   (vals board)))
+         {:keys [r g b]} (or (get player-colors player-num) active-color)]
+     (md/background-frame
+       1
+       0xff 0xff 0xff
+       (md/vsep' 2
+                 (md/hsep' 2
+                           (md/background-frame
+                             1.5 0xff 0xff 0xff
+                             (md/text (str (if player-num "Player " "Game Stats ") player-num)))
+                           (md/superimpose'
+                             (when (not player-num)
+                               (md/text (str (apply + dice-roll))))
+                             (md/fill-color r g b
+                                            255
+                                            (md/polygon-regular 6 1))))
+                 (md/hsep' 2
+                           (md/vsep 0 (map #(md/superimpose' (md/text (str (get-in player-stats [player-num %])))
+                                                             (md/fill-color (-> land-colors % :r)
+                                                                            (-> land-colors % :g)
+                                                                            (-> land-colors % :b)
+                                                                            255
+                                                                            (md/polygon-regular 6 1)))
+                                           [:brick :sheep :stone :wheat :wood]))
+                           (md/vsep' 0.5
+                                     (md/hsep' 0.75
+                                               (md/scale 1 0.5 (draw-road {:player-num player-num :side 0}))
+                                               (md/text (str num-roads)))
+                                     (md/hsep' 0.75
+                                               (draw-settlement {:player-num player-num})
+                                               (md/text (str num-settlements)))
+                                     (md/hsep' 0.75
+                                               (draw-settlement {:player-num player-num :city? true})
+                                               (md/text (str num-cities))))))))))
 
 (defn draw-board [game-state]
   (loop [visited #{}
@@ -187,9 +195,10 @@
                                         (some #{(:id %)} (map :id queue)))
                                    (map-indexed #(merge (get-in game-state [:board (get neighbors %1)]) %2)
                                                 (hex/neighbor-coordinates tile)))))
-               (conj diags (draw-tile tile))))
+               (conj diags (draw-tile (assoc tile :active? (= (:roll tile) (apply + (:dice-roll game-state))))))))
       (md/vsep' 1
-                (md/hsep 0 (map (partial draw-player-stats game-state) (range (:num-players game-state))))
+                (md/hsep 0 (conj (map (partial draw-player-stats game-state) (range (:num-players game-state)))
+                                 (draw-player-stats game-state)))
                 (md/superimpose
                   (concat (map :pieces diags)
                           (map :base diags)))))))

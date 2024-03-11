@@ -104,7 +104,7 @@
    (get board (get (:neighbors (get board tile-id)) side))
    (get board (get (:neighbors (get board tile-id)) (inc side)))])
 
-(defn get-tile-settlements [{:keys [board] :as game-state} {:keys [settlements neighbors]}]
+(defn get-tile-settlements [{:keys [board]} {:keys [settlements neighbors]}]
   (concat settlements
           (filter #(#{0} (:side %)) (get-in board [(get neighbors 3) :settlements]))
           (filter #(#{0 1} (:side %)) (get-in board [(get neighbors 4) :settlements]))
@@ -278,12 +278,39 @@
        (mapcat #(map (fn [settlement] (assoc settlement :type (first %))) (second %)))
        (reduce #(update-in %1 [:player-stats (:player-num %2) (:type %2)] + (if (:city? %2) 2 1)) game-state)))
 
-(defn find-available-structures [game-state]
-  game-state)
+(defn move-robber [{:keys [board] :as game-state}]
+  (let [current-robber-id (->> board
+                               vals
+                               (filter :robber?)
+                               first
+                               :id)]
+    (-> game-state
+        (assoc-in [:board current-robber-id :robber?] false)
+        (assoc-in [:board
+                   (:id (first (filter #(and (not= (:type %) :ocean)
+                                             (not= (:id %) current-robber-id))
+                                       (repeatedly #(rand-nth (vals board))))))
+                   :robber?] true))))
 
-(defn find-affordable-actions
-  "sequence of all actions that can currently be afforded"
-  [{:keys [board current-player] :as game-state}]
+(defn discard-resources [{:keys [player-stats] :as game-state}]
+  (->> player-stats
+       (map-indexed #(do [%1 %2]))
+       (filter #(> (apply + (vals (second %))) 7))
+       (reduce (fn [gs [player-num resources]]
+                 (->> resources
+                      weights->selection-order
+                      (take (Math/floor (/ (apply + (vals resources)) 2)))
+                      (reduce #(update-in %1 [:player-stats player-num %2] dec) gs)))
+               game-state)))
+
+(defn handle-roll [{:keys [dice-roll] :as game-state}]
+  (if (= (apply + dice-roll) 7)
+    (-> game-state
+        discard-resources
+        move-robber)
+    (collect-resources game-state)))
+
+(defn find-available-structures [game-state]
   game-state)
 
 (defn take-actions [game-state]
@@ -296,6 +323,18 @@
                                            update-setup-phase))
           (not (:setup-phase? game-state)) (#(-> %
                                                  (roll-dice 2 6)
-                                                 collect-resources
+                                                 handle-roll
                                                  find-available-structures
                                                  take-actions))))
+
+(defn play-game [game-state]
+  (lazy-seq (cons game-state (play-game (do-turn game-state)))))
+
+#_(require '[mindra.core :refer [diagram->svg]]
+           '[arduino-playground-client.draw :as d]
+           '[arduino-playground-client.hex-graph :as hex]
+           '[arduino-playground-client.catan :as c])
+#_(map-indexed #(spit (str "game/turn-" %1 ".svg")
+                      (diagram->svg
+                        (d/draw-board %2)))
+               (take 100 (c/play-game (c/setup-board (hex/create-graph 4 8) 6))))

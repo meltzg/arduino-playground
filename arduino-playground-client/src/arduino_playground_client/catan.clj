@@ -15,6 +15,10 @@
                        :stone  5
                        :wheat  6})
 
+(defonce structure-costs {:road       {:wood 1 :brick 1}
+                          :settlement {:wood 1 :brick 1 :wheat 1 :sheep 1}
+                          :city       {:wheat 2 :stone 3}})
+
 (defonce VALID-SETTLEMENTS #{0 1})
 (defonce VALID-ROADS #{0 1 2})
 
@@ -34,8 +38,11 @@
                             {:neighbor 2 :side 0}
                             {:neighbor -1 :side 2}]])
 
+(defn weights->items [weights]
+  (apply concat (map #(repeat (second %) (first %)) weights)))
+
 (defn weights->selection-order [weights]
-  (shuffle (apply concat (map #(repeat (second %) (first %)) weights))))
+  (shuffle (weights->items weights)))
 
 (defn setup-land [land-tiles]
   (loop [remaining-tiles land-tiles
@@ -140,9 +147,9 @@
     game-state))
 
 (defn get-available-settlements
-  ([game-state player-num]
-   (get-available-settlements game-state player-num false))
-  ([game-state player-num city?]
+  ([game-state]
+   (get-available-settlements game-state false))
+  ([{:keys [board current-player] :as game-state} city?]
    (mapcat
      (fn [[tile-id settlements]]
        (map #(do [tile-id %]) settlements))
@@ -151,11 +158,11 @@
                         (remove nil? (map (fn [side]
                                             (valid-settlement?
                                               game-state (:id %)
-                                              {:player-num player-num
+                                              {:player-num current-player
                                                :city?      city?
                                                :side       side}))
                                           (range 2)))])
-                  (-> game-state :board vals))))))
+                  (vals board))))))
 
 (defn settlement->neighbor
   "Given a city side number [0-5], return the neighbor the city is on since we only use side 0 and 1. -1 for on tile"
@@ -205,7 +212,7 @@
     game-state))
 
 (defn get-available-roads
-  [game-state player-num]
+  [{:keys [board current-player] :as game-state}]
   (mapcat
     (fn [[tile-id roads]]
       (map #(do [tile-id %]) roads))
@@ -214,10 +221,10 @@
                        (remove nil? (map (fn [side]
                                            (valid-road?
                                              game-state (:id %)
-                                             {:player-num player-num
+                                             {:player-num current-player
                                               :side       side}))
                                          (range 3)))])
-                 (-> game-state :board vals)))))
+                 (vals board)))))
 
 (defn setup-board [graph num-players]
   {:pre [(pos-int? num-players)]}
@@ -237,7 +244,7 @@
 
 (defn select-initial-settlement [{:keys [board current-player] :as game-state}]
   (let [num-settlements (count (filter #(= (:player-num %) current-player) (mapcat :settlements (vals board))))
-        [tile-id settlement] (rand-nth (get-available-settlements game-state current-player))
+        [tile-id settlement] (rand-nth (get-available-settlements game-state))
         resource-tiles (remove #(#{:ocean :desert} (:type %))
                                (get-settlement-tiles game-state tile-id settlement))]
     (as-> game-state gs
@@ -310,11 +317,38 @@
         move-robber)
     (collect-resources game-state)))
 
-(defn find-available-structures [game-state]
-  game-state)
+(defn get-available-structures [game-state]
+  {:roads (get-available-roads game-state)
+   :settlements (get-available-settlements game-state)
+   :cities (get-available-settlements game-state true)})
+
+(defn make-payment [{:keys [current-player player-stats]} structure]
+  (loop [player-stats (get player-stats current-player)
+         payment {}
+         cost (weights->items (structure structure-costs))]
+    (let [resource (first cost)]
+      (cond (not (seq cost))
+            payment
+            (< (resource player-stats) 1)
+            nil
+            :else
+            (recur (update player-stats resource dec)
+                   (update payment resource (fnil inc 0))
+                   (rest cost))))))
+
+(defn affordable-actions [game-state]
+  (->> structure-costs
+       keys
+       (map #(do [% (make-payment game-state %)]))
+       (remove #(nil? (second %)))
+       (into {})))
 
 (defn take-actions [game-state]
-  game-state)
+  (loop [game-state game-state]
+    (let [possible-actions (affordable-actions game-state)
+          available-structures (select-keys (get-available-structures game-state)
+                                            (keys possible-actions))]
+      game-state)))
 
 (defn do-turn [game-state]
   (cond-> (update-current-player game-state)
@@ -324,7 +358,6 @@
           (not (:setup-phase? game-state)) (#(-> %
                                                  (roll-dice 2 6)
                                                  handle-roll
-                                                 find-available-structures
                                                  take-actions))))
 
 (defn play-game [game-state]
@@ -334,7 +367,7 @@
            '[arduino-playground-client.draw :as d]
            '[arduino-playground-client.hex-graph :as hex]
            '[arduino-playground-client.catan :as c])
-#_(map-indexed #(spit (str "game/turn-" %1 ".svg")
+#_(map-indexed #(spit (str "game/turn-" (format "%03d" %1) ".svg")
                       (diagram->svg
                         (d/draw-board %2)))
                (take 100 (c/play-game (c/setup-board (hex/create-graph 4 8) 6))))

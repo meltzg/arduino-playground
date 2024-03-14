@@ -1,42 +1,42 @@
 (ns arduino-playground-client.catan
   (:require [arduino-playground-client.utils :refer [take-rand']]))
 
-(defonce port-weights {:wild  5
-                       :brick 1
-                       :sheep 2
-                       :wood  1
-                       :stone 1
-                       :wheat 1})
+(def port-weights {:wild  5
+                   :brick 1
+                   :sheep 2
+                   :wood  1
+                   :stone 1
+                   :wheat 1})
 
-(defonce land-weights {:desert 2
-                       :brick  5
-                       :sheep  6
-                       :wood   6
-                       :stone  5
-                       :wheat  6})
+(def land-weights {:desert 2
+                   :brick  5
+                   :sheep  6
+                   :wood   6
+                   :stone  5
+                   :wheat  6})
 
-(defonce structure-costs {:road       {:wood 1 :brick 1}
-                          :settlement {:wood 1 :brick 1 :wheat 1 :sheep 1}
-                          :city       {:wheat 2 :stone 3}})
+(def structure-costs {:road       {:wood 1 :brick 1}
+                      :settlement {:wood 1 :brick 1 :wheat 1 :sheep 1}
+                      :city       {:wheat 2 :stone 3}})
 
-(defonce VALID-SETTLEMENTS #{0 1})
-(defonce VALID-ROADS #{0 1 2})
+(def VALID-SETTLEMENTS #{0 1})
+(def VALID-ROADS #{0 1 2})
 
-(defonce roads-to-check [[{:neighbor 0 :side 2}
-                          {:neighbor 5 :side 1}
-                          {:neighbor 5 :side 2}]
-                         [{:neighbor 0 :side 2}
-                          {:neighbor 2 :side 0}]
-                         [{:neighbor 2 :side 0}
-                          {:neighbor 3 :side 0}
-                          {:neighbor 3 :side 1}]])
+(def roads-to-check [[{:neighbor 0 :side 2}
+                      {:neighbor 5 :side 1}
+                      {:neighbor 5 :side 2}]
+                     [{:neighbor 0 :side 2}
+                      {:neighbor 2 :side 0}]
+                     [{:neighbor 2 :side 0}
+                      {:neighbor 3 :side 0}
+                      {:neighbor 3 :side 1}]])
 
-(defonce settlement-roads [[{:neighbor -1 :side 0}
-                            {:neighbor 0 :side 2}
-                            {:neighbor -1 :side 1}]
-                           [{:neighbor -1 :side 1}
-                            {:neighbor 2 :side 0}
-                            {:neighbor -1 :side 2}]])
+(def settlement-roads [[{:neighbor -1 :side 0}
+                        {:neighbor 0 :side 2}
+                        {:neighbor -1 :side 1}]
+                       [{:neighbor -1 :side 1}
+                        {:neighbor 2 :side 0}
+                        {:neighbor -1 :side 2}]])
 
 (defn weights->items [weights]
   (apply concat (map #(repeat (second %) (first %)) weights)))
@@ -202,7 +202,7 @@
                                                 (if (neg? settlement-ahead-neighbor) tile-id (get (:neighbors tile) settlement-ahead-neighbor))
                                                 (mod settlement-ahead 2)))) ; the settlement ahead is owned by the player
                    (seq (filter #(= player-num (:player-num %)) ; a relevant road is owned by the player on a neighboring tile
-                                (map #(get-road board (get-in tile [:neighbors (:neighbor %)]) (:side %))
+                                (map #(get-road game-state (get-in tile [:neighbors (:neighbor %)]) (:side %))
                                      (get roads-to-check side))))))
       road)))
 
@@ -301,7 +301,7 @@
 
 (defn discard-resources [{:keys [player-stats] :as game-state}]
   (->> player-stats
-       (map-indexed #(do [%1 %2]))
+       (map-indexed vector)
        (filter #(> (apply + (vals (second %))) 7))
        (reduce (fn [gs [player-num resources]]
                  (->> resources
@@ -318,9 +318,9 @@
     (collect-resources game-state)))
 
 (defn get-available-structures [game-state]
-  {:roads (get-available-roads game-state)
-   :settlements (get-available-settlements game-state)
-   :cities (get-available-settlements game-state true)})
+  (into {} (filter (comp seq second) {:road       (get-available-roads game-state)
+                                      :settlement (get-available-settlements game-state)
+                                      :city       (get-available-settlements game-state true)})))
 
 (defn make-payment [{:keys [current-player player-stats]} structure]
   (loop [player-stats (get player-stats current-player)
@@ -343,12 +343,27 @@
        (remove #(nil? (second %)))
        (into {})))
 
+(defn build-structure [{:keys [current-player] :as game-state} structure-type [tile-id structure]]
+  (println "build" structure-type)
+  (let [payment (make-payment game-state structure-type)]
+    (reduce #(update-in %1 [:player-stats current-player %2] dec)
+            (case structure-type
+              (:city :settlement) (set-settlement game-state tile-id structure)
+              :road (set-road game-state tile-id structure))
+            (weights->items payment))))
+
 (defn take-actions [game-state]
   (loop [game-state game-state]
     (let [possible-actions (affordable-actions game-state)
-          available-structures (select-keys (get-available-structures game-state)
-                                            (keys possible-actions))]
-      game-state)))
+          available-structures (get-available-structures game-state)
+          available-affordable-actions (clojure.set/intersection (set (keys possible-actions))
+                                                                 (set (keys available-structures)))
+          type-to-build (first (filter available-affordable-actions [:city :settlement :road]))]
+      (println possible-actions)
+      (if type-to-build
+        (recur (-> game-state
+                   (build-structure type-to-build (rand-nth (type-to-build available-structures)))))
+        game-state))))
 
 (defn do-turn [game-state]
   (cond-> (update-current-player game-state)

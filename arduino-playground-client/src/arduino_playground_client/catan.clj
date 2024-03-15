@@ -101,6 +101,11 @@
                                                                   (map-indexed list (:neighbors (first remaining-ports)))))))))))
             final-ports))))))
 
+(defn get-road [{:keys [board]} tile-id side]
+  (->> (get-in board [tile-id :roads])
+       (filter #(= side (:side %)))
+       first))
+
 (defn get-settlement [{:keys [board]} tile-id side]
   (->> (get-in board [tile-id :settlements])
        (filter #(= side (:side %)))
@@ -138,7 +143,14 @@
                (every? nil? neighboring-settlements)        ; no immediate neighbors
                (some #(and % (not= :ocean (:type %))) possible-land-tiles) ; one of the relevant tiles is land
                (or setup-phase?                             ; setup phase does not require roads
-                   false))                                  ; settlement needs to be connected to a valid road
+                   (->> (get settlement-roads side)
+                        (map #(get-road game-state
+                                        (if (neg? (:neighbor %))
+                                          tile-id
+                                          (get-in board [tile-id :neighbors (:neighbors %)]))
+                                        (:side %)))
+                        (filter #(= (:player-num %) player-num))
+                        seq)))                              ; settlement needs to be connected to a valid road
       settlement)))
 
 (defn set-settlement [game-state tile-id settlement]
@@ -172,11 +184,6 @@
     2 3
     (3 4) 4
     5 5))
-
-(defn get-road [{:keys [board]} tile-id side]
-  (->> (get-in board [tile-id :roads])
-       (filter #(= side (:side %)))
-       first))
 
 (defn valid-road?
   "Validates road placement. Only positions 0, 1, and 2 are valid to simplify logic"
@@ -344,7 +351,6 @@
        (into {})))
 
 (defn build-structure [{:keys [current-player] :as game-state} structure-type [tile-id structure]]
-  (println "build" structure-type)
   (let [payment (make-payment game-state structure-type)]
     (reduce #(update-in %1 [:player-stats current-player %2] dec)
             (case structure-type
@@ -359,11 +365,24 @@
           available-affordable-actions (clojure.set/intersection (set (keys possible-actions))
                                                                  (set (keys available-structures)))
           type-to-build (first (filter available-affordable-actions [:city :settlement :road]))]
-      (println possible-actions)
       (if type-to-build
         (recur (-> game-state
                    (build-structure type-to-build (rand-nth (type-to-build available-structures)))))
         game-state))))
+
+(defn calculate-scores [{:keys [board num-players] :as game-state}]
+  (let [settlement-scores (reduce (fn [scores {:keys [player-num city?]}]
+                                    (update scores player-num + (if city? 2 1)))
+                                  (vec (repeat num-players 0))
+                                  (mapcat :settlements (vals board)))]
+    (assoc game-state :scores settlement-scores)))
+
+(defn assign-winner [{:keys [scores] :as game-state}]
+  (let [winner (->> scores
+                    (map-indexed vector)
+                    (filter #(>= (second %) 10))
+                    ffirst)]
+    (assoc game-state :winner winner)))
 
 (defn do-turn [game-state]
   (cond-> (update-current-player game-state)
@@ -372,11 +391,16 @@
                                            update-setup-phase))
           (not (:setup-phase? game-state)) (#(-> %
                                                  (roll-dice 2 6)
+                                                 (update :turn (fnil inc 0))
                                                  handle-roll
-                                                 take-actions))))
+                                                 take-actions
+                                                 calculate-scores
+                                                 assign-winner))))
 
 (defn play-game [game-state]
-  (lazy-seq (cons game-state (play-game (do-turn game-state)))))
+  (if (:winner game-state)
+    (list game-state)
+    (lazy-seq (cons game-state (play-game (do-turn game-state))))))
 
 #_(require '[mindra.core :refer [diagram->svg]]
            '[arduino-playground-client.draw :as d]

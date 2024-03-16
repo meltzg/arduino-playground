@@ -153,9 +153,11 @@
                         seq)))                              ; settlement needs to be connected to a valid road
       settlement)))
 
-(defn set-settlement [game-state tile-id settlement]
+(defn set-settlement [game-state tile-id {:keys [side city?] :as settlement}]
   (if (valid-settlement? game-state tile-id settlement)
-    (update-in game-state [:board tile-id :settlements] conj settlement)
+    (cond-> (update-in game-state [:board tile-id :settlements] conj settlement)
+            city? (update-in [:board tile-id :settlements] (partial remove #(and (= side (:side %))
+                                                                                 (not (:city? %))))))
     game-state))
 
 (defn get-available-settlements
@@ -484,4 +486,4 @@
 #_(map-indexed #(spit (str "game/turn-" (format "%03d" %1) ".svg")
                       (diagram->svg
                         (d/draw-board %2)))
-               (take 100 (c/play-game (c/setup-board (hex/create-graph 4 8) 6))))
+               (c/play-game (c/setup-board (hex/create-graph 4 8) 6)))

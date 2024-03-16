@@ -92,11 +92,12 @@
 (defn draw-roads [{:keys [roads]}]
   (md/superimpose (map #(draw-placed-road %) roads)))
 
-(defn draw-base [{land-type :type :keys [roll robber? active?]}]
+(defn draw-base [{land-type :type :keys [id roll robber? active?]}]
   (let [{:keys [r g b]} (if land-type (land-type land-colors)
                                       (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))
         roll-color (if active? active-color (:desert land-colors))]
     (md/superimpose'
+      (md/translate 0 2 (md/text (str "ID: " id)))
       (when robber? (draw-robber))
       (when-not (nil? roll)
         (md/superimpose'

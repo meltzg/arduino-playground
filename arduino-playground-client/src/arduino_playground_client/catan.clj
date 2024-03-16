@@ -233,6 +233,44 @@
                                          (range 3)))])
                  (vals board)))))
 
+(defn get-owned-ports [{:keys [board current-player] :as game-state}]
+  (->> board
+       vals
+       (filter :port)
+       (map #(assoc % :settlement-behind-side
+                      (mod (+ (-> % :port :side) 5) 6)
+                      :settlement-ahead-side
+                      (mod (-> % :port :side) 6)))
+       (map #(assoc % :settlement-behind-neighbor
+                      (settlement->neighbor
+                        (:settlement-behind-side %))
+                      :settlement-ahead-neighbor
+                      (settlement->neighbor
+                        (:settlement-ahead-side %))))
+       (map #(assoc % :settlement-behind
+                      (get-settlement
+                        game-state
+                        (if (neg? (:settlement-behind-neighbor %))
+                          (:id %)
+                          (get (:neighbors %) (:settlement-behind-neighbor %)))
+                        (mod (:settlement-behind-side %) 2))))
+       (map #(assoc % :settlement-ahead
+                      (get-settlement
+                        game-state
+                        (if (neg? (:settlement-ahead-neighbor %))
+                          (:id %)
+                          (get (:neighbors %) (:settlement-ahead-neighbor %)))
+                        (mod (:settlement-ahead-side %) 2))))
+       (map #(if (:settlement-behind %)
+               (assoc-in % [:settlement-behind :type] (-> % :port :type))
+               %))
+       (map #(if (:settlement-ahead %)
+               (assoc-in % [:settlement-ahead :type] (-> % :port :type))
+               %))
+       (mapcat #(vals (select-keys % [:settlement-ahead :settlement-behind])))
+       (filter #(= (:player-num %) current-player))
+       (map :type)))
+
 (defn setup-board [graph num-players]
   {:pre [(pos-int? num-players)]}
   (let [{ocean-tiles true

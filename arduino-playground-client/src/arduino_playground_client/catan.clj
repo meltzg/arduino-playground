@@ -15,6 +15,13 @@
                    :stone  5
                    :wheat  6})
 
+(def structure-costs {:road       {:wood 1 :brick 1}
+                      :settlement {:wood 1 :brick 1 :wheat 1 :sheep 1}
+                      :city       {:wheat 2 :stone 3}})
+
+(def VALID-SETTLEMENTS #{0 1})
+(def VALID-ROADS #{0 1 2})
+
 (def roads-to-check [[{:neighbor 0 :side 2}
                       {:neighbor 5 :side 1}
                       {:neighbor 5 :side 2}]
@@ -31,8 +38,11 @@
                         {:neighbor 2 :side 0}
                         {:neighbor -1 :side 2}]])
 
+(defn weights->items [weights]
+  (apply concat (map #(repeat (second %) (first %)) weights)))
+
 (defn weights->selection-order [weights]
-  (shuffle (apply concat (map #(repeat (second %) (first %)) weights))))
+  (shuffle (weights->items weights)))
 
 (defn setup-land [land-tiles]
   (loop [remaining-tiles land-tiles
@@ -91,6 +101,11 @@
                                                                   (map-indexed list (:neighbors (first remaining-ports)))))))))))
             final-ports))))))
 
+(defn get-road [{:keys [board]} tile-id side]
+  (->> (get-in board [tile-id :roads])
+       (filter #(= side (:side %)))
+       first))
+
 (defn get-settlement [{:keys [board]} tile-id side]
   (->> (get-in board [tile-id :settlements])
        (filter #(= side (:side %)))
@@ -100,6 +115,12 @@
   [(get board tile-id)
    (get board (get (:neighbors (get board tile-id)) side))
    (get board (get (:neighbors (get board tile-id)) (inc side)))])
+
+(defn get-tile-settlements [{:keys [board]} {:keys [settlements neighbors]}]
+  (concat settlements
+          (filter #(#{0} (:side %)) (get-in board [(get neighbors 3) :settlements]))
+          (filter #(#{0 1} (:side %)) (get-in board [(get neighbors 4) :settlements]))
+          (filter #(#{1} (:side %)) (get-in board [(get neighbors 5) :settlements]))))
 
 (defn valid-settlement?
   "Validates settlement/city placement. Only positions 0 and 1 are valid to simplify logic"
@@ -114,7 +135,7 @@
                                                  (get (:neighbors tile) (* side 3))
                                                  (mod (inc side) 2))]
         possible-land-tiles (get-settlement-tiles game-state tile-id settlement)]
-    (when (and (#{0 1} side)                                ; only side 0 and 1 are valid
+    (when (and (VALID-SETTLEMENTS side)                     ; only side 0 and 1 are valid
                (if city?
                  (and (= (:player-num current-settlement) player-num) ; settlement must be owned by the player-num to be a city
                       (false? (boolean (:city? current-settlement)))) ; settlement can't already be city
@@ -122,18 +143,27 @@
                (every? nil? neighboring-settlements)        ; no immediate neighbors
                (some #(and % (not= :ocean (:type %))) possible-land-tiles) ; one of the relevant tiles is land
                (or setup-phase?                             ; setup phase does not require roads
-                   false))                                  ; settlement needs to be connected to a valid road
+                   (->> (get settlement-roads side)
+                        (map #(get-road game-state
+                                        (if (neg? (:neighbor %))
+                                          tile-id
+                                          (get-in board [tile-id :neighbors (:neighbors %)]))
+                                        (:side %)))
+                        (filter #(= (:player-num %) player-num))
+                        seq)))                              ; settlement needs to be connected to a valid road
       settlement)))
 
-(defn set-settlement [game-state tile-id settlement]
+(defn set-settlement [game-state tile-id {:keys [side city?] :as settlement}]
   (if (valid-settlement? game-state tile-id settlement)
-    (update-in game-state [:board tile-id :settlements] conj settlement)
+    (cond-> (update-in game-state [:board tile-id :settlements] conj settlement)
+            city? (update-in [:board tile-id :settlements] (partial remove #(and (= side (:side %))
+                                                                                 (not (:city? %))))))
     game-state))
 
 (defn get-available-settlements
-  ([game-state player-num]
-   (get-available-settlements game-state player-num false))
-  ([game-state player-num city?]
+  ([game-state]
+   (get-available-settlements game-state false))
+  ([{:keys [board current-player] :as game-state} city?]
    (mapcat
      (fn [[tile-id settlements]]
        (map #(do [tile-id %]) settlements))
@@ -142,11 +172,11 @@
                         (remove nil? (map (fn [side]
                                             (valid-settlement?
                                               game-state (:id %)
-                                              {:player-num player-num
+                                              {:player-num current-player
                                                :city?      city?
                                                :side       side}))
                                           (range 2)))])
-                  (-> game-state :board vals))))))
+                  (vals board))))))
 
 (defn settlement->neighbor
   "Given a city side number [0-5], return the neighbor the city is on since we only use side 0 and 1. -1 for on tile"
@@ -157,11 +187,6 @@
     (3 4) 4
     5 5))
 
-(defn get-road [{:keys [board]} tile-id side]
-  (->> (get-in board [tile-id :roads])
-       (filter #(= side (:side %)))
-       first))
-
 (defn valid-road?
   "Validates road placement. Only positions 0, 1, and 2 are valid to simplify logic"
   [{:keys [board] :as game-state} tile-id {:keys [player-num side] :as road}]
@@ -170,7 +195,7 @@
         settlement-behind-neighbor (settlement->neighbor settlement-behind)
         settlement-ahead (mod side 6)
         settlement-ahead-neighbor (settlement->neighbor settlement-ahead)]
-    (when (and (#{0 1 2} side)
+    (when (and (VALID-ROADS side)
                (not (seq (filter #(= side (:side %)) roads)))
                (or (not= :ocean (:type tile))
                    (not= :ocean (:type (get board (get (:neighbors tile) side))))) ; the road is on land
@@ -186,7 +211,7 @@
                                                 (if (neg? settlement-ahead-neighbor) tile-id (get (:neighbors tile) settlement-ahead-neighbor))
                                                 (mod settlement-ahead 2)))) ; the settlement ahead is owned by the player
                    (seq (filter #(= player-num (:player-num %)) ; a relevant road is owned by the player on a neighboring tile
-                                (map #(get-road board (get-in tile [:neighbors (:neighbor %)]) (:side %))
+                                (map #(get-road game-state (get-in tile [:neighbors (:neighbor %)]) (:side %))
                                      (get roads-to-check side))))))
       road)))
 
@@ -196,7 +221,7 @@
     game-state))
 
 (defn get-available-roads
-  [game-state player-num]
+  [{:keys [board current-player] :as game-state}]
   (mapcat
     (fn [[tile-id roads]]
       (map #(do [tile-id %]) roads))
@@ -205,16 +230,54 @@
                        (remove nil? (map (fn [side]
                                            (valid-road?
                                              game-state (:id %)
-                                             {:player-num player-num
+                                             {:player-num current-player
                                               :side       side}))
                                          (range 3)))])
-                 (-> game-state :board vals)))))
+                 (vals board)))))
+
+(defn get-owned-ports [{:keys [board current-player] :as game-state}]
+  (->> board
+       vals
+       (filter :port)
+       (map #(assoc % :settlement-behind-side
+                      (mod (+ (-> % :port :side) 5) 6)
+                      :settlement-ahead-side
+                      (mod (-> % :port :side) 6)))
+       (map #(assoc % :settlement-behind-neighbor
+                      (settlement->neighbor
+                        (:settlement-behind-side %))
+                      :settlement-ahead-neighbor
+                      (settlement->neighbor
+                        (:settlement-ahead-side %))))
+       (map #(assoc % :settlement-behind
+                      (get-settlement
+                        game-state
+                        (if (neg? (:settlement-behind-neighbor %))
+                          (:id %)
+                          (get (:neighbors %) (:settlement-behind-neighbor %)))
+                        (mod (:settlement-behind-side %) 2))))
+       (map #(assoc % :settlement-ahead
+                      (get-settlement
+                        game-state
+                        (if (neg? (:settlement-ahead-neighbor %))
+                          (:id %)
+                          (get (:neighbors %) (:settlement-ahead-neighbor %)))
+                        (mod (:settlement-ahead-side %) 2))))
+       (map #(if (:settlement-behind %)
+               (assoc-in % [:settlement-behind :type] (-> % :port :type))
+               %))
+       (map #(if (:settlement-ahead %)
+               (assoc-in % [:settlement-ahead :type] (-> % :port :type))
+               %))
+       (mapcat #(vals (select-keys % [:settlement-ahead :settlement-behind])))
+       (filter #(= (:player-num %) current-player))
+       (map :type)))
 
 (defn setup-board [graph num-players]
   {:pre [(pos-int? num-players)]}
   (let [{ocean-tiles true
          land-tiles  false} (group-by #(boolean (some nil? (:neighbors %))) graph)]
-    {:current-player 0
+    {:current-player -1
      :num-players    num-players
      :setup-phase?   true
      :player-stats   (vec (repeat num-players {:brick 0
@@ -226,34 +289,201 @@
                                    (concat (setup-land land-tiles)
                                            (setup-ocean ocean-tiles land-tiles))))}))
 
-(defn set-initial-settlement
-  ([game-state player-num]
-   (set-initial-settlement game-state player-num false))
-  ([game-state player-num collect-resources?]
-   (let [[tile-id settlement] (rand-nth (get-available-settlements game-state player-num))
-         resource-tiles (remove #(#{:ocean :desert} (:type %))
-                                (get-settlement-tiles game-state tile-id settlement))]
-     (as-> game-state gs
-           (set-settlement gs tile-id settlement)
-           (apply (partial set-road gs)
-                  (rand-nth (filter #(valid-road? gs (first %) (second %))
-                                    (map #(do [(if (neg? (:neighbor %))
-                                                 tile-id
-                                                 (get-in gs [:board tile-id :neighbors (:neighbor %)]))
-                                               {:player-num player-num :side (:side %)}])
-                                         (get settlement-roads (:side settlement))))))
-           (reduce #(update-in %1 [:player-stats player-num (:type %2)] (if collect-resources? inc identity))
-                   gs
-                   resource-tiles)))))
+(defn select-initial-settlement [{:keys [board current-player] :as game-state}]
+  (let [num-settlements (count (filter #(= (:player-num %) current-player) (mapcat :settlements (vals board))))
+        [tile-id settlement] (rand-nth (get-available-settlements game-state))
+        resource-tiles (remove #(#{:ocean :desert} (:type %))
+                               (get-settlement-tiles game-state tile-id settlement))]
+    (as-> game-state gs
+          (set-settlement gs tile-id settlement)
+          (apply (partial set-road gs)
+                 (rand-nth (filter #(valid-road? gs (first %) (second %))
+                                   (map #(do [(if (neg? (:neighbor %))
+                                                tile-id
+                                                (get-in gs [:board tile-id :neighbors (:neighbor %)]))
+                                              {:player-num current-player :side (:side %)}])
+                                        (get settlement-roads (:side settlement))))))
+          (reduce #(update-in %1 [:player-stats current-player (:type %2)] (if (>= num-settlements 1) inc identity))
+                  gs
+                  resource-tiles))))
 
-(defn select-initial-settlements [{:keys [num-players] :as game-state}]
-  (as-> game-state gs
-        (reduce
-          #(set-initial-settlement %1 %2)
-          gs
-          (range num-players))
-        (reduce
-          #(set-initial-settlement %1 %2 true)
-          gs
-          (range (dec num-players) -1 -1))
-        (assoc gs :setup-phase? false)))
+(defn update-setup-phase [{:keys [board num-players setup-phase?] :as game-state}]
+  (if (and setup-phase?
+           (= (count (mapcat :settlements (vals board))) (* num-players 2)))
+    (assoc game-state :setup-phase? false :current-player -1)
+    game-state))
+
+(defn update-current-player [{:keys [board setup-phase? num-players] :as game-state}]
+  (let [num-settlements (count (mapcat :settlements (vals board)))
+        updater (cond (or (not setup-phase?)
+                          (< num-settlements num-players)) inc
+                      (> num-settlements num-players) dec
+                      :else identity)]
+    (update game-state :current-player #(mod (updater %) num-players))))
+
+(defn roll-dice [game-state n d]
+  (assoc game-state :dice-roll (repeatedly n #(rand-int d))))
+(defn collect-resources [{:keys [dice-roll board] :as game-state}]
+  (->> board
+       vals
+       (filter #(and (not (:robber? %))
+                     (= (:roll %) (apply + dice-roll))))
+       (map #(do [(:type %) (get-tile-settlements game-state %)]))
+       (mapcat #(map (fn [settlement] (assoc settlement :type (first %))) (second %)))
+       (reduce #(update-in %1 [:player-stats (:player-num %2) (:type %2)] + (if (:city? %2) 2 1)) game-state)))
+
+(defn move-robber [{:keys [board] :as game-state}]
+  (let [current-robber-id (->> board
+                               vals
+                               (filter :robber?)
+                               first
+                               :id)]
+    (-> game-state
+        (assoc-in [:board current-robber-id :robber?] false)
+        (assoc-in [:board
+                   (:id (first (filter #(and (not= (:type %) :ocean)
+                                             (not= (:id %) current-robber-id))
+                                       (repeatedly #(rand-nth (vals board))))))
+                   :robber?] true))))
+
+(defn discard-resources [{:keys [player-stats] :as game-state}]
+  (->> player-stats
+       (map-indexed vector)
+       (filter #(> (apply + (vals (second %))) 7))
+       (reduce (fn [gs [player-num resources]]
+                 (->> resources
+                      weights->selection-order
+                      (take (Math/floor (/ (apply + (vals resources)) 2)))
+                      (reduce #(update-in %1 [:player-stats player-num %2] dec) gs)))
+               game-state)))
+
+(defn handle-roll [{:keys [dice-roll] :as game-state}]
+  (if (= (apply + dice-roll) 7)
+    (-> game-state
+        discard-resources
+        move-robber)
+    (collect-resources game-state)))
+
+(defn get-available-structures [game-state]
+  (into {} (filter (comp seq second) {:road       (get-available-roads game-state)
+                                      :settlement (get-available-settlements game-state)
+                                      :city       (get-available-settlements game-state true)})))
+
+(defn substitute-resource [game-state player-stats]
+  (let [owned-ports (get-owned-ports game-state)
+        specific-port-sub (first (filter #(and (% player-stats)
+                                               (>= (% player-stats) 2))
+                                         (remove (partial = :wild) owned-ports)))
+        wild-port-sub (when ((set owned-ports) :wild)
+                        (->> player-stats
+                             (filter #(>= (second %) 3))
+                             ffirst))
+        bank-sub (->> player-stats
+                      (filter #(>= (second %) 4))
+                      ffirst)]
+    (cond specific-port-sub {specific-port-sub 2}
+          wild-port-sub {wild-port-sub 3}
+          bank-sub {bank-sub 4})))
+
+(defn make-payment [{:keys [current-player player-stats] :as game-state} structure]
+  (let [[base-payment required-subs updated-stats]
+        (loop [player-stats (get player-stats current-player)
+               payment {}
+               need-sub {}
+               cost (weights->items (structure structure-costs))]
+          (let [resource (first cost)]
+            (cond (not (seq cost))
+                  [payment need-sub player-stats]
+                  (< (resource player-stats) 1)
+                  (recur player-stats
+                         payment
+                         (update need-sub resource (fnil inc 0))
+                         (rest cost))
+                  :else
+                  (recur (update player-stats resource dec)
+                         (update payment resource (fnil inc 0))
+                         need-sub
+                         (rest cost)))))
+        sub-payment
+        (loop [player-stats updated-stats
+               payment {}
+               cost (weights->items required-subs)]
+          (let [substitution (substitute-resource game-state player-stats)]
+            (cond (not (seq cost))
+                  payment
+                  (nil? substitution)
+                  nil
+                  :else
+                  (recur (merge-with - player-stats substitution)
+                         (merge-with + payment substitution)
+                         (rest cost)))))]
+    (when-not (and (seq required-subs) (nil? sub-payment))
+      (merge-with + base-payment sub-payment))))
+
+(defn affordable-actions [game-state]
+  (->> structure-costs
+       keys
+       (map #(do [% (make-payment game-state %)]))
+       (remove #(nil? (second %)))
+       (into {})))
+
+(defn build-structure [{:keys [current-player] :as game-state} structure-type [tile-id structure]]
+  (let [payment (make-payment game-state structure-type)]
+    (reduce #(update-in %1 [:player-stats current-player %2] dec)
+            (case structure-type
+              (:city :settlement) (set-settlement game-state tile-id structure)
+              :road (set-road game-state tile-id structure))
+            (weights->items payment))))
+
+(defn take-actions [game-state]
+  (loop [game-state game-state]
+    (let [possible-actions (affordable-actions game-state)
+          available-structures (get-available-structures game-state)
+          available-affordable-actions (clojure.set/intersection (set (keys possible-actions))
+                                                                 (set (keys available-structures)))
+          type-to-build (first (filter available-affordable-actions [:city :settlement :road]))]
+      (if type-to-build
+        (recur (-> game-state
+                   (build-structure type-to-build (rand-nth (type-to-build available-structures)))))
+        game-state))))
+
+(defn calculate-scores [{:keys [board num-players] :as game-state}]
+  (let [settlement-scores (reduce (fn [scores {:keys [player-num city?]}]
+                                    (update scores player-num + (if city? 2 1)))
+                                  (vec (repeat num-players 0))
+                                  (mapcat :settlements (vals board)))]
+    (assoc game-state :scores settlement-scores)))
+
+(defn assign-winner [{:keys [scores] :as game-state}]
+  (let [winner (->> scores
+                    (map-indexed vector)
+                    (filter #(>= (second %) 10))
+                    ffirst)]
+    (assoc game-state :winner winner)))
+
+(defn do-turn [game-state]
+  (cond-> (update-current-player game-state)
+          (:setup-phase? game-state) (#(-> %
+                                           select-initial-settlement
+                                           update-setup-phase))
+          (not (:setup-phase? game-state)) (#(-> %
+                                                 (roll-dice 2 6)
+                                                 (update :turn (fnil inc 0))
+                                                 handle-roll
+                                                 take-actions
+                                                 calculate-scores
+                                                 assign-winner))))
+
+(defn play-game [game-state]
+  (if (:winner game-state)
+    (list game-state)
+    (lazy-seq (cons game-state (play-game (do-turn game-state))))))
+
+#_(require '[mindra.core :refer [diagram->svg]]
+           '[arduino-playground-client.draw :as d]
+           '[arduino-playground-client.hex-graph :as hex]
+           '[arduino-playground-client.catan :as c])
+#_(map-indexed #(spit (str "game/turn-" (format "%03d" %1) ".svg")
+                      (diagram->svg
+                        (d/draw-board %2)))
+               (c/play-game (c/setup-board (hex/create-graph 4 8) 6)))

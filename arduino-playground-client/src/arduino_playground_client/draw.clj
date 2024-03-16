@@ -97,7 +97,7 @@
                                       (into {} (map #(vec [% (rand-int 255)]) [:r :g :b])))
         roll-color (if active? active-color (:desert land-colors))]
     (md/superimpose'
-      (md/translate 0 2 (md/text (str "ID: " id)))
+      (md/translate 0 2 (md/text (str "ID: " (format "0x%02X" id))))
       (when robber? (draw-robber))
       (when-not (nil? roll)
         (md/superimpose'

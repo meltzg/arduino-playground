@@ -367,19 +367,56 @@
                                       :settlement (get-available-settlements game-state)
                                       :city       (get-available-settlements game-state true)})))
 
-(defn make-payment [{:keys [current-player player-stats]} structure]
-  (loop [player-stats (get player-stats current-player)
-         payment {}
-         cost (weights->items (structure structure-costs))]
-    (let [resource (first cost)]
-      (cond (not (seq cost))
-            payment
-            (< (resource player-stats) 1)
-            nil
-            :else
-            (recur (update player-stats resource dec)
-                   (update payment resource (fnil inc 0))
-                   (rest cost))))))
+(defn substitute-resource [game-state player-stats]
+  (let [owned-ports (get-owned-ports game-state)
+        specific-port-sub (first (filter #(and (% player-stats)
+                                               (>= (% player-stats) 2))
+                                         (remove (partial = :wild) owned-ports)))
+        wild-port-sub (when ((set owned-ports) :wild)
+                        (->> player-stats
+                             (filter #(>= (second %) 3))
+                             ffirst))
+        bank-sub (->> player-stats
+                      (filter #(>= (second %) 4))
+                      ffirst)]
+    (cond specific-port-sub {specific-port-sub 2}
+          wild-port-sub {wild-port-sub 3}
+          bank-sub {bank-sub 4})))
+
+(defn make-payment [{:keys [current-player player-stats] :as game-state} structure]
+  (let [[base-payment required-subs updated-stats]
+        (loop [player-stats (get player-stats current-player)
+               payment {}
+               need-sub {}
+               cost (weights->items (structure structure-costs))]
+          (let [resource (first cost)]
+            (cond (not (seq cost))
+                  [payment need-sub player-stats]
+                  (< (resource player-stats) 1)
+                  (recur player-stats
+                         payment
+                         (update need-sub resource (fnil inc 0))
+                         (rest cost))
+                  :else
+                  (recur (update player-stats resource dec)
+                         (update payment resource (fnil inc 0))
+                         need-sub
+                         (rest cost)))))
+        sub-payment
+        (loop [player-stats updated-stats
+               payment {}
+               cost (weights->items required-subs)]
+          (let [substitution (substitute-resource game-state player-stats)]
+            (cond (not (seq cost))
+                  payment
+                  (nil? substitution)
+                  nil
+                  :else
+                  (recur (merge-with - player-stats substitution)
+                         (merge-with + payment substitution)
+                         (rest cost)))))]
+    (when-not (and (seq required-subs) (nil? sub-payment))
+      (merge-with + base-payment sub-payment))))
 
 (defn affordable-actions [game-state]
   (->> structure-costs

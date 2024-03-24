@@ -49,7 +49,6 @@
                                          ignore-actor? (bit-or ROUTER_SYS_COMMAND)
                                          use-cache? (bit-or ROUTER_USE_CACHE)))
         payload-length (length->bytes (count payload))]
-    (println payload-length)
     (concat [PORT_H
              dest]
             payload-length
@@ -87,16 +86,17 @@
     (.writeBytes port (byte-array 1 [ACK_BYTE]) 1)
     (while (not= (first ping-buffer) START_CODE)
       (.readBytes port ping-buffer 1))
-    (.readBytes port header-buffer 8)
+    (while (< (.bytesAvailable port) 8))
+    (println "header read" (.readBytes port header-buffer 8))
     (let [payload-size (get-payload-size header-buffer)
           payload-buffer (byte-array payload-size)]
-      (.readBytes port payload-buffer payload-size)
+      (while (< (.bytesAvailable port) payload-size))
+      (println "payload read" (.readBytes port payload-buffer payload-size))
       (bytes->message (concat header-buffer payload-buffer)))))
 (defn write-message! [port message]
   (let [ping-buffer (byte-array 1, [0x00])
         msg-bytes (message->bytes message)]
     (while (not= (first ping-buffer) ACK_BYTE)
-      (println "ping")
       (.writeBytes port (byte-array 1 [PING_BYTE]) 1)
       (.readBytes port ping-buffer 1))
     (println "recieved ack")

@@ -1,5 +1,6 @@
 (ns arduino-playground-client.catan
-  (:require [arduino-playground-client.utils :refer [take-rand']]))
+  (:require [arduino-playground-client.utils :refer [take-rand']]
+            [clojure.set :refer [intersection]]))
 
 (def port-weights {:wild  5
                    :brick 1
@@ -439,8 +440,8 @@
   (loop [game-state game-state]
     (let [possible-actions (affordable-actions game-state)
           available-structures (get-available-structures game-state)
-          available-affordable-actions (clojure.set/intersection (set (keys possible-actions))
-                                                                 (set (keys available-structures)))
+          available-affordable-actions (intersection (set (keys possible-actions))
+                                                     (set (keys available-structures)))
           type-to-build (first (filter available-affordable-actions [:city :settlement :road]))]
       (if type-to-build
         (recur (-> game-state

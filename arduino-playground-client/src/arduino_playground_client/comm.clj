@@ -103,3 +103,47 @@
     (.writeBytes port (byte-array 1 [START_CODE]) 1)
     (.writeBytes port (byte-array (count msg-bytes) msg-bytes) (count msg-bytes))
     (println "message sent")))
+
+(defn get-id! [port]
+  (write-message! port {:dest          PORT_H
+                        :command       ROUTER_GET_ID
+                        :ignore-actor? true
+                        :use-cache?    true})
+  (-> port
+      read-message!
+      :payload
+      first))
+
+(defn get-neighbors!
+  ([port node-id]
+   (get-neighbors! port node-id true))
+  ([port node-id use-cache?]
+   (write-message! port {:dest          node-id
+                         :command       ROUTER_GET_NEIGHBORS
+                         :ignore-actor? true
+                         :use-cache?    use-cache?})
+   (->> port
+        read-message!
+        :payload
+        rest
+        (map #(if (zero? %) nil %)))))
+
+(defn get-topology! [port]
+  (loop [visited #{}
+         queue (conj clojure.lang.PersistentQueue/EMPTY
+                     (get-id! port))
+         graph {}]
+    (if (seq queue)
+      (let [curr-id (first queue)
+            neighbors (get-neighbors! port curr-id)]
+        (println "node:" (format "0x%02X" curr-id) "neighbors:" (map #(format "0x%02X" %) neighbors))
+        (recur (conj visited curr-id)
+               (pop (apply (partial conj queue)
+                           (remove #(or (nil? %)
+                                        (visited %)
+                                        (some #{%} queue))
+                                   neighbors)))
+               (assoc graph curr-id {:id (int curr-id)
+                                     :neighbors (mapv #(when (some? %) (int %))
+                                                      neighbors)})))
+      graph)))

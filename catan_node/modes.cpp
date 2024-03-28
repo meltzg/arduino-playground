@@ -115,7 +115,7 @@ bool sendNeighborRequest(NodeId_t destination, bool useCache)
         catanState.id,
         destination,
         0,
-        useCache ? ROUTER_USE_CACHE : 0,
+        useCache ? ROUTER_USE_LOCAL_CACHE : 0,
         ROUTER_GET_NEIGHBORS,
         NULL);
 

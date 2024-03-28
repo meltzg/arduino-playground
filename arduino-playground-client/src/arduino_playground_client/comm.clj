@@ -14,10 +14,13 @@
 
 ;; System options
 (def ROUTER_SYS_COMMAND (unchecked-byte 0x01))
-(def ROUTER_USE_CACHE (unchecked-byte 0x02))
+(def ROUTER_USE_LOCAL_CACHE (unchecked-byte 0x02))
 (def ROUTER_BROADCAST (unchecked-byte 0x04))
 (def ROUTER_CLEAR_TOPOLOGY (unchecked-byte 0x08))
 (def ROUTER_ENABLE_DISCOVERY_UPDATES (unchecked-byte 0x10))
+(def ROUTER_HARDWARE_PROXY_REQUEST (unchecked-byte 0x20))
+(def ROUTER_HARDWARE_PROXY_RESPONSE (unchecked-byte 0x40))
+(def ROUTER_USE_REMOTE_CACHE (unchecked-byte 0x80))
 
 ;; System commands
 (def ROUTER_GET_ID (unchecked-byte 0x01))
@@ -43,11 +46,12 @@
       (.rewind)
       (.getInt)))
 
-(defn message->bytes [{:keys [dest command payload ignore-actor? use-cache?]
+(defn message->bytes [{:keys [dest command payload ignore-actor? use-local-cache? use-remote-cache?]
                        :or   {dest 0x00 command 0x00}}]
-  (let [options (unchecked-byte (cond->> 0x00
+  (let [options (unchecked-byte (cond->> ROUTER_HARDWARE_PROXY_REQUEST
                                          ignore-actor? (bit-or ROUTER_SYS_COMMAND)
-                                         use-cache? (bit-or ROUTER_USE_CACHE)))
+                                         use-local-cache? (bit-or ROUTER_USE_LOCAL_CACHE)
+                                         use-remote-cache? (bit-or ROUTER_USE_REMOTE_CACHE)))
         payload-length (length->bytes (count payload))]
     (concat [PORT_H
              dest]
@@ -116,12 +120,13 @@
 
 (defn get-neighbors!
   ([port node-id]
-   (get-neighbors! port node-id true))
-  ([port node-id use-cache?]
-   (write-message! port {:dest          node-id
-                         :command       ROUTER_GET_NEIGHBORS
-                         :ignore-actor? true
-                         :use-cache?    use-cache?})
+   (get-neighbors! port node-id true false))
+  ([port node-id use-local-cache? use-remote-cache?]
+   (write-message! port {:dest              node-id
+                         :command           ROUTER_GET_NEIGHBORS
+                         :ignore-actor?     true
+                         :use-local-cache?  use-local-cache?
+                         :use-remote-cache? use-remote-cache?})
    (->> port
         read-message!
         :payload
@@ -135,7 +140,7 @@
          graph {}]
     (if (seq queue)
       (let [curr-id (first queue)
-            neighbors (get-neighbors! port curr-id)]
+            neighbors (get-neighbors! port curr-id false true)]
         (println "node:" (format "0x%02X" curr-id) "neighbors:" (map #(format "0x%02X" %) neighbors))
         (recur (conj visited curr-id)
                (pop (apply (partial conj queue)
@@ -143,7 +148,7 @@
                                         (visited %)
                                         (some #{%} queue))
                                    neighbors)))
-               (assoc graph curr-id {:id (int curr-id)
+               (assoc graph curr-id {:id        (int curr-id)
                                      :neighbors (mapv #(when (some? %) (int %))
                                                       neighbors)})))
       graph)))

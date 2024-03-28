@@ -18,6 +18,7 @@ HARD_PORT = b"\xff" * ID_SIZE
 
 class Message(object):
     def __init__(self, header_bytes: bytes, conn: serial.Serial) -> None:
+        print(header_bytes)
         self.source = header_bytes[0]
         self.dest = header_bytes[1]
         self.payload_size = int.from_bytes(header_bytes[2:4], "little")

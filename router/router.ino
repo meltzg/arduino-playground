@@ -91,7 +91,15 @@ void loop()
     {
         Serial.println(F("Serial available"));
         Message message = readMessage(&Serial);
-        message.setSource(PORT_H);
+        if (message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST)
+        {
+            message.setSource(NODE_ID);
+        }
+        else
+        {
+            message.setSource(PORT_H);
+        }
+        
         processMessage(&Serial, message);
         message.free();
     }
@@ -199,11 +207,17 @@ void processMessage(Stream *srcPort, const Message &message)
     }
     if (message.getDest() != NODE_ID)
     {
-        if (!(message.getSysOption() & ROUTER_USE_CACHE) || !(message.getSysCommand() & ROUTER_GET_NEIGHBORS))
+        if (!((message.getSysOption() & ROUTER_USE_LOCAL_CACHE) && (message.getSysCommand() & ROUTER_GET_NEIGHBORS)))
         {
             routeMessage(message);
             return;
         }
+    }
+    if (message.getSysOption() & ROUTER_HARDWARE_PROXY_RESPONSE)
+    {
+        message.setDest(PORT_H);
+        routeMessage(message);
+        return;
     }
     if (message.getSysCommand() == ROUTER_RESPONSE_ID)
     {
@@ -244,7 +258,7 @@ void processMessage(Stream *srcPort, const Message &message)
                     numNodes++;
                 }
             }
-            if (!(message.getSysOption() & ROUTER_USE_CACHE) || numNodes < adj.count)
+            if (!(message.getSysOption() & (ROUTER_USE_LOCAL_CACHE | ROUTER_USE_REMOTE_CACHE)) || numNodes < adj.count)
             {
                 pendingNeighborRequests.pushBack(message.getSource());
                 resetNeighbors(message.getSysOption() & ROUTER_SYS_COMMAND);
@@ -273,11 +287,16 @@ void processMessage(Stream *srcPort, const Message &message)
             }
         }
 
+        SysOption_t options = message.getSysOption() & ROUTER_SYS_COMMAND;
+        if (options & ROUTER_HARDWARE_PROXY_REQUEST) {
+            options &= ~ROUTER_HARDWARE_PROXY_REQUEST;
+            options |= ROUTER_HARDWARE_PROXY_RESPONSE;
+        }
         Message response(
             NODE_ID,
             message.getSource(),
             sizeof(NodeId_t) * numNodes,
-            message.getSysOption() & ROUTER_SYS_COMMAND,
+            options,
             ROUTER_ADD_NODE,
             (byte *)nodeMessage);
         routeMessage(response);

@@ -202,7 +202,8 @@ void processMessage(Stream *srcPort, const Message &message)
     }
     if (message.getDest() != NODE_ID)
     {
-        if (!(message.getSysOption() & ROUTER_USE_CACHE) || !(message.getSysCommand() & ROUTER_GET_NEIGHBORS))
+        Serial.println(F("message not for self"));
+        if (!((message.getSysOption() & ROUTER_USE_CACHE) && (message.getSysCommand() == ROUTER_GET_NEIGHBORS)))
         {
             routeMessage(message);
             return;
@@ -293,7 +294,7 @@ void processMessage(Stream *srcPort, const Message &message)
         delete[] nodeMessage;
         return;
     }
-    if (message.getSysCommand() == ROUTER_ADD_NODE)
+    if (message.getSysCommand() == ROUTER_ADD_NODE && !(message.getSysOption() & ROUTER_HARDWARE_PROXY_RESPONSE))
     {
         sprintf(buf, "Adding node to topology", message.getSource());
         Serial.println(buf);
@@ -316,7 +317,10 @@ void processMessage(Stream *srcPort, const Message &message)
     {
         // return without sending message to actor
         Serial.println(F("Message not for actor"));
-        return;
+        if (!(message.getSysOption() & ROUTER_HARDWARE_PROXY_RESPONSE))
+        {
+            return;
+        }
     }
     routeMessage(message);
 }

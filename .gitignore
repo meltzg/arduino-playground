@@ -77,3 +77,6 @@ gerber/
 
 *.stl
 *.FCStd1
+
+.clj-kondo/
+.lsp/

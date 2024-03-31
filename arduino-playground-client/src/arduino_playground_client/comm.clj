@@ -45,6 +45,9 @@
       (.rewind)
       (.getInt)))
 
+(defn format-bytes [bytes]
+  (map (partial format "0x%02X") bytes))
+
 (defn message->bytes [{:keys [dest command payload ignore-actor? use-cache?]
                        :or   {dest 0x00 command 0x00}}]
   (let [options (unchecked-byte (cond->> 0x00
@@ -92,13 +95,14 @@
   (let [ping-buffer (byte-array 1 [0x00])
         header-buffer (byte-array 8)]
     (while (not= (first ping-buffer) PING_BYTE)
-      (.readBytes port ping-buffer 1))
+      (when (> (.readBytes port ping-buffer 1) 0)
+        (print (String. ping-buffer "UTF-8"))))
     (.writeBytes port (byte-array 1 [ACK_BYTE]) 1)
     (while (not= (first ping-buffer) START_CODE)
       (.readBytes port ping-buffer 1))
     (while (< (.bytesAvailable port) 8))
     (println "header read" (.readBytes port header-buffer 8))
-    (println "header" (map (partial format "0x%02X ") header-buffer))
+    (println "header" (format-bytes header-buffer))
     (let [payload-size (get-payload-size header-buffer)
           payload-buffer (byte-array payload-size)]
       (while (< (.bytesAvailable port) payload-size))
@@ -108,6 +112,7 @@
 (defn write-message! [port message]
   (let [ping-buffer (byte-array 1, [0x00])
         msg-bytes (message->bytes message)]
+    (println "bytes to write" (format-bytes msg-bytes))
     (while (not= (first ping-buffer) ACK_BYTE)
       (.writeBytes port (byte-array 1 [PING_BYTE]) 1)
       (.readBytes port ping-buffer 1))
@@ -142,7 +147,7 @@
 
 (defn get-neighbor-topology!
   ([port node-id]
-   (get-neighbors! port node-id true))
+   (get-neighbor-topology! port node-id true))
   ([port node-id use-cache?]
    (write-message! port {:dest          node-id
                          :command       ROUTER_GET_NEIGHBOR_TOPOLOGY
@@ -162,7 +167,7 @@
     (if (seq queue)
       (let [curr-id (first queue)
             neighbors (get-neighbors! port curr-id)]
-        (println "node:" (format "0x%02X" curr-id) "neighbors:" (map #(format "0x%02X" %) neighbors))
+        (println "node:" (format-bytes [curr-id]) "neighbors:" (format-bytes neighbors))
         (recur (conj visited curr-id)
                (pop (apply (partial conj queue)
                            (remove #(or (nil? %)

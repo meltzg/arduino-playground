@@ -18,6 +18,7 @@
 (def ROUTER_BROADCAST (unchecked-byte 0x04))
 (def ROUTER_CLEAR_TOPOLOGY (unchecked-byte 0x08))
 (def ROUTER_ENABLE_DISCOVERY_UPDATES (unchecked-byte 0x10))
+(def ROUTER_HARDWARE_PROXY (unchecked-byte 0x20))
 
 ;; System commands
 (def ROUTER_GET_ID (unchecked-byte 0x01))
@@ -27,6 +28,7 @@
 (def ROUTER_START_DISCOVERY (unchecked-byte 0x05))
 (def ROUTER_GET_DISCOVERY_STATUS (unchecked-byte 0x06))
 (def ROUTER_RESPONSE_DISCOVERY_STATUS (unchecked-byte 0x07))
+(def ROUTER_GET_NEIGHBOR_TOPOLOGY (unchecked-byte 0x08))
 
 (defn length->bytes [length]
   (-> (ByteBuffer/allocate 4)
@@ -71,12 +73,20 @@
 (defn get-port [path]
   (SerialPort/getCommPort path))
 
+(defn list-ports []
+  (map #(.getSystemPortName %) (SerialPort/getCommPorts)))
+
 (defn open-port! [port]
   (.openPort port)
   port)
 
 (defn close-port! [port]
   (.closePort port))
+
+(defn read-buffer! [port]
+  (let [buffer (byte-array (.bytesAvailable port))]
+    (.readBytes port buffer (count buffer))
+    (String. buffer "UTF-8")))
 
 (defn read-message! [port]
   (let [ping-buffer (byte-array 1 [0x00])
@@ -88,11 +98,13 @@
       (.readBytes port ping-buffer 1))
     (while (< (.bytesAvailable port) 8))
     (println "header read" (.readBytes port header-buffer 8))
+    (println "header" (map (partial format "0x%02X ") header-buffer))
     (let [payload-size (get-payload-size header-buffer)
           payload-buffer (byte-array payload-size)]
       (while (< (.bytesAvailable port) payload-size))
       (println "payload read" (.readBytes port payload-buffer payload-size))
       (bytes->message (concat header-buffer payload-buffer)))))
+
 (defn write-message! [port message]
   (let [ping-buffer (byte-array 1, [0x00])
         msg-bytes (message->bytes message)]
@@ -120,6 +132,20 @@
   ([port node-id use-cache?]
    (write-message! port {:dest          node-id
                          :command       ROUTER_GET_NEIGHBORS
+                         :ignore-actor? true
+                         :use-cache?    use-cache?})
+   (->> port
+        read-message!
+        :payload
+        rest
+        (map #(if (zero? %) nil %)))))
+
+(defn get-neighbor-topology!
+  ([port node-id]
+   (get-neighbors! port node-id true))
+  ([port node-id use-cache?]
+   (write-message! port {:dest          node-id
+                         :command       ROUTER_GET_NEIGHBOR_TOPOLOGY
                          :ignore-actor? true
                          :use-cache?    use-cache?})
    (->> port

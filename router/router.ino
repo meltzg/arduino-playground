@@ -91,7 +91,10 @@ void loop()
     {
         Serial.println(F("Serial available"));
         Message message = readMessage(&Serial);
-        message.setSource(PORT_H);
+        message.setSource(NODE_ID);
+        message.setSysOption(message.getSysOption() | ROUTER_HARDWARE_PROXY);
+        Serial.print(F("Sys Options on PORT_H "));
+        Serial.println(message.getSysOption(), HEX);
         processMessage(&Serial, message);
         message.free();
     }
@@ -226,7 +229,7 @@ void processMessage(Stream *srcPort, const Message &message)
         Serial.println(F("Clear topology"));
         pathfinder.clearTopology();
     }
-    if (message.getSysCommand() == ROUTER_GET_NEIGHBORS)
+    if (message.getSysCommand() == ROUTER_GET_NEIGHBORS || message.getSysCommand() == ROUTER_GET_NEIGHBOR_TOPOLOGY)
     {
         sprintf(buf, "Node Neighbors requested by %hx", message.getSource());
         Serial.println(buf);
@@ -277,7 +280,7 @@ void processMessage(Stream *srcPort, const Message &message)
             NODE_ID,
             message.getSource(),
             sizeof(NodeId_t) * numNodes,
-            message.getSysOption() & ROUTER_SYS_COMMAND,
+            message.getSysOption() | ROUTER_SYS_COMMAND,
             ROUTER_ADD_NODE,
             (byte *)nodeMessage);
         routeMessage(response);
@@ -315,6 +318,12 @@ void processMessage(Stream *srcPort, const Message &message)
 void routeMessage(const Message &message, NodeId_t nextStep)
 {
     char buf[PRINT_BUF_SIZE];
+    Serial.print(F("Sys Options on outbound "));
+    Serial.println(message.getSysOption(), HEX);
+    if (message.getDest() == NODE_ID && (message.getSysOption() & ROUTER_HARDWARE_PROXY))
+    {
+        message.setDest(PORT_H);
+    }
     sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", message.getSource(), message.getDest(), NODE_ID, message.getPayloadSize());
     Serial.println(buf);
     if (message.getDest() == PORT_H)

@@ -92,7 +92,7 @@ void loop()
         Serial.println(F("Serial available"));
         Message message = readMessage(&Serial);
         message.setSource(NODE_ID);
-        message.setSysOption(message.getSysOption() | ROUTER_HARDWARE_PROXY);
+        message.setSysOption(message.getSysOption() | ROUTER_HARDWARE_PROXY_REQUEST);
         Serial.print(F("Sys Options on PORT_H "));
         Serial.println(message.getSysOption(), HEX);
         processMessage(&Serial, message);
@@ -276,11 +276,17 @@ void processMessage(Stream *srcPort, const Message &message)
             }
         }
 
+        SysOption_t options = message.getSysOption();
+        if (options & ROUTER_HARDWARE_PROXY_REQUEST)
+        {
+            options &= ~ROUTER_HARDWARE_PROXY_REQUEST;
+            options |= ROUTER_HARDWARE_PROXY_RESPONSE;
+        }
         Message response(
             NODE_ID,
             message.getSource(),
             sizeof(NodeId_t) * numNodes,
-            message.getSysOption() | ROUTER_SYS_COMMAND,
+            options | ROUTER_SYS_COMMAND,
             ROUTER_ADD_NODE,
             (byte *)nodeMessage);
         routeMessage(response);
@@ -320,7 +326,7 @@ void routeMessage(const Message &message, NodeId_t nextStep)
     char buf[PRINT_BUF_SIZE];
     Serial.print(F("Sys Options on outbound "));
     Serial.println(message.getSysOption(), HEX);
-    if (message.getDest() == NODE_ID && (message.getSysOption() & ROUTER_HARDWARE_PROXY))
+    if (message.getDest() == NODE_ID && (message.getSysOption() & ROUTER_HARDWARE_PROXY_RESPONSE))
     {
         message.setDest(PORT_H);
     }

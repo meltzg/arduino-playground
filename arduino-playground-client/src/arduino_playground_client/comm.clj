@@ -18,7 +18,7 @@
 (def ROUTER_BROADCAST (unchecked-byte 0x04))
 (def ROUTER_CLEAR_TOPOLOGY (unchecked-byte 0x08))
 (def ROUTER_ENABLE_DISCOVERY_UPDATES (unchecked-byte 0x10))
-(def ROUTER_HARDWARE_PROXY (unchecked-byte 0x20))
+(def ROUTER_HARDWARE_PROXY_REQUEST (unchecked-byte 0x20))
 
 ;; System commands
 (def ROUTER_GET_ID (unchecked-byte 0x01))

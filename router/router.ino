@@ -310,7 +310,7 @@ void processMessage(Stream *srcPort, const Message &message)
     if (message.getSysCommand() == ROUTER_GET_DISCOVERY_STATUS)
     {
         Serial.println(F("Get discovery stats"));
-        sendDiscoveryStats(message.getSource());
+        sendDiscoveryStats((message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST) ? PORT_H : message.getSource());
         return;
     }
     if (message.getSysOption() & ROUTER_SYS_COMMAND)

@@ -1,7 +1,7 @@
 (ns arduino-playground-client.comm
-  (:import [java.nio ByteBuffer]
-           [java.nio ByteOrder]
-           [com.fazecast.jSerialComm SerialPort]))
+  (:import (java.nio ByteBuffer)
+           (com.fazecast.jSerialComm SerialPort)
+           (java.nio ByteOrder)))
 
 (def BAUD 9600)
 (def PING_BYTE (unchecked-byte 0xAA))
@@ -44,6 +44,13 @@
       (.put (byte-array 2 [low high]))
       (.rewind)
       (.getInt)))
+
+(defn parse-discovery-stats [bytes]
+  (let [discovery-complete (pos? (first bytes))
+        [nodes edges] (map bytes->length (partition 2 (rest bytes)))]
+    {:discovery-complete? discovery-complete
+     :nodes nodes
+     :edges edges}))
 
 (defn format-bytes [bytes]
   (map (partial format "0x%02X") bytes))
@@ -159,6 +166,18 @@
         rest
         (map #(if (zero? %) nil %)))))
 
+(defn get-discovery-stats!
+  ([port]
+   (get-discovery-stats! port (get-id! port)))
+  ([port node-id]
+   (write-message! port {:dest          node-id
+                         :command       ROUTER_GET_DISCOVERY_STATUS
+                         :ignore-actor? true})
+   (->> port
+        read-message!
+        :payload
+        parse-discovery-stats)))
+
 (defn get-topology! [port]
   (loop [visited #{}
          queue (conj clojure.lang.PersistentQueue/EMPTY
@@ -174,7 +193,7 @@
                                         (visited %)
                                         (some #{%} queue))
                                    neighbors)))
-               (assoc graph curr-id {:id (int curr-id)
+               (assoc graph curr-id {:id        (int curr-id)
                                      :neighbors (mapv #(when (some? %) (int %))
                                                       neighbors)})))
       graph)))

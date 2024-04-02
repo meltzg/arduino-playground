@@ -310,7 +310,7 @@ void processMessage(Stream *srcPort, const Message &message)
     if (message.getSysCommand() == ROUTER_GET_DISCOVERY_STATUS)
     {
         Serial.println(F("Get discovery stats"));
-        sendDiscoveryStats((message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST) ? PORT_H : message.getSource());
+        sendDiscoveryStats(message.getSource(), (message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST));
         return;
     }
     if (message.getSysOption() & ROUTER_SYS_COMMAND)
@@ -606,7 +606,7 @@ void startDiscovery(NodeId_t src, bool enableDiscoveryUpdates)
     }
 }
 
-void sendDiscoveryStats(NodeId_t dst)
+void sendDiscoveryStats(NodeId_t dst, bool isHardwareRequest)
 {
     DiscoveryStats stats = pathfinder.getDiscoveryStats();
     bool discoveryDone = stats.discoveryDone;
@@ -619,10 +619,15 @@ void sendDiscoveryStats(NodeId_t dst)
         NODE_ID,
         dst,
         sizeof(DiscoveryStats),
-        0,
+        isHardwareRequest ? ROUTER_HARDWARE_PROXY_RESPONSE : 0,
         ROUTER_RESPONSE_DISCOVERY_STATUS,
         (char *)(&stats));
     routeMessage(response);
+}
+
+void sendDiscoveryStats(NodeId_t dst)
+{
+    sendDiscoveryStats(dst, false);
 }
 
 #ifdef __arm__

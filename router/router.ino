@@ -54,7 +54,18 @@ NodeId_t NODE_ID;
 
 PathFinder pathfinder(6);
 
-Set<NodeId_t> pendingNeighborRequests;
+struct NeighborRequest
+{
+    NodeId_t id;
+    bool hardwareProxy;
+
+    bool operator==(const NeighborRequest &other)
+    {
+        return id == other.id && hardwareProxy == other.hardwareProxy;
+    }
+};
+
+Set<NeighborRequest> pendingNeighborRequests;
 unsigned char pendingIdRequests = 0;
 bool pendingDiscovery = false;
 unsigned long previousDiscoveryStatsUpdate = 0;
@@ -250,7 +261,10 @@ void processMessage(Stream *srcPort, const Message &message)
             }
             if (!(message.getSysOption() & ROUTER_USE_CACHE) || numNodes < adj.count)
             {
-                pendingNeighborRequests.pushBack(message.getSource());
+                NeighborRequest req;
+                req.id = message.getSource();
+                req.hardwareProxy = message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST;
+                pendingNeighborRequests.pushBack(req);
                 resetNeighbors(message.getSysOption() & ROUTER_SYS_COMMAND);
                 return;
             }
@@ -445,7 +459,16 @@ void updateNeighborIds(bool isSysCommand)
 
         while (!pendingNeighborRequests.isEmpty())
         {
-            response.setDest(pendingNeighborRequests.popFront());
+            NeighborRequest pending = pendingNeighborRequests.popFront();
+            response.setDest(pending.id);
+            if (pending.hardwareProxy)
+            {
+                response.setSysOption(response.getSysOption() | ROUTER_HARDWARE_PROXY_RESPONSE);
+            }
+            else
+            {
+                response.setSysOption(response.getSysOption() & ~ROUTER_HARDWARE_PROXY_RESPONSE);
+            }
             routeMessage(response);
         }
         if (pendingDiscovery)

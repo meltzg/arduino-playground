@@ -315,7 +315,9 @@ enum CatanCommand : byte
     GET_STATE,
     STATE_RESPONSE,
     SET_PLAYER,
-    CLEAR_ROBBER
+    CLEAR_ROBBER,
+    SET_STATE,
+    ACKNOWLEDGE
 };
 
 struct BaseCatanState
@@ -418,6 +420,28 @@ struct StateResponse : public CatanMessage
         command = STATE_RESPONSE;
     }
 };
+
+struct SetStateRequest: public CatanMessage
+{
+    CatanState state;
+    bool sendAck;
+
+    SetStateRequest(CatanState state, bool sendAck) : state(state), sendAck(sendAck)
+    {
+        modeId = MODE_CATAN;
+        command = SET_STATE;
+    }
+}
+
+struct AcknowledgeResponse : public CatanMessage
+{
+    AcknowledgeResponse()
+    {
+        modeId = MODE_CATAN;
+        command = ACKNOWLEDGE;
+    }
+};
+
 
 struct SetCurrentPlayerRequest : public CatanMessage
 {

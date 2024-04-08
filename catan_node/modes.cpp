@@ -650,8 +650,6 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
     catanState.portType = request.initialState.portType;
     catanState.portNeighbor = request.initialState.portNeighbor;
 
-    catanState.controllerId = node;
-
     if (catanState.hasRobber)
     {
         setTileValue(0xFF);
@@ -678,6 +676,31 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
     setCurrentPlayer(SetCurrentPlayerRequest(0));
 
     sendNeighborRequest(catanState.id, true);
+}
+
+void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request)
+{
+    memcpy(&catanState, &request.state, sizeof(CatanPlayState));
+
+    setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
+
+    if (request.sendAck)
+    {
+        AcknowledgeResponse ack;
+        Message msg(
+            catanState.id,
+            source,
+            sizeof(AcknowledgeResponse),
+            hardwareProxy ? ROUTER_HARDWARE_PROXY_RESPONSE : 0,
+            0,
+            (byte *)&ack);
+
+        if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
+        {
+            Serial.println(F("Fail"));
+        }
+    }
+    setCurrentPlayer(SetCurrentPlayerRequest(catanState.currentPlayer));
 }
 
 void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request)

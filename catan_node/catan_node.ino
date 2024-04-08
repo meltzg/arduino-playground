@@ -321,6 +321,9 @@ void processMessage(const Message &message)
                     catanState.hasRobber = false;
                     setTileValue(catanState.rollValue);
                 }
+            case SET_STATE:
+                setState(message.getSource(), message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST, *(SetStateRequest *)command);
+                break;
             default:
                 break;
             }

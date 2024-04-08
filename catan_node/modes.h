@@ -332,7 +332,6 @@ struct BaseCatanState
 
 struct CatanState : public BaseCatanState
 {
-    NodeId_t controllerId;
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
@@ -423,15 +422,15 @@ struct StateResponse : public CatanMessage
 
 struct SetStateRequest: public CatanMessage
 {
-    CatanState state;
+    CatanPlayState state;
     bool sendAck;
 
-    SetStateRequest(CatanState state, bool sendAck) : state(state), sendAck(sendAck)
+    SetStateRequest(CatanPlayState state, bool sendAck) : state(state), sendAck(sendAck)
     {
         modeId = MODE_CATAN;
         command = SET_STATE;
     }
-}
+};
 
 struct AcknowledgeResponse : public CatanMessage
 {
@@ -492,6 +491,7 @@ byte randomRollValue();
 
 void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
 void setInitialState(NodeId_t node, SetInitialStateRequest request);
+void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request);
 void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
 void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
 void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);

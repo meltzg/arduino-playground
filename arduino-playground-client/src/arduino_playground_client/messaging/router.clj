@@ -85,10 +85,10 @@
   (loop [visited #{}
          queue (conj clojure.lang.PersistentQueue/EMPTY
                      (get-id! port))
-         graph {}]
+         graph '()]
     (if (seq queue)
       (let [curr-id (first queue)
-            neighbors (get-neighbors! port curr-id)]
+            neighbors (get-neighbor-topology! port curr-id)]
         (println "node:" (ser/format-bytes [curr-id]) "neighbors:" (ser/format-bytes neighbors))
         (recur (conj visited curr-id)
                (pop (apply (partial conj queue)
@@ -96,7 +96,7 @@
                                         (visited %)
                                         (some #{%} queue))
                                    neighbors)))
-               (assoc graph curr-id {:id        (int curr-id)
-                                     :neighbors (mapv #(when (some? %) (int %))
-                                                      neighbors)})))
+               (conj graph {:id        (int curr-id)
+                            :neighbors (mapv #(when (some? %) (int %))
+                                             neighbors)})))
       graph)))

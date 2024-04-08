@@ -26,7 +26,7 @@
   (map (partial format "0x%02X") bytes))
 
 (defn message->bytes [{:keys [source dest command payload options]
-                       :or   {dest 0x00 command 0x00}}]
+                       :or   {dest 0x00 command 0x00 options 0x00}}]
   (let [payload-length (length->bytes (count payload))]
     (concat [source
              dest]

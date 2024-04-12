@@ -683,10 +683,11 @@ void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request)
     memcpy(&catanState, &request.state, sizeof(CatanPlayState));
 
     setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
-
+    Serial.print(F("send ack? "));
+    Serial.println(request.sendAck);
     if (request.sendAck)
     {
-        AcknowledgeResponse ack;
+        AcknowledgeResponse ack(catanState);
         Message msg(
             catanState.id,
             source,

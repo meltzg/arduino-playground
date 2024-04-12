@@ -434,7 +434,9 @@ struct SetStateRequest: public CatanMessage
 
 struct AcknowledgeResponse : public CatanMessage
 {
-    AcknowledgeResponse()
+    CatanPlayState state;
+
+    AcknowledgeResponse(CatanPlayState state) : state(state)
     {
         modeId = MODE_CATAN;
         command = ACKNOWLEDGE;

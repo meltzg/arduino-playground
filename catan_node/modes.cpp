@@ -680,9 +680,45 @@ void setInitialState(NodeId_t node, SetInitialStateRequest request)
 
 void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request)
 {
+    bool roadsToSet[NUM_ROADS] = {false};
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        if (catanState.roadOwners[i] != request.state.roadOwners[i])
+        {
+            roadsToSet[i] = true;
+        }
+    } 
     memcpy(&catanState, &request.state, sizeof(CatanPlayState));
 
     setTileValue(catanState.hasRobber ? 0xFF : catanState.rollValue);
+
+    for (int i = 0; i < NUM_ROADS; i++)
+    {
+        if (!roadsToSet[i])
+        {
+            continue;
+        }
+        SetRoadRequest command((i + NUM_ROADS / 2) % NUM_ROADS, catanState.roadOwners[i]);
+        Message msg(
+            catanState.id,
+            catanState.neighborIds[i],
+            sizeof(SetRoadRequest),
+            0,
+            0,
+            (byte *)&command);
+
+        Serial.print(F("updateNeighbor: "));
+        Serial.println(updateNeighbor);
+
+        if (msg.getDest() != EMPTY)
+        {
+            if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))
+            {
+                Serial.println(F("Fail"));
+            }
+        }
+    }
+
     Serial.print(F("send ack? "));
     Serial.println(request.sendAck);
     if (request.sendAck)

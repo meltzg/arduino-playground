@@ -54,7 +54,18 @@ NodeId_t NODE_ID;
 
 PathFinder pathfinder(6);
 
-Set<NodeId_t> pendingNeighborRequests;
+struct NeighborRequest
+{
+    NodeId_t id;
+    bool hardwareProxy;
+
+    bool operator==(const NeighborRequest &other)
+    {
+        return id == other.id && hardwareProxy == other.hardwareProxy;
+    }
+};
+
+Set<NeighborRequest> pendingNeighborRequests;
 unsigned char pendingIdRequests = 0;
 bool pendingDiscovery = false;
 unsigned long previousDiscoveryStatsUpdate = 0;
@@ -91,7 +102,10 @@ void loop()
     {
         Serial.println(F("Serial available"));
         Message message = readMessage(&Serial);
-        message.setSource(PORT_H);
+        message.setSource(NODE_ID);
+        message.setSysOption(message.getSysOption() | ROUTER_HARDWARE_PROXY_REQUEST);
+        Serial.print(F("Sys Options on PORT_H "));
+        Serial.println(message.getSysOption(), HEX);
         processMessage(&Serial, message);
         message.free();
     }
@@ -199,7 +213,8 @@ void processMessage(Stream *srcPort, const Message &message)
     }
     if (message.getDest() != NODE_ID)
     {
-        if (!(message.getSysOption() & ROUTER_USE_CACHE) || !(message.getSysCommand() & ROUTER_GET_NEIGHBORS))
+        Serial.println(F("message not for self"));
+        if (!((message.getSysOption() & ROUTER_USE_CACHE) && (message.getSysCommand() == ROUTER_GET_NEIGHBORS)))
         {
             routeMessage(message);
             return;
@@ -226,7 +241,7 @@ void processMessage(Stream *srcPort, const Message &message)
         Serial.println(F("Clear topology"));
         pathfinder.clearTopology();
     }
-    if (message.getSysCommand() == ROUTER_GET_NEIGHBORS)
+    if (message.getSysCommand() == ROUTER_GET_NEIGHBORS || message.getSysCommand() == ROUTER_GET_NEIGHBOR_TOPOLOGY)
     {
         sprintf(buf, "Node Neighbors requested by %hx", message.getSource());
         Serial.println(buf);
@@ -246,7 +261,10 @@ void processMessage(Stream *srcPort, const Message &message)
             }
             if (!(message.getSysOption() & ROUTER_USE_CACHE) || numNodes < adj.count)
             {
-                pendingNeighborRequests.pushBack(message.getSource());
+                NeighborRequest req;
+                req.id = message.getSource();
+                req.hardwareProxy = message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST;
+                pendingNeighborRequests.pushBack(req);
                 resetNeighbors(message.getSysOption() & ROUTER_SYS_COMMAND);
                 return;
             }
@@ -273,18 +291,24 @@ void processMessage(Stream *srcPort, const Message &message)
             }
         }
 
+        SysOption_t options = message.getSysOption();
+        if (options & ROUTER_HARDWARE_PROXY_REQUEST)
+        {
+            options &= ~ROUTER_HARDWARE_PROXY_REQUEST;
+            options |= ROUTER_HARDWARE_PROXY_RESPONSE;
+        }
         Message response(
             NODE_ID,
             message.getSource(),
             sizeof(NodeId_t) * numNodes,
-            message.getSysOption() & ROUTER_SYS_COMMAND,
+            options | ROUTER_SYS_COMMAND,
             ROUTER_ADD_NODE,
             (byte *)nodeMessage);
         routeMessage(response);
         delete[] nodeMessage;
         return;
     }
-    if (message.getSysCommand() == ROUTER_ADD_NODE)
+    if (message.getSysCommand() == ROUTER_ADD_NODE && !(message.getSysOption() & ROUTER_HARDWARE_PROXY_RESPONSE))
     {
         sprintf(buf, "Adding node to topology", message.getSource());
         Serial.println(buf);
@@ -300,14 +324,17 @@ void processMessage(Stream *srcPort, const Message &message)
     if (message.getSysCommand() == ROUTER_GET_DISCOVERY_STATUS)
     {
         Serial.println(F("Get discovery stats"));
-        sendDiscoveryStats(message.getSource());
+        sendDiscoveryStats(message.getSource(), (message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST));
         return;
     }
     if (message.getSysOption() & ROUTER_SYS_COMMAND)
     {
         // return without sending message to actor
         Serial.println(F("Message not for actor"));
-        return;
+        if (!(message.getSysOption() & ROUTER_HARDWARE_PROXY_RESPONSE))
+        {
+            return;
+        }
     }
     routeMessage(message);
 }
@@ -315,6 +342,12 @@ void processMessage(Stream *srcPort, const Message &message)
 void routeMessage(const Message &message, NodeId_t nextStep)
 {
     char buf[PRINT_BUF_SIZE];
+    Serial.print(F("Sys Options on outbound "));
+    Serial.println(message.getSysOption(), HEX);
+    if (message.getDest() == NODE_ID && (message.getSysOption() & ROUTER_HARDWARE_PROXY_RESPONSE))
+    {
+        message.setDest(PORT_H);
+    }
     sprintf(buf, "Routing message from %hx to %hx via %hx size %hu", message.getSource(), message.getDest(), NODE_ID, message.getPayloadSize());
     Serial.println(buf);
     if (message.getDest() == PORT_H)
@@ -426,7 +459,16 @@ void updateNeighborIds(bool isSysCommand)
 
         while (!pendingNeighborRequests.isEmpty())
         {
-            response.setDest(pendingNeighborRequests.popFront());
+            NeighborRequest pending = pendingNeighborRequests.popFront();
+            response.setDest(pending.id);
+            if (pending.hardwareProxy)
+            {
+                response.setSysOption(response.getSysOption() | ROUTER_HARDWARE_PROXY_RESPONSE);
+            }
+            else
+            {
+                response.setSysOption(response.getSysOption() & ~ROUTER_HARDWARE_PROXY_RESPONSE);
+            }
             routeMessage(response);
         }
         if (pendingDiscovery)
@@ -587,7 +629,7 @@ void startDiscovery(NodeId_t src, bool enableDiscoveryUpdates)
     }
 }
 
-void sendDiscoveryStats(NodeId_t dst)
+void sendDiscoveryStats(NodeId_t dst, bool isHardwareRequest)
 {
     DiscoveryStats stats = pathfinder.getDiscoveryStats();
     bool discoveryDone = stats.discoveryDone;
@@ -600,10 +642,15 @@ void sendDiscoveryStats(NodeId_t dst)
         NODE_ID,
         dst,
         sizeof(DiscoveryStats),
-        0,
+        isHardwareRequest ? ROUTER_HARDWARE_PROXY_RESPONSE : 0,
         ROUTER_RESPONSE_DISCOVERY_STATUS,
         (char *)(&stats));
     routeMessage(response);
+}
+
+void sendDiscoveryStats(NodeId_t dst)
+{
+    sendDiscoveryStats(dst, false);
 }
 
 #ifdef __arm__

@@ -1,6 +1,7 @@
 (ns arduino-playground-client.core
   (:gen-class)
-  (:require [mindra.core :refer [diagram->svg]]
+  (:require [arduino-playground-client.messaging.serial :as ser]
+            [mindra.core :refer [diagram->svg]]
             [arduino-playground-client.draw :as d]
             [arduino-playground-client.hex-graph :as hex]
             [arduino-playground-client.catan :as c]))
@@ -33,3 +34,5 @@
       (spit "tile-test.svg" (diagram->svg (d/draw-board winner-map)))
       (Thread/sleep 10000)
       (recur))))
+
+#_ (def c-tile (ser/open-port! (ser/get-port "/dev/ttyUSB0")))

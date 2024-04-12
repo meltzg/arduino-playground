@@ -315,7 +315,9 @@ enum CatanCommand : byte
     GET_STATE,
     STATE_RESPONSE,
     SET_PLAYER,
-    CLEAR_ROBBER
+    CLEAR_ROBBER,
+    SET_STATE,
+    ACKNOWLEDGE
 };
 
 struct BaseCatanState
@@ -330,7 +332,6 @@ struct BaseCatanState
 
 struct CatanState : public BaseCatanState
 {
-    NodeId_t controllerId;
     byte roadOwners[NUM_ROADS];
     byte settlementOwners[NUM_SETTLEMENTS];
     bool isCity[NUM_SETTLEMENTS] = {false};
@@ -419,6 +420,30 @@ struct StateResponse : public CatanMessage
     }
 };
 
+struct SetStateRequest: public CatanMessage
+{
+    CatanPlayState state;
+    bool sendAck;
+
+    SetStateRequest(CatanPlayState state, bool sendAck) : state(state), sendAck(sendAck)
+    {
+        modeId = MODE_CATAN;
+        command = SET_STATE;
+    }
+};
+
+struct AcknowledgeResponse : public CatanMessage
+{
+    CatanPlayState state;
+
+    AcknowledgeResponse(CatanPlayState state) : state(state)
+    {
+        modeId = MODE_CATAN;
+        command = ACKNOWLEDGE;
+    }
+};
+
+
 struct SetCurrentPlayerRequest : public CatanMessage
 {
     byte playerNumber = 0;
@@ -468,6 +493,7 @@ byte randomRollValue();
 
 void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
 void setInitialState(NodeId_t node, SetInitialStateRequest request);
+void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request);
 void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
 void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
 void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);

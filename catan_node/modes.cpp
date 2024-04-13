@@ -707,9 +707,6 @@ void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request)
             0,
             (byte *)&command);
 
-        Serial.print(F("updateNeighbor: "));
-        Serial.println(updateNeighbor);
-
         if (msg.getDest() != EMPTY)
         {
             if (!writeMessage(&netPort, msg, MAX_NET_RETRIES, MAX_NET_COMPLETE_RETRIES, MAX_NET_COMPLETE_RETRY_DELAY))

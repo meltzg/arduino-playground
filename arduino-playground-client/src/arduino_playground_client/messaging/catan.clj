@@ -3,8 +3,9 @@
             [arduino-playground-client.messaging.serial :as ser]))
 
 (def MODE-ID 2)
-(def COMMANDS {:set-state   6
-               :acknowledge 7})
+(def COMMANDS {:set-state           6
+               :play-state-response 7
+               :play-state-request  8})
 (def EMPTY-TILE (unchecked-byte 0x00))
 (def UNOWNED (unchecked-byte 0xff))
 
@@ -76,3 +77,16 @@
          rest
          rest
          bytes->tile-state))))
+
+(defn get-tile-play-state! [port id]
+  (ser/write-message! port
+                      {:source  r/PORT_H
+                       :dest    id
+                       :payload [MODE-ID
+                                 (:play-state-request COMMANDS)]})
+  (-> port
+      ser/read-message!
+      :payload
+      rest
+      rest
+      bytes->tile-state))

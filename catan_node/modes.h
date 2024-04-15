@@ -317,7 +317,8 @@ enum CatanCommand : byte
     SET_PLAYER,
     CLEAR_ROBBER,
     SET_STATE,
-    ACKNOWLEDGE
+    PLAY_STATE_RESPONSE,
+    PLAY_STATE_REQUEST
 };
 
 struct BaseCatanState
@@ -432,14 +433,14 @@ struct SetStateRequest: public CatanMessage
     }
 };
 
-struct AcknowledgeResponse : public CatanMessage
+struct PlayStateResponse : public CatanMessage
 {
     CatanPlayState state;
 
-    AcknowledgeResponse(CatanPlayState state) : state(state)
+    PlayStateResponse(CatanPlayState state) : state(state)
     {
         modeId = MODE_CATAN;
-        command = ACKNOWLEDGE;
+        command = PLAY_STATE_RESPONSE;
     }
 };
 
@@ -494,6 +495,7 @@ byte randomRollValue();
 void setRoadOwner(SetRoadRequest request, bool updateNeighbor = true);
 void setInitialState(NodeId_t node, SetInitialStateRequest request);
 void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request);
+void sendPlayStateResponse(NodeId_t source, bool hardwareProxy);
 void sendSetInitialStateRequest(NodeId_t node, SetInitialStateRequest request);
 void sendStateRequest(NodeId_t node, PlacementValidationInfo placementInfo);
 void sendStateResponse(NodeId_t node, PlacementValidationInfo placementInfo);

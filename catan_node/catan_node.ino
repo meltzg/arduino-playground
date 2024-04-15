@@ -324,6 +324,8 @@ void processMessage(const Message &message)
             case SET_STATE:
                 setState(message.getSource(), message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST, *(SetStateRequest *)command);
                 break;
+            case PLAY_STATE_REQUEST:
+                sendPlayStateResponse(message.getSource(), message.getSysOption() & ROUTER_HARDWARE_PROXY_REQUEST);
             default:
                 break;
             }

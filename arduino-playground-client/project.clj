@@ -10,4 +10,5 @@
             [com.github.clj-kondo/lein-clj-kondo "2024.02.12"]]
   :main ^:skip-aot arduino-playground-client.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}})
+  :profiles {:uberjar {:aot :all}}
+  :repl-options {:timeout 120000})

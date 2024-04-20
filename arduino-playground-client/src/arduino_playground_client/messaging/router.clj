@@ -100,3 +100,9 @@
                             :neighbors (mapv #(when (some? %) (int %))
                                              neighbors)})))
       graph)))
+
+(defn wake-node! [port id]
+  (ser/write-message! port
+                      {:source  r/PORT_H
+                       :dest    id
+                       :payload [1 0]}))

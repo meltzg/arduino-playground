@@ -1,6 +1,8 @@
 (ns arduino-playground-client.core
   (:gen-class)
   (:require [arduino-playground-client.messaging.serial :as ser]
+            [arduino-playground-client.messaging.router :as r]
+            [arduino-playground-client.messaging.catan :as cmsg]
             [mindra.core :refer [diagram->svg]]
             [arduino-playground-client.draw :as d]
             [arduino-playground-client.hex-graph :as hex]

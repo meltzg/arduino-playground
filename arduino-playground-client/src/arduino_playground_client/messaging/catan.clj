@@ -94,6 +94,5 @@
 (defn update-board! [port [{previous-board :board} {:keys [current-player] current-board :board}]]
   (let [previous-tileset (set (vals previous-board))
         updated-tiles (remove #(previous-tileset %) (vals current-board))]
-    (doall (map #(do (set-tile! port % current-player)
-                     (Thread/sleep 500))
+    (doall (map #(do (set-tile! port % current-player true))
                 updated-tiles))))

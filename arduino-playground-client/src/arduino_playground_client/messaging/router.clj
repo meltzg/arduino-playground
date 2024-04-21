@@ -81,6 +81,15 @@
         :payload
         parse-discovery-stats)))
 
+(defn start-discovery!
+  ([port]
+   (start-discovery! port (get-id! port)))
+  ([port node-id]
+   (ser/write-message! port {:source  PORT_H
+                             :dest    node-id
+                             :command ROUTER_START_DISCOVERY
+                             :options ROUTER_SYS_COMMAND})))
+
 (defn get-topology! [port]
   (loop [visited #{}
          queue (conj clojure.lang.PersistentQueue/EMPTY

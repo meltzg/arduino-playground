@@ -425,11 +425,16 @@ struct SetStateRequest: public CatanMessage
 {
     CatanPlayState state;
     bool sendAck;
+    bool validRoads[NUM_ROADS];
 
-    SetStateRequest(CatanPlayState state, bool sendAck) : state(state), sendAck(sendAck)
+    SetStateRequest(CatanPlayState state, bool sendAck, bool validRoads[NUM_ROADS]) : state(state), sendAck(sendAck)
     {
         modeId = MODE_CATAN;
         command = SET_STATE;
+        for (int i = 0; i < NUM_ROADS; i++)
+        {
+            this->validRoads[i] = validRoads[i];
+        }
     }
 };
 

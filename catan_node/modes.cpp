@@ -683,6 +683,10 @@ void setState(NodeId_t source, bool hardwareProxy, SetStateRequest request)
     bool roadsToSet[NUM_ROADS] = {false};
     for (int i = 0; i < NUM_ROADS; i++)
     {
+        if (!request.validRoads[i])
+        {
+            request.state.roadOwners[i] = catanState.roadOwners[i];
+        }
         if (catanState.roadOwners[i] != request.state.roadOwners[i])
         {
             roadsToSet[i] = true;

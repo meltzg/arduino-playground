@@ -69,7 +69,8 @@
                         :payload (concat [MODE-ID
                                           (:set-state COMMANDS)]
                                          (tile-state->bytes tile-state current-player)
-                                         [(if request-ack? 1 0)])})
+                                         [(if request-ack? 1 0)]
+                                         [1 1 1 0 0 0])})
    (when request-ack?
      (-> port
          ser/read-message!

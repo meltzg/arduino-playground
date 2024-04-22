@@ -20,26 +20,23 @@
                 topology))
     (loop []
       (let [playthrough (c/play-game (c/setup-board topology 6))
-            last-turn (last playthrough)
-            winner-map (-> last-turn
-                           (update :board (fn [graph]
-                                            (update-vals
-                                              graph
-                                              (fn [tile]
-                                                (update tile :settlements
-                                                        (partial filter #(= (:player-num %)
-                                                                            (:winner last-turn))))))))
-                           (update :board (fn [graph]
-                                            (update-vals
-                                              graph
-                                              (fn [tile]
-                                                (update tile :roads
-                                                        (partial filter #(= (:player-num %)
-                                                                            (:winner last-turn)))))))))]
+            winner (-> playthrough
+                       last
+                       :current-player)
+            winner-tile (->> playthrough
+                             last
+                             :board
+                             vals
+                             (filter #(every? nil? (take 3 (:neighbors %))))
+                             first)]
         (doall (map #(do (cmsg/set-tile! port % 0 true))
                     (-> playthrough first :board vals)))
         (doall (map (partial cmsg/update-board! port) (partition 2 1 playthrough)))
-        (Thread/sleep 5000)
-        (cmsg/update-board! port [last-turn winner-map]))
+        (cmsg/set-tile! port
+                        (assoc winner-tile :settlements
+                                           (map #(do {:player-num winner :city? true :side %}) (range 2)))
+                        winner
+                        true)
+        (Thread/sleep 2000))
       (recur))
     (ser/close-port! port)))

@@ -14,6 +14,7 @@
         topology (if (.exists (io/file "topology.edn"))
                    (edn/read-string (slurp "topology.edn"))
                    (r/get-topology! port))]
+    (spit "topology.edn" topology)
     (Thread/sleep 5000)
     (doall (map #(do (r/wake-node! port (:id %))
                      (Thread/sleep 2000))
